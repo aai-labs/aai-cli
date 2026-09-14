@@ -18,6 +18,7 @@ const BUNDLED_SKILLS_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/aai-
 const SERVICE: &str = "skills";
 
 const SKILL_COMMANDS: &[(&str, &[&str])] = &[
+    ("aai-apollo", &["apollo"]),
     ("aai-bitbucket", &["bitbucket"]),
     ("aai-confluence", &["confluence"]),
     ("aai-excel", &["excel"]),
@@ -523,7 +524,7 @@ mod tests {
         let packages = load_packages().expect("load bundled skills");
         let reports = validate_packages(&packages);
 
-        assert_eq!(reports.len(), 14);
+        assert_eq!(reports.len(), 15);
         assert!(
             reports.iter().all(|report| report.valid),
             "invalid reports: {reports:#?}"
