@@ -22,6 +22,7 @@ use crate::{
 };
 
 mod common;
+mod excel;
 mod outlook;
 mod planner;
 mod sharepoint;
@@ -49,6 +50,7 @@ pub(crate) async fn dispatch(
         MicrosoftResource::Teams(command) => teams::dispatch(client, ctx, command).await,
         MicrosoftResource::Todo(command) => todo::dispatch(client, ctx, command).await,
         MicrosoftResource::Planner(command) => planner::dispatch(client, ctx, command).await,
+        MicrosoftResource::Excel(command) => excel::dispatch(client, ctx, command).await,
         MicrosoftResource::Request(args) => {
             generic_request::dispatch(client, ctx, SERVICE, graph_base(ctx), args).await
         }

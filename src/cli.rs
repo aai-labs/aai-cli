@@ -83,8 +83,217 @@ pub enum MicrosoftResource {
     Todo(MicrosoftTodoCommand),
     /// Read Planner plans/buckets and manage Planner tasks.
     Planner(MicrosoftPlannerCommand),
+    /// Read and edit Excel workbooks stored in OneDrive or SharePoint.
+    Excel(MicrosoftExcelCommand),
     /// Call a Microsoft Graph endpoint with profile authentication.
     Request(GenericRequest),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftExcelResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelResource {
+    /// Inspect and manage workbook worksheets.
+    Worksheets(MicrosoftExcelWorksheetsCommand),
+    /// Read, update, or clear worksheet ranges.
+    Ranges(MicrosoftExcelRangesCommand),
+    /// Inspect and manage workbook tables and rows.
+    Tables(MicrosoftExcelTablesCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftWorkbookTarget {
+    /// Drive item ID of the .xlsx workbook.
+    #[arg(long, conflicts_with = "path", required_unless_present = "path")]
+    pub item_id: Option<String>,
+    /// Path to the .xlsx workbook relative to the selected drive root.
+    #[arg(long, conflicts_with = "item_id", required_unless_present = "item_id")]
+    pub path: Option<String>,
+    /// SharePoint or OneDrive drive ID. Omit to use the configured user's OneDrive.
+    #[arg(long, conflicts_with = "user_id")]
+    pub drive_id: Option<String>,
+    /// User ID whose OneDrive should be used. Defaults to profile.user_id.
+    #[arg(long, conflicts_with = "drive_id")]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelWorksheetsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelWorksheetsAction {
+    /// List worksheet tabs in a workbook.
+    List(MicrosoftExcelWorksheetTarget),
+    /// Add a worksheet tab.
+    Add(MicrosoftExcelWorksheetMutation),
+    /// Rename a worksheet tab.
+    Rename(MicrosoftExcelWorksheetRename),
+    /// Delete a worksheet tab.
+    Delete(MicrosoftExcelWorksheetDelete),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetDelete {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetMutation {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Name for the new worksheet.
+    pub name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetRename {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or current name.
+    pub worksheet: String,
+    /// New worksheet name.
+    pub name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelRangesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelRangesAction {
+    /// Read a worksheet range.
+    Get(MicrosoftExcelRangeTarget),
+    /// Update values, formulas, or number formats in a range.
+    Update(MicrosoftExcelRangeUpdate),
+    /// Clear values, formats, or all content in a range.
+    Clear(MicrosoftExcelRangeClear),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+    /// A1 range address, such as A1:C5.
+    pub range: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeUpdate {
+    #[command(flatten)]
+    pub target: MicrosoftExcelRangeTarget,
+    /// JSON matrix for the Graph `values` property.
+    #[arg(long)]
+    pub values: Option<String>,
+    /// JSON matrix for the Graph `formulas` property.
+    #[arg(long)]
+    pub formulas: Option<String>,
+    /// JSON matrix for the Graph `numberFormat` property.
+    #[arg(long)]
+    pub number_format: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeClear {
+    #[command(flatten)]
+    pub target: MicrosoftExcelRangeTarget,
+    /// Clear scope: Contents, Formats, or All.
+    #[arg(long, default_value = "Contents")]
+    pub apply_to: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTablesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelTablesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelTablesAction {
+    /// List workbook tables.
+    List(MicrosoftExcelTableWorkbookTarget),
+    /// Create a table over a worksheet range.
+    Create(MicrosoftExcelTableCreate),
+    /// Delete a table.
+    Delete(MicrosoftExcelTableTarget),
+    /// Inspect and append table rows.
+    #[command(subcommand)]
+    Rows(MicrosoftExcelTableRowsCommand),
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelTableRowsCommand {
+    /// List rows in a table.
+    List(MicrosoftExcelTableRowsList),
+    /// Append one or more rows to a table.
+    Append(MicrosoftExcelTableRowsAppend),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableWorkbookTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Table ID or name.
+    pub table: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableRowsList {
+    #[command(flatten)]
+    pub target: MicrosoftExcelTableTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableCreate {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+    /// Table range, such as A1:C10.
+    pub range: String,
+    /// Whether the first row is a header row.
+    #[arg(long)]
+    pub has_headers: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableRowsAppend {
+    #[command(flatten)]
+    pub target: MicrosoftExcelTableTarget,
+    /// JSON array of row arrays, for example [["Ada", "Ready"], ["Grace", "Blocked"]].
+    #[arg(long)]
+    pub values: String,
 }
 
 #[derive(Debug, Args)]
@@ -3956,6 +4165,7 @@ mod tests {
             "teams",
             "todo",
             "planner",
+            "excel",
             "request",
         ] {
             assert!(help.contains(resource), "microsoft help lacks {resource}");
@@ -3999,6 +4209,21 @@ mod tests {
             "report.docx",
         ])
         .expect_err("SharePoint file commands require --drive-id");
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "excel",
+            "tables",
+            "rows",
+            "append",
+            "--item-id",
+            "workbook-id",
+            "Table1",
+            "--values",
+            r#"[["Ada",42]]"#,
+        ])
+        .expect("parse Graph Excel table row append");
     }
 
     #[test]

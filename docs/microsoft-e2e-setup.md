@@ -178,7 +178,16 @@ export AAI_E2E_CONFIG=./local/e2e.config.toml
 cargo test --test microsoft_e2e_live -- --ignored --nocapture --test-threads=1
 ```
 
-The three Given/When/Then tests exercise complete, isolated flows:
+To run only the Excel coverage (including the app-only rejection and both
+delegated workbook flows), use the three test-name filters:
+
+```bash
+cargo test --test microsoft_e2e_live given_application_credentials_when_graph_excel_is_requested_then_unsupported_auth_is_returned_without_network_access -- --ignored --nocapture --test-threads=1
+cargo test --test microsoft_e2e_live given_saved_delegated_credentials_when_onedrive_workbook_is_updated_then_graph_and_downloaded_content_agree -- --ignored --nocapture --test-threads=1
+cargo test --test microsoft_e2e_live given_saved_delegated_credentials_when_sharepoint_workbook_is_updated_then_graph_and_downloaded_content_agree -- --ignored --nocapture --test-threads=1
+```
+
+The live suite includes Given/When/Then tests for complete, isolated flows:
 
 - Outlook draft, event, and contact create/read/update/delete, plus collection reads.
 - Mail send to the test user, inbox/sent verification, and deletion of both copies.
@@ -186,6 +195,9 @@ The three Given/When/Then tests exercise complete, isolated flows:
 - Microsoft To Do list/task and Planner task create/read/update/delete.
 - Team, channel, team-member, channel-message, and chat reads.
 - A minimal Word document uploaded through `microsoft files`, downloaded and inspected, uploaded through `microsoft sharepoint files`, downloaded and inspected again, then deleted from both drives.
+- Delegated Graph Excel worksheet, range, formula, table, and table-row operations against disposable OneDrive and SharePoint workbooks. SharePoint workbook calls pass the provisioned document-library drive ID; path targets are resolved to item IDs before Graph workbook operations. The same workbook is downloaded and independently read with the local Excel command to verify the remote result.
+
+Graph Excel operations require the delegated profile. The application profile is intentionally rejected with `unsupported_auth`; Word has no typed editor and follows the file-transfer workflow described in the bundled Microsoft skill. To edit a Word document, download it, use an external library or program, and upload the complete replacement.
 
 Every created resource has a best-effort cleanup guard so an assertion failure does not normally leave test data behind. The tests also explicitly verify deletion where Graph supports an immediate read-after-delete check. Run serially because they share one mailbox and collaboration workspace.
 

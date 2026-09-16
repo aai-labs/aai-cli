@@ -58,5 +58,6 @@ Apollo docs include an implementation summary for auth, base URLs, rate limits, 
 - `docs/auth-matrix.md` summarizes personal token, service account, app token, and OAuth differences across providers.
 - `docs/microsoft-e2e-setup.md` documents repeatable Microsoft 365 provisioning, durable delegated login, resource verification, and live behavioral tests.
 - `docs/adr/0001-microsoft-graph-integration.md` records the Microsoft Graph command/auth architecture and its compatibility consequences.
+- `docs/adr/0002-office-file-boundaries.md` records the typed Graph Excel boundary and the download/edit/upload workflow for Word files.
 - `docs/drive-command-test-results.md` is the live-run report for the `aai-cli drive` command surface. Regenerate it with `scripts/drive-command-report.sh`.
 - `docs/atlassian/adf.md` summarizes the Atlassian Document Format files needed for Jira/Confluence implementation.

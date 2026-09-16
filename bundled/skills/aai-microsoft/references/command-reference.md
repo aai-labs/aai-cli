@@ -28,6 +28,19 @@ microsoft sharepoint files upload <FILE> <PATH> --drive-id ID [--mime-type TYPE]
 microsoft sharepoint files download <PATH> --drive-id ID --output PATH
 microsoft sharepoint files delete <PATH> --drive-id ID
 
+microsoft excel worksheets list [--item-id ID | --path PATH] [--drive-id ID] [--limit N]
+microsoft excel worksheets add [--item-id ID | --path PATH] NAME [--drive-id ID]
+microsoft excel worksheets rename [--item-id ID | --path PATH] <WORKSHEET> <NAME> [--drive-id ID]
+microsoft excel worksheets delete [--item-id ID | --path PATH] <WORKSHEET> [--drive-id ID]
+microsoft excel ranges get [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID]
+microsoft excel ranges update [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--values JSON_OR_PATH] [--formulas JSON_OR_PATH] [--number-format JSON_OR_PATH]
+microsoft excel ranges clear [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--apply-to Contents|Formats|All]
+microsoft excel tables list [--item-id ID | --path PATH] [--drive-id ID] [--limit N]
+microsoft excel tables create [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--has-headers]
+microsoft excel tables delete [--item-id ID | --path PATH] <TABLE> [--drive-id ID]
+microsoft excel tables rows list [--item-id ID | --path PATH] <TABLE> [--drive-id ID] [--limit N]
+microsoft excel tables rows append [--item-id ID | --path PATH] <TABLE> --values JSON_OR_PATH [--drive-id ID]
+
 microsoft mail messages list [--user-id ID] [--limit N]
 microsoft mail messages get <ID> [--user-id ID]
 microsoft mail messages create [--user-id ID] --json JSON_OR_PATH
@@ -84,6 +97,16 @@ microsoft planner tasks delete <ID> --etag ETAG
 All create/update bodies must be JSON objects. `--json` accepts inline JSON, a file path, or `-` for stdin. SharePoint item creation normally uses `{ "fields": { ... } }`; item update accepts the fields object itself. Planner create normally includes `planId`, `bucketId`, and `title`.
 
 Planner uses optimistic concurrency. Read `@odata.etag` from the current task and pass it unchanged to `--etag`; a stale value fails instead of overwriting another writer.
+
+Excel workbook operations use Graph's delegated workbook resources directly. They do not download and rewrite the workbook locally. Create or obtain an `.xlsx` with the local `excel` command or another tool, upload it through `microsoft files`/`microsoft sharepoint files`, then pass its item ID or path here. The typed API does not create workbooks. For a SharePoint workbook, pass its document-library `--drive-id`. For Word or any unsupported Excel operation, use the file workflow instead:
+
+```text
+microsoft files download <REMOTE_PATH> --output ./document.docx
+# edit ./document.docx with an external library or program
+microsoft files upload ./document.docx <REMOTE_PATH> --mime-type application/vnd.openxmlformats-officedocument.wordprocessingml.document
+```
+
+For SharePoint, use the corresponding `microsoft sharepoint files` commands and pass `--drive-id`. Upload replaces the complete remote file; the CLI does not provide semantic Word editing or merge concurrent changes.
 
 ## Generic Graph request
 

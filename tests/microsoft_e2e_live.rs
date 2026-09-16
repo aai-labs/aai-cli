@@ -100,8 +100,8 @@ struct Cleanup {
 
 impl Cleanup {
     fn run(&mut self) {
-        for args in [
-            vec![
+        if !self.drive_id.is_empty() {
+            let args = [
                 "microsoft",
                 "sharepoint",
                 "files",
@@ -109,9 +109,7 @@ impl Cleanup {
                 self.remote_name.as_str(),
                 "--drive-id",
                 self.drive_id.as_str(),
-            ],
-            vec!["microsoft", "files", "delete", self.remote_name.as_str()],
-        ] {
+            ];
             let _ = Command::new(env!("CARGO_BIN_EXE_aai-cli"))
                 .args([
                     "--config",
@@ -122,6 +120,15 @@ impl Cleanup {
                 .args(args)
                 .output();
         }
+        let _ = Command::new(env!("CARGO_BIN_EXE_aai-cli"))
+            .args([
+                "--config",
+                self.config.as_str(),
+                "--profile",
+                self.profile.as_str(),
+            ])
+            .args(["microsoft", "files", "delete", self.remote_name.as_str()])
+            .output();
         for path in &self.local_paths {
             let _ = std::fs::remove_file(path);
         }
@@ -208,6 +215,292 @@ fn given_delegated_credentials_when_word_is_moved_then_both_drive_copies_are_ver
     // when a Word document moves through OneDrive and SharePoint,
     // then its content survives both downloads and both remote copies are deleted.
     word_onedrive_to_sharepoint_roundtrip_scenario();
+}
+
+#[test]
+#[ignore = "requires a configured Microsoft app profile"]
+fn given_application_credentials_when_graph_excel_is_requested_then_unsupported_auth_is_returned_without_network_access(
+) {
+    let Some((config, profile)) = microsoft_env("AAI_E2E_MS_APP_PROFILE") else {
+        eprintln!("skipping live Microsoft E2E: app profile environment is not set");
+        return;
+    };
+    let response = output(
+        &config,
+        &profile,
+        &[
+            "microsoft",
+            "excel",
+            "worksheets",
+            "list",
+            "--item-id",
+            "not-a-real-workbook",
+        ],
+    );
+    assert_eq!(response.status.code(), Some(3));
+    let error: Value = serde_json::from_slice(&response.stderr).expect("structured JSON error");
+    assert_eq!(error["code"], "unsupported_auth");
+    assert_eq!(error["service"], "microsoft");
+    assert!(error["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("microsoft_delegated")));
+    assert!(error["message"]
+        .as_str()
+        .is_some_and(|message| message.contains("Files.ReadWrite")));
+}
+
+#[test]
+#[ignore = "requires durable delegated credentials and a disposable OneDrive workbook"]
+fn given_saved_delegated_credentials_when_onedrive_workbook_is_updated_then_graph_and_downloaded_content_agree(
+) {
+    let Some((config, profile)) = microsoft_env("AAI_E2E_MS_DELEGATED_PROFILE") else {
+        eprintln!("skipping live Microsoft E2E: delegated profile environment is not set");
+        return;
+    };
+    excel_workbook_scenario(&config, &profile, None);
+}
+
+#[test]
+#[ignore = "requires durable delegated credentials and a disposable SharePoint workbook"]
+fn given_saved_delegated_credentials_when_sharepoint_workbook_is_updated_then_graph_and_downloaded_content_agree(
+) {
+    let (Some((config, profile)), Ok(drive_id)) = (
+        microsoft_env("AAI_E2E_MS_DELEGATED_PROFILE"),
+        env::var("AAI_E2E_MS_DRIVE_ID"),
+    ) else {
+        eprintln!("skipping live Microsoft E2E: SharePoint environment is not set");
+        return;
+    };
+    excel_workbook_scenario(&config, &profile, Some(&drive_id));
+}
+
+fn excel_workbook_scenario(config: &str, profile: &str, drive_id: Option<&str>) {
+    let remote_name = format!("{}.xlsx", unique("aai-e2e-ms-excel"));
+    let source = env::temp_dir().join(format!("source-{remote_name}"));
+    let downloaded = env::temp_dir().join(format!("downloaded-{remote_name}"));
+    let mut cleanup = Cleanup {
+        config: config.to_string(),
+        profile: profile.to_string(),
+        drive_id: drive_id.unwrap_or("").to_string(),
+        remote_name: remote_name.clone(),
+        local_paths: vec![source.clone(), downloaded.clone()],
+        active: true,
+    };
+
+    let create_args = [
+        "excel",
+        "workbook",
+        "create",
+        source.to_str().expect("source path"),
+        "--sheets",
+        "Sheet1,Data",
+    ];
+    run(config, profile, &create_args);
+
+    let upload_args = if let Some(drive_id) = drive_id {
+        vec![
+            "microsoft",
+            "sharepoint",
+            "files",
+            "upload",
+            source.to_str().expect("source path"),
+            remote_name.as_str(),
+            "--drive-id",
+            drive_id,
+            "--mime-type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ]
+    } else {
+        vec![
+            "microsoft",
+            "files",
+            "upload",
+            source.to_str().expect("source path"),
+            remote_name.as_str(),
+            "--mime-type",
+            "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ]
+    };
+    let uploaded = run(config, profile, &upload_args);
+    let item_id = field(&uploaded, "id").to_string();
+
+    let location = drive_id
+        .map(|id| vec!["--drive-id", id])
+        .unwrap_or_default();
+    let mut list_args = vec![
+        "microsoft",
+        "excel",
+        "worksheets",
+        "list",
+        "--path",
+        remote_name.as_str(),
+    ];
+    list_args.extend(location.iter().copied());
+    let worksheets = run(config, profile, &list_args);
+    assert!(worksheets["value"]
+        .as_array()
+        .is_some_and(|items| { items.iter().any(|item| item["name"] == "Sheet1") }));
+
+    let mut update_args = vec![
+        "microsoft",
+        "excel",
+        "ranges",
+        "update",
+        "--path",
+        remote_name.as_str(),
+        "Sheet1",
+        "A1:B2",
+        "--values",
+        r#"[["Name","Score"],["Ada",42]]"#,
+    ];
+    update_args.extend(location.iter().copied());
+    run(config, profile, &update_args);
+
+    let formula = r#"[["=B2*2"]]"#;
+    let mut formula_args = vec![
+        "microsoft",
+        "excel",
+        "ranges",
+        "update",
+        "--item-id",
+        item_id.as_str(),
+        "Sheet1",
+        "C2",
+        "--formulas",
+        formula,
+    ];
+    formula_args.extend(location.iter().copied());
+    run(config, profile, &formula_args);
+
+    let mut get_args = vec![
+        "microsoft",
+        "excel",
+        "ranges",
+        "get",
+        "--item-id",
+        item_id.as_str(),
+        "Sheet1",
+        "A1:C2",
+    ];
+    get_args.extend(location.iter().copied());
+    let range = run(config, profile, &get_args);
+    assert_eq!(range["values"][0][0], "Name");
+    assert_eq!(range["values"][1][1].as_f64(), Some(42.0));
+    assert_eq!(range["formulas"][1][2], "=B2*2");
+
+    let mut table_create_args = vec![
+        "microsoft",
+        "excel",
+        "tables",
+        "create",
+        "--item-id",
+        item_id.as_str(),
+        "Sheet1",
+        "A1:B2",
+        "--has-headers",
+    ];
+    table_create_args.extend(location.iter().copied());
+    let table = run(config, profile, &table_create_args);
+    let table_name = field(&table, "name").to_string();
+
+    let mut append_args = vec![
+        "microsoft",
+        "excel",
+        "tables",
+        "rows",
+        "append",
+        "--item-id",
+        item_id.as_str(),
+        table_name.as_str(),
+        "--values",
+        r#"[["Grace",99]]"#,
+    ];
+    append_args.extend(location.iter().copied());
+    run(config, profile, &append_args);
+
+    let mut rows_args = vec![
+        "microsoft",
+        "excel",
+        "tables",
+        "rows",
+        "list",
+        "--item-id",
+        item_id.as_str(),
+        table_name.as_str(),
+    ];
+    rows_args.extend(location.iter().copied());
+    let rows = run(config, profile, &rows_args);
+    assert!(rows["value"].as_array().is_some_and(|items| {
+        items.iter().any(|item| {
+            item["values"][0][0] == "Grace" && item["values"][0][1].as_f64() == Some(99.0)
+        })
+    }));
+
+    let download_args = if let Some(drive_id) = drive_id {
+        vec![
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            remote_name.as_str(),
+            "--drive-id",
+            drive_id,
+            "--output",
+            downloaded.to_str().expect("download path"),
+        ]
+    } else {
+        vec![
+            "microsoft",
+            "files",
+            "download",
+            remote_name.as_str(),
+            "--output",
+            downloaded.to_str().expect("download path"),
+        ]
+    };
+    run(config, profile, &download_args);
+    let local = run(
+        config,
+        profile,
+        &[
+            "excel",
+            "values",
+            "get",
+            downloaded.to_str().expect("download path"),
+            "'Sheet1'!A1:C3",
+        ],
+    );
+    assert_eq!(local["values"][0][0], "Name");
+    assert_eq!(local["values"][1][1].as_f64(), Some(42.0));
+    assert_eq!(local["values"][1][2].as_f64(), Some(84.0));
+    assert_eq!(local["values"][2][0], "Grace");
+    assert_eq!(local["values"][2][1].as_f64(), Some(99.0));
+
+    cleanup.run();
+    if let Some(drive_id) = drive_id {
+        let args = [
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            remote_name.as_str(),
+            "--drive-id",
+            drive_id,
+            "--output",
+            downloaded.to_str().expect("download path"),
+        ];
+        assert_not_found(config, profile, &args);
+    } else {
+        let args = [
+            "microsoft",
+            "files",
+            "download",
+            remote_name.as_str(),
+            "--output",
+            downloaded.to_str().expect("download path"),
+        ];
+        assert_not_found(config, profile, &args);
+    }
 }
 
 fn outlook_and_sharepoint_crud_scenario() {

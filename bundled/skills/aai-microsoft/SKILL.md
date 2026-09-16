@@ -1,11 +1,11 @@
 ---
 name: aai-microsoft
-description: Work with Microsoft 365 through aai-cli by choosing the right Microsoft service and resource model, then using durable Graph credentials for Outlook, OneDrive, SharePoint, Teams, To Do, and Planner workflows.
+description: Work with Microsoft 365 through aai-cli by choosing the right Microsoft service and resource model, then using durable Graph credentials for Outlook, OneDrive, SharePoint, Teams, Excel, To Do, and Planner workflows.
 ---
 
 # aai-cli Microsoft Graph
 
-Use this skill for Microsoft 365 work through `aai-cli microsoft`. Start from the user's intent and Microsoft 365 ownership model, not from the command list.
+Use this skill for Microsoft 365 work through `aai-cli microsoft`. Start from the user's intent and Microsoft 365 ownership model, not from the command list. Read the concepts reference before a cross-service or file-editing workflow.
 
 ## Choose the service first
 
@@ -17,13 +17,19 @@ Use this skill for Microsoft 365 work through `aai-cli microsoft`. Start from th
 - **Planner** is shared plan/task management, commonly attached to a Microsoft 365 group or Team. A plan contains buckets, and buckets organize tasks.
 - **Microsoft Graph** is the common API surface across these products. Use `microsoft request` only when the needed Graph operation lacks a typed command.
 
+## Excel and Word are different kinds of files
+
+- **Excel workbooks:** `microsoft excel` calls the documented Graph workbook API for worksheets, ranges, tables, and table rows. It requires a delegated profile with `Files.ReadWrite` access; application profiles are rejected because Graph does not support application permissions for workbook operations. For SharePoint workbooks, pass the document-library `--drive-id`.
+- **Word documents:** Graph exposes `.docx` files as `driveItem` content, not as paragraphs or tables. There is no `microsoft word` editor in this CLI. Download the file with `microsoft files` or `microsoft sharepoint files`, edit it with an external library/program, then upload the complete replacement. Consider a backup, version history, concurrent edits, and features the external library may not preserve.
+- **Teams files:** channel files are SharePoint files, so use the SharePoint file workflow rather than treating them as Teams messages.
+
 Read [Microsoft 365 concepts and routing](references/microsoft-365-concepts.md) before acting when the request crosses products, refers to a Team or SharePoint URL rather than IDs, or leaves ownership/visibility ambiguous. It explains resource relationships, identifier choice, auth choice, and common workflows.
 
 Confirm the active profile or pass `--profile`. App-only profiles are best for unattended organization-owned automation. Delegated profiles act on behalf of one user and are required by this CLI for complete Microsoft To Do CRUD. Both obtain short-lived access tokens automatically from credentials saved in the encrypted secret store; never request or copy an access token into a command.
 
 Prefer typed commands for supported operations. Use `microsoft request` only for a Graph endpoint without a typed command. Writes through `request` require `--allow-write`.
 
-Most user resources accept `--user-id`; otherwise they use `profile.user_id`. IDs belong to different resource types and are not interchangeable: a Team/group ID is not a site, drive, list, channel, plan, or bucket ID. SharePoint list commands require site and list IDs. Use `microsoft files` for OneDrive and the explicit `microsoft sharepoint files` commands with `--drive-id` for a SharePoint document library. Planner task update/delete require the current `@odata.etag` from a preceding get/create/update response.
+Most user resources accept `--user-id`; otherwise they use `profile.user_id`. IDs belong to different resource types and are not interchangeable: a Team/group ID is not a site, drive, list, channel, plan, or bucket ID. SharePoint list commands require site and list IDs. Use `microsoft files` for OneDrive and the explicit `microsoft sharepoint files` commands with `--drive-id` for a SharePoint document library. Use `microsoft excel` with `--item-id` or `--path` for workbook operations. Planner task update/delete require the current `@odata.etag` from a preceding get/create/update response.
 
 Treat creates, sends, updates, and deletes as external side effects. Read the target first when practical, use stable identifiers, and report what changed. Supply request bodies through `--json PATH` or `--json -` for complex or sensitive values rather than shell-inline JSON.
 

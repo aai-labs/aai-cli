@@ -57,6 +57,7 @@ A **site** is the collaboration container. A site can hold:
 Choose the model by the content:
 
 - Upload/download a Word document, PDF, spreadsheet, image, or arbitrary bytes with `microsoft sharepoint files ... --drive-id DRIVE_ID`.
+- Read or edit a workbook that Graph can open with `microsoft excel ... --item-id ITEM_ID --drive-id DRIVE_ID` (or `--path PATH`). For SharePoint workbooks, pass the document-library drive ID. Workbook operations are delegated-only and operate on the remote workbook through Graph; path targets are resolved to drive-item IDs before the workbook call for consistent behavior across drives.
 - Create/update a business record with `microsoft sharepoint items ... SITE_ID LIST_ID`.
 - Do not upload a document as a list item just because document libraries also have list metadata internally. Use the file interface unless the task explicitly concerns columns/metadata exposed through a list.
 
@@ -82,6 +83,22 @@ Both expose files through Graph drives, but the ownership semantics differ:
 - **SharePoint:** site-owned shared library. `microsoft sharepoint files` requires the library's `--drive-id` explicitly.
 
 Moving a document between them is a byte transfer, not a metadata-preserving move: download from the source, validate the bytes/content, upload to the destination, validate again, then delete the source only if the user requested a move rather than a copy.
+
+## Word documents: file transfer, not document editing
+
+Microsoft Graph represents a Word `.docx` as a `driveItem` file stream. The CLI can transfer that stream, but it does not expose Word paragraphs, tables, formatting, comments, or tracked changes as typed commands. There is intentionally no `microsoft word` command group.
+
+When an agent needs to change a Word document, use this explicit workflow:
+
+1. Download the source with `microsoft files download` or `microsoft sharepoint files download`.
+2. Edit the local `.docx` with an external library or program chosen for the required fidelity.
+3. Validate the generated file and retain a backup/version when the source matters.
+4. Upload the complete replacement with the matching file command.
+5. Re-download and validate when correctness matters.
+
+Uploading is a whole-file replacement. It can overwrite a newer remote version and an external library may discard unsupported OOXML features. The CLI does not merge Word edits or provide collaborative document semantics. Use unique paths, copies, or provider version history when concurrent changes are possible.
+
+The same download/edit/upload pattern applies to Excel features not represented by `microsoft excel`, including unsupported workbook formats or advanced objects. Create a new workbook with the local `excel workbook create` command (or another library), upload it as a normal drive item, and then use `microsoft excel` for supported remote operations.
 
 ## Outlook resources
 
@@ -151,4 +168,4 @@ Prefer IDs returned by Graph or the provisioning/discovery workflow. Display nam
 - Planner typed coverage reads plans/buckets and manages tasks; it does not create plans or buckets.
 - The generic Graph request command can reach other endpoints, but writes require `--allow-write` and remain real external side effects.
 
-Authoritative background: [Graph permission types](https://learn.microsoft.com/en-us/graph/permissions-overview), [Teams channel storage](https://learn.microsoft.com/en-us/microsoftteams/standard-channels), [SharePoint list items](https://learn.microsoft.com/en-us/graph/api/resources/listitem?view=graph-rest-1.0), [To Do concepts](https://learn.microsoft.com/en-us/graph/todo-concept-overview), and [Planner concepts](https://learn.microsoft.com/en-us/graph/api/resources/planner-overview?view=graph-rest-1.0).
+Authoritative background: [Graph permission types](https://learn.microsoft.com/en-us/graph/permissions-overview), [Excel workbook resources](https://learn.microsoft.com/en-us/graph/api/resources/excel?view=graph-rest-1.0), [DriveItem file resources](https://learn.microsoft.com/en-us/graph/api/resources/driveitem?view=graph-rest-1.0), [Teams channel storage](https://learn.microsoft.com/en-us/microsoftteams/standard-channels), [SharePoint list items](https://learn.microsoft.com/en-us/graph/api/resources/listitem?view=graph-rest-1.0), [To Do concepts](https://learn.microsoft.com/en-us/graph/todo-concept-overview), and [Planner concepts](https://learn.microsoft.com/en-us/graph/api/resources/planner-overview?view=graph-rest-1.0).
