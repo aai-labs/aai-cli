@@ -27,6 +27,7 @@ const SKILL_COMMANDS: &[(&str, &[&str])] = &[
     ("aai-google-drive", &["drive"]),
     ("aai-google-sheets", &["sheets"]),
     ("aai-jira", &["jira"]),
+    ("aai-microsoft", &["microsoft"]),
     ("aai-pipedrive", &["pipedrive"]),
     ("aai-posthog", &["posthog"]),
     ("aai-slack", &["slack"]),
@@ -48,6 +49,7 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "excel",
     "slack",
     "posthog",
+    "microsoft",
     "config",
     "secrets",
     "skills",
@@ -523,7 +525,7 @@ mod tests {
         let packages = load_packages().expect("load bundled skills");
         let reports = validate_packages(&packages);
 
-        assert_eq!(reports.len(), 14);
+        assert_eq!(reports.len(), 15);
         assert!(
             reports.iter().all(|report| report.valid),
             "invalid reports: {reports:#?}"
@@ -558,6 +560,18 @@ mod tests {
 
         assert_eq!(calendar["covered"], false);
         assert_eq!(calendar["skills"], json!([]));
+    }
+
+    #[test]
+    fn discover_reports_microsoft_skill_coverage() {
+        let coverage = command_coverage();
+        let microsoft = coverage
+            .iter()
+            .find(|entry| entry["command"] == "microsoft")
+            .expect("microsoft coverage entry");
+
+        assert_eq!(microsoft["covered"], true);
+        assert_eq!(microsoft["skills"], json!(["aai-microsoft"]));
     }
 
     #[test]

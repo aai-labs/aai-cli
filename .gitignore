@@ -4,6 +4,7 @@
 # Local live-test config and secrets
 /local/e2e.config.toml
 /local/e2e.env
+/local/e2e-ms.env
 /local/*.enc.json
 /local/*.key
 /local/key

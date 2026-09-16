@@ -31,6 +31,7 @@ Service-level CLI docs live under `docs/services/`:
 - [Google Sheets](services/sheets.md)
 - [Google Drive](services/drive.md)
 - [OpenPanel](services/openpanel.md)
+- [Microsoft Graph](microsoft-e2e-setup.md)
 
 Atlassian docs include REST entrypoints, auth/API-token docs, OAuth scopes, webhooks, rate limits, and Jira ADF references. Start with:
 
@@ -55,5 +56,7 @@ Apollo docs include an implementation summary for auth, base URLs, rate limits, 
 - `docs/aai-cli-command-reference.md` is the agent-facing command reference for implemented CLI behavior, including Jira/Confluence search, pagination, Confluence page moves, GitHub Actions status/logs, and Bitbucket Pipelines status/logs.
 - `docs/manifest.json` records every source URL, output path, format, size, status, and retrieval timestamp.
 - `docs/auth-matrix.md` summarizes personal token, service account, app token, and OAuth differences across providers.
+- `docs/microsoft-e2e-setup.md` documents repeatable Microsoft 365 provisioning, durable delegated login, resource verification, and live behavioral tests.
+- `docs/adr/0001-microsoft-graph-integration.md` records the Microsoft Graph command/auth architecture and its compatibility consequences.
 - `docs/drive-command-test-results.md` is the live-run report for the `aai-cli drive` command surface. Regenerate it with `scripts/drive-command-report.sh`.
 - `docs/atlassian/adf.md` summarizes the Atlassian Document Format files needed for Jira/Confluence implementation.

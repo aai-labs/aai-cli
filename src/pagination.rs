@@ -1,6 +1,7 @@
 use serde_json::{json, Value};
 
 const COLLECTION_KEYS: &[&str] = &[
+    "value",
     "values",
     "results",
     "issues",
@@ -170,6 +171,16 @@ fn continuation(value: &Value) -> Option<Continuation> {
             parameters: query_parameters(next_url),
             next_url: Some(next_url.to_string()),
         });
+    }
+
+    if let Some(next_url) = value.get("@odata.nextLink").and_then(Value::as_str) {
+        if !next_url.is_empty() {
+            return Some(Continuation {
+                source: "@odata.nextLink",
+                parameters: query_parameters(next_url),
+                next_url: Some(next_url.to_string()),
+            });
+        }
     }
 
     offset_continuation(value)
@@ -444,6 +455,23 @@ mod tests {
         assert_eq!(
             output["_aai"]["pagination"]["next_command"],
             "aai-cli github request get /items --query state=open --query page=2"
+        );
+    }
+
+    #[test]
+    fn detects_microsoft_odata_next_link_and_value_count() {
+        let value = json!({
+            "value": [{"id": "one"}, {"id": "two"}],
+            "@odata.nextLink": "https://graph.microsoft.com/v1.0/users?$skiptoken=opaque"
+        });
+        let args = strings(&["aai-cli", "microsoft", "contacts", "list", "--limit", "2"]);
+        let output = annotate(value, &args);
+
+        assert_eq!(output["_aai"]["pagination"]["returned_count"], 2);
+        assert_eq!(output["_aai"]["pagination"]["status"], "more_available");
+        assert_eq!(
+            output["_aai"]["pagination"]["continuation"]["source"],
+            "@odata.nextLink"
         );
     }
 

@@ -35,6 +35,11 @@ const ALLOWED_PROFILE_FIELDS: &[&str] = &[
     "site_url",
     "email",
     "username",
+    "tenant_id",
+    "scope",
+    "client_id",
+    "client_secret_secret",
+    "refresh_token_secret",
     "token_secret",
     "api_token_secret",
     "password_secret",
@@ -330,6 +335,26 @@ fn validate_profile_table(
             "bearer_token",
             "token_secret",
         ),
+        "microsoft" => {
+            required_string(profile, "tenant_id", operation)?;
+            required_string(profile, "client_id", operation)?;
+            match auth_type {
+                "microsoft_client_credentials" => {
+                    required_string(profile, "client_secret_secret", operation)?;
+                    Ok(())
+                }
+                "microsoft_delegated" => {
+                    required_string(profile, "refresh_token_secret", operation)?;
+                    required_string(profile, "scope", operation)?;
+                    Ok(())
+                }
+                _ => Err(AppError::invalid_input(
+                    "config",
+                    operation,
+                    "auth_type must be microsoft_client_credentials or microsoft_delegated for this provider",
+                )),
+            }
+        }
         "jira" | "confluence" | "bitbucket" => require_auth(
             profile,
             operation,

@@ -824,3 +824,31 @@ Covered GitHub operations (uses page-based GitHub pagination):
 - `github source history`
 
 Set the smallest useful `--limit`. Large limits increase latency and rate-limit pressure.
+## Microsoft Graph
+
+```text
+microsoft auth login
+microsoft auth status
+microsoft request <get|head|post|put|patch|delete> <relative-path> [--query key=value] [--json JSON_OR_PATH] [--allow-write]
+microsoft files upload <local-file> <remote-path> [--drive-id ID | --user-id ID] [--mime-type TYPE]
+microsoft files download <remote-path> [--drive-id ID | --user-id ID] --output PATH
+microsoft files delete <remote-path> [--drive-id ID | --user-id ID]
+microsoft mail messages <list|get|create|update|delete> ...
+microsoft mail send [--user-id ID] --json JSON_OR_PATH
+microsoft calendar events <list|get|create|update|delete> ...
+microsoft contacts <list|get|create|update|delete> ...
+microsoft sharepoint lists <list|get> ...
+microsoft sharepoint items <list|get|create|update|delete> ...
+microsoft teams <get|channels|channel|members|messages|chats> ...
+microsoft todo lists <list|get|create|update|delete> ...
+microsoft todo tasks <list|get|create|update|delete> ...
+microsoft planner plans get <ID>
+microsoft planner buckets get <ID>
+microsoft planner tasks <get|create|update|delete> ...
+```
+
+`auth login` is the only interactive operation. It saves an encrypted delegated refresh token after verifying the configured user. Every other command acquires fresh access tokens from saved credentials. Without `--drive-id`, file commands use `--user-id` or `profile.user_id`; `--drive-id` targets a SharePoint or OneDrive document library directly. Downloaded bytes are written only to `--output`.
+
+Typed user-resource commands use `--user-id` or `profile.user_id`. Create/update bodies use `--json JSON_OR_PATH` (or `--json -` for stdin). List commands aggregate Graph's `@odata.nextLink` pages into the provider's `value` array up to `--limit`.
+
+Microsoft To Do requires a delegated profile; Graph does not offer application permissions for these endpoints. Planner task update/delete require the last observed `@odata.etag` through `--etag`. Teams commands are read-only in this initial coverage: team/channel metadata, team members, channel messages, and chats. The exact argument shapes and safe CRUD workflow are included in the bundled `aai-microsoft` skill.

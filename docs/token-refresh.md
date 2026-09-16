@@ -1,6 +1,18 @@
-# Email Token Refresh
+# OAuth Token Refresh
 
-How to provision Google sheets, Gmail and Zoho Mail REST for use with `aai-cli`. The tool automatically exchanges a refresh token for a fresh access token on every request — no manual token rotation needed.
+How to provision durable delegated credentials for Microsoft Graph, Google Workspace, and Zoho REST services.
+
+## Microsoft Graph
+
+Microsoft delegated profiles use device authorization once and encrypted refresh tokens afterward:
+
+```bash
+aai-cli --config local/e2e.config.toml \
+  --profile microsoft-e2e-delegated \
+  microsoft auth login
+```
+
+The profile scope must contain `offline_access`. The CLI verifies the returned `/me` identity against `profile.user_id` when configured, then stores the refresh token under `refresh_token_secret`. Every later request exchanges that saved value noninteractively and persists Microsoft's rotated replacement token. Validate the durable session from a new process with `microsoft auth status`.
 
 ---
 

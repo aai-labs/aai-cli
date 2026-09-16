@@ -29,6 +29,8 @@ pub struct Profile {
     pub refresh_token_env: Option<String>,
     pub refresh_token_secret: Option<String>,
     pub client_id: Option<String>,
+    pub tenant_id: Option<String>,
+    pub scope: Option<String>,
     pub client_secret: Option<String>,
     pub client_secret_env: Option<String>,
     pub client_secret_secret: Option<String>,
@@ -54,6 +56,10 @@ pub struct Profile {
     pub mail_folder: Option<String>,
     pub sent_folder: Option<String>,
     pub caldav_url: Option<String>,
+    #[serde(skip)]
+    pub runtime_secrets_file: Option<PathBuf>,
+    #[serde(skip)]
+    pub runtime_key_file: Option<PathBuf>,
 }
 
 pub struct Context {
@@ -105,6 +111,8 @@ impl Context {
             key_file,
         };
         apply_secret_overrides(&mut ctx)?;
+        ctx.profile.runtime_secrets_file = Some(ctx.secrets_file.clone());
+        ctx.profile.runtime_key_file = Some(ctx.key_file.clone());
 
         Ok(ctx)
     }

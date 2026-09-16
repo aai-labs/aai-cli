@@ -1,6 +1,6 @@
 # Auth Matrix
 
-This project should support credentials supplied by users or agents rather than implementing OAuth acquisition flows in v1.
+This project primarily consumes credentials supplied by users or agents. Microsoft delegated profiles additionally support an explicit one-time device bootstrap because unattended runs require a securely persisted refresh token.
 
 ## Atlassian Cloud
 
@@ -63,3 +63,11 @@ This project should support credentials supplied by users or agents rather than 
 - Never infer service-account semantics from a token string alone.
 - Keep provider profiles isolated; do not reuse an Atlassian token across Jira, Confluence, and Bitbucket unless the provider docs explicitly support it.
 - Prefer env var overrides for secrets and config-file fields for non-secret metadata such as site URL, workspace, region, account email, and default scopes.
+## Microsoft Graph
+
+- `microsoft_client_credentials` uses `tenant_id`, `client_id`, and `client_secret_secret`. Each command obtains an app-only token for `https://graph.microsoft.com/.default` without user interaction.
+- `microsoft_delegated` uses `tenant_id`, `client_id`, `scope`, and `refresh_token_secret`. Run `microsoft auth login` once; it requires `offline_access`, validates `/me` against `profile.user_id` when configured, and stores the refresh token encrypted.
+- Refresh responses can rotate the delegated refresh token. The CLI replaces the encrypted value before returning the Graph response.
+- `microsoft auth status` is noninteractive. A revoked or expired delegated credential fails with an instruction to run `microsoft auth login` again.
+- Microsoft To Do commands require `microsoft_delegated`; Graph does not support application permissions for To Do tasks. The typed commands reject app-only profiles before making a request.
+- Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.

@@ -1,8 +1,9 @@
 use std::{
     collections::HashMap,
-    fs,
-    io::{self, Read},
+    fs::{self, OpenOptions},
+    io::{self, Read, Write},
     path::{Path, PathBuf},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use base64::{engine::general_purpose, Engine as _};
@@ -53,6 +54,19 @@ pub(crate) fn default_secrets_path() -> Result<PathBuf, AppError> {
 pub(crate) fn get(ctx: &Context, key: &str) -> Result<Option<String>, AppError> {
     let store = SecretStore::open(&ctx.secrets_file, &ctx.key_file)?;
     store.get(key)
+}
+
+pub(crate) fn set(ctx: &Context, key: &str, value: &str) -> Result<(), AppError> {
+    set_at(&ctx.secrets_file, &ctx.key_file, key, value)
+}
+
+pub(crate) fn set_at(
+    secrets_file: &Path,
+    key_file: &Path,
+    key: &str,
+    value: &str,
+) -> Result<(), AppError> {
+    SecretStore::open(secrets_file, key_file)?.set(key, value)
 }
 
 pub(crate) fn dispatch(ctx: &Context, command: SecretsCommand) -> Result<Value, AppError> {
@@ -207,14 +221,40 @@ impl<'a> SecretStore<'a> {
         };
         let rendered = serde_json::to_string_pretty(&file)
             .map_err(|err| AppError::internal("secrets", "encrypt", err.to_string()))?;
-        fs::write(self.secrets_file, rendered).map_err(|err| {
-            AppError::config(format!(
-                "failed to write secrets file {}: {err}",
-                self.secrets_file.display()
-            ))
-        })?;
-        set_file_private(self.secrets_file)?;
-        Ok(())
+        let parent = self.secrets_file.parent().unwrap_or_else(|| Path::new("."));
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|value| value.as_nanos())
+            .unwrap_or_default();
+        let temp_path = parent.join(format!(
+            ".{}.{}.{}.tmp",
+            self.secrets_file
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("secrets.enc.json"),
+            std::process::id(),
+            unique
+        ));
+        let write_result = (|| {
+            let mut output = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&temp_path)
+                .map_err(|err| AppError::internal("secrets", "encrypt", err.to_string()))?;
+            output
+                .write_all(rendered.as_bytes())
+                .map_err(|err| AppError::internal("secrets", "encrypt", err.to_string()))?;
+            output
+                .sync_all()
+                .map_err(|err| AppError::internal("secrets", "encrypt", err.to_string()))?;
+            set_file_private(&temp_path)?;
+            fs::rename(&temp_path, self.secrets_file)
+                .map_err(|err| AppError::internal("secrets", "encrypt", err.to_string()))
+        })();
+        if write_result.is_err() {
+            let _ = fs::remove_file(&temp_path);
+        }
+        write_result
     }
 }
 
