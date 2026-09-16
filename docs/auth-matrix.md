@@ -57,6 +57,16 @@ This project should support credentials supplied by users or agents rather than 
 - Optional `project_id` profile field: `insights *` and `profiles *` require a project ID in the URL; set `profile.project_id` to avoid passing `--project-id` on every call.
 - OAuth install flow: not applicable — OpenPanel has no OAuth flow for the REST API, only static client credentials created in the dashboard under Settings → Clients.
 
+## Microsoft 365 / SharePoint
+
+- App-only client credentials (`auth_type = "microsoft_client_credentials"`): the only implemented model. Profiles set `tenant_id`, `client_id` and `client_secret_secret`; the CLI requests a token from `https://login.microsoftonline.com/{tenant}/oauth2/v2.0/token` with `grant_type=client_credentials` and the Graph `.default` scope, and sends a standard `Authorization: Bearer` header. There is no user and no refresh token.
+- `tenant_id` is required. Unlike every other provider here the token authority is tenant-scoped, and the multi-tenant `common` authority cannot issue app-only tokens.
+- Required application permission: `Sites.Selected`, with tenant admin consent. It grants nothing on its own — each site must then be granted to the app individually (`read`, `write`, `manage` or `fullcontrol`). `Sites.Read.All` / `Sites.ReadWrite.All` also work but reach every site in the tenant.
+- The organisation owns the app, so the credential reaches only that organisation's tenant and only what its administrator granted.
+- Client secrets work because the CLI calls Microsoft Graph. SharePoint's own REST API rejects app-only tokens issued for a client secret and requires a certificate, which is why the CLI does not use it.
+- Delegated (user) OAuth: not implemented. Microsoft refresh tokens expire 90 days after issue and rotate on use, and delegated permissions cannot be scoped to specific sites.
+- Mail and calendar are deliberately not offered app-only: those application permissions reach every mailbox in the tenant.
+
 ## CLI Implications
 
 - Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `github_app`, `oauth_user`, or `service_account`.

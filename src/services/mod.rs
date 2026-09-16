@@ -13,6 +13,7 @@ pub(crate) mod openpanel;
 pub(crate) mod pipedrive;
 pub(crate) mod posthog;
 pub(crate) mod shared;
+pub(crate) mod sharepoint;
 pub(crate) mod sheets;
 pub(crate) mod slack;
 
@@ -37,6 +38,7 @@ pub async fn dispatch(ctx: &Context, command: Command) -> Result<Value, AppError
         Command::Slack(command) => slack::dispatch(&client, ctx, command).await,
         Command::Openpanel(command) => openpanel::dispatch(&client, ctx, command).await,
         Command::Posthog(command) => posthog::dispatch(&client, ctx, command).await,
+        Command::Sharepoint(command) => sharepoint::dispatch(&client, ctx, command).await,
         Command::Excel(_) => unreachable!("excel commands are dispatched before context loading"),
         Command::Config(_) => unreachable!("config commands are dispatched before context loading"),
         Command::Skills(_) => unreachable!("skills commands are dispatched before context loading"),

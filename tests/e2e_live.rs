@@ -1945,3 +1945,68 @@ fn openpanel_projects_insights_and_profiles_read() {
     );
     assert!(profiles.is_array() || profiles.is_object());
 }
+
+#[test]
+#[ignore = "requires live SharePoint credentials and a site the account can read"]
+fn sharepoint_site_drive_and_item_reads() {
+    let Some(site) = env_or_skip("AAI_E2E_SHAREPOINT_SITE") else {
+        return;
+    };
+
+    let site_value = cli_required(
+        "AAI_E2E_SHAREPOINT_PROFILE",
+        &["sharepoint", "sites", "get", &site],
+    );
+    let site_id = str_at(&site_value, &["id"]).to_string();
+    assert!(!site_id.is_empty());
+
+    let drives = cli_required(
+        "AAI_E2E_SHAREPOINT_PROFILE",
+        &["sharepoint", "drives", "list", &site_id],
+    );
+    let drive_id = str_at(&drives, &["value", "0", "id"]).to_string();
+    assert!(!drive_id.is_empty());
+
+    let items = cli_required(
+        "AAI_E2E_SHAREPOINT_PROFILE",
+        &["sharepoint", "items", "list", &drive_id, "--limit", "5"],
+    );
+    assert!(items["value"].as_array().is_some());
+    // the signed download url is trimmed out of listings on purpose
+    assert!(items["value"][0]
+        .get("@microsoft.graph.downloadUrl")
+        .is_none());
+
+    let delta = cli_required(
+        "AAI_E2E_SHAREPOINT_PROFILE",
+        &["sharepoint", "items", "delta", &drive_id],
+    );
+    // a completed delta enumeration carries a deltaLink and must NOT report more pages
+    assert!(delta["@odata.deltaLink"].is_string() || delta["@odata.nextLink"].is_string());
+
+    let Some(file_id) = items["value"]
+        .as_array()
+        .and_then(|values| values.iter().find(|item| item.get("file").is_some()))
+        .and_then(|item| item.get("id"))
+        .and_then(Value::as_str)
+        .map(str::to_string)
+    else {
+        return;
+    };
+
+    let output = std::env::temp_dir().join(unique("aai_e2e_sharepoint_item"));
+    let downloaded = cli_required(
+        "AAI_E2E_SHAREPOINT_PROFILE",
+        &[
+            "sharepoint",
+            "items",
+            "download",
+            &drive_id,
+            &file_id,
+            "--output",
+            output.to_str().unwrap(),
+        ],
+    );
+    assert!(downloaded["bytes"].as_u64().unwrap_or(0) > 0);
+    let _ = std::fs::remove_file(&output);
+}

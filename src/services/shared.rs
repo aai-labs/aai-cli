@@ -209,6 +209,14 @@ pub(crate) fn openpanel_base(profile: &Profile) -> String {
         .unwrap_or_else(|| "https://api.openpanel.dev".to_string())
 }
 
+pub(crate) fn graph_base(profile: &Profile) -> String {
+    profile
+        .base_url
+        .as_deref()
+        .map(trim_url)
+        .unwrap_or_else(|| "https://graph.microsoft.com/v1.0".to_string())
+}
+
 pub(crate) fn posthog_base(profile: &Profile) -> String {
     profile
         .base_url

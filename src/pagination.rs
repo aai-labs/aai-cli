@@ -17,6 +17,8 @@ const COLLECTION_KEYS: &[&str] = &[
     "fields",
     "drives",
     "permissions",
+    // Microsoft Graph wraps every collection in "value" (singular).
+    "value",
 ];
 
 pub(crate) fn annotate(value: Value, command_args: &[String]) -> Value {
@@ -152,7 +154,11 @@ fn continuation(value: &Value) -> Option<Continuation> {
         }
     }
 
-    for (pointer, source) in [("/next", "next"), ("/_links/next", "_links.next")] {
+    for (pointer, source) in [
+        ("/next", "next"),
+        ("/_links/next", "_links.next"),
+        ("/@odata.nextLink", "@odata.nextLink"),
+    ] {
         if let Some(next_url) = value.pointer(pointer).and_then(Value::as_str) {
             if !next_url.is_empty() {
                 return Some(Continuation {
@@ -550,5 +556,48 @@ mod tests {
 
     fn strings(values: &[&str]) -> Vec<String> {
         values.iter().map(|value| value.to_string()).collect()
+    }
+
+    #[test]
+    fn counts_graph_value_collection() {
+        let value = json!({
+            "value": [{"id": "a"}, {"id": "b"}, {"id": "c"}]
+        });
+        let args = strings(&["aai-cli", "sharepoint", "drives", "list"]);
+        let output = annotate(value, &args);
+
+        // "value" must register as a collection: without it, Graph list responses
+        // report no count and fall through to "not_applicable".
+        assert_eq!(output["_aai"]["pagination"]["returned_count"], 3);
+        assert_eq!(output["_aai"]["pagination"]["status"], "unknown");
+    }
+
+    #[test]
+    fn detects_odata_next_link_continuation() {
+        let value = json!({
+            "value": [{"id": "a"}],
+            "@odata.nextLink": "https://graph.microsoft.com/v1.0/sites/s1/drives?$skiptoken=ABC123"
+        });
+        let args = strings(&["aai-cli", "sharepoint", "drives", "list"]);
+        let output = annotate(value, &args);
+
+        let pagination = &output["_aai"]["pagination"];
+        assert_eq!(pagination["has_more"], true);
+        assert_eq!(pagination["continuation"]["source"], "@odata.nextLink");
+    }
+
+    #[test]
+    fn odata_delta_link_is_not_treated_as_a_next_page() {
+        let value = json!({
+            "value": [{"id": "a"}],
+            "@odata.deltaLink": "https://graph.microsoft.com/v1.0/drives/d1/root/delta?token=XYZ"
+        });
+        let args = strings(&["aai-cli", "sharepoint", "items", "delta"]);
+        let output = annotate(value, &args);
+
+        // deltaLink is a cursor for the *next sync run*, not another page of this
+        // result, so it must not surface as a continuation.
+        assert!(output["_aai"]["pagination"]["continuation"].is_null());
+        assert!(output["_aai"]["pagination"]["has_more"].is_null());
     }
 }

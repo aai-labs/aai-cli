@@ -1,8 +1,8 @@
 use std::sync::atomic::{AtomicU64, Ordering};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 use base64::{engine::general_purpose, Engine as _};
-use reqwest::{Client, Method, RequestBuilder};
+use reqwest::{Client, Method, RequestBuilder, StatusCode};
 use serde_json::Value;
 
 use crate::{config::Profile, error::AppError};
@@ -96,7 +96,35 @@ impl ApiClient {
         .await?;
         Ok(attach_provider_next_url(value, next_url))
     }
+}
 
+/// Maximum number of retries after the initial attempt.
+const MAX_RETRY_ATTEMPTS: u32 = 3;
+/// Upper bound on a single wait, so a hostile or mistaken Retry-After cannot hang the CLI.
+const MAX_RETRY_DELAY: Duration = Duration::from_secs(60);
+
+/// How long to wait before re-sending, or `None` to stop and surface the response.
+///
+/// Only provider throttling (429) and transient unavailability (503) are retried;
+/// every other status, success or failure, belongs to the caller. `attempt` is
+/// zero-based. `Retry-After` is honoured when it parses as seconds — the form Graph
+/// sends — and the HTTP-date form falls back to exponential backoff rather than
+/// failing the request outright.
+fn retry_delay(status: StatusCode, retry_after: Option<&str>, attempt: u32) -> Option<Duration> {
+    if attempt >= MAX_RETRY_ATTEMPTS {
+        return None;
+    }
+    if status != StatusCode::TOO_MANY_REQUESTS && status != StatusCode::SERVICE_UNAVAILABLE {
+        return None;
+    }
+    let delay = retry_after
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .map(Duration::from_secs)
+        .unwrap_or_else(|| Duration::from_secs(1u64 << attempt));
+    Some(delay.min(MAX_RETRY_DELAY))
+}
+
+impl ApiClient {
     async fn request_with(
         client: &Client,
         service: &'static str,
@@ -111,16 +139,32 @@ impl ApiClient {
             token: Some(token),
             ..profile.clone()
         };
-        let mut request = client.request(method, &url);
-        request = apply_auth(request, service, operation, &effective)?;
-        request = request.header("Accept", "application/json");
-        if let Some(body) = body {
-            request = request.json(&body);
-        }
+        let mut attempt: u32 = 0;
+        let response = loop {
+            let mut request = client.request(method.clone(), &url);
+            request = apply_auth(request, service, operation, &effective)?;
+            request = request.header("Accept", "application/json");
+            if let Some(body) = &body {
+                request = request.json(body);
+            }
 
-        let response = request.send().await.map_err(|err| {
-            AppError::internal(service, operation, format!("request failed: {err}"))
-        })?;
+            let response = request.send().await.map_err(|err| {
+                AppError::internal(service, operation, format!("request failed: {err}"))
+            })?;
+
+            let retry_after = response
+                .headers()
+                .get(reqwest::header::RETRY_AFTER)
+                .and_then(|value| value.to_str().ok())
+                .map(str::to_string);
+            match retry_delay(response.status(), retry_after.as_deref(), attempt) {
+                Some(delay) => {
+                    tokio::time::sleep(delay).await;
+                    attempt += 1;
+                }
+                None => break response,
+            }
+        };
         let status = response.status();
         let next_url = response
             .headers()
@@ -635,5 +679,74 @@ mod tests {
 
         assert_eq!(error.code, "provider_api_error");
         assert_eq!(error.status, Some(302));
+    }
+
+    #[test]
+    fn honors_retry_after_seconds_on_429() {
+        let delay = retry_delay(StatusCode::TOO_MANY_REQUESTS, Some("7"), 0);
+        assert_eq!(delay, Some(Duration::from_secs(7)));
+    }
+
+    #[test]
+    fn retries_503_service_unavailable() {
+        let delay = retry_delay(StatusCode::SERVICE_UNAVAILABLE, Some("2"), 0);
+        assert_eq!(delay, Some(Duration::from_secs(2)));
+    }
+
+    #[test]
+    fn falls_back_to_exponential_backoff_without_retry_after() {
+        assert_eq!(
+            retry_delay(StatusCode::TOO_MANY_REQUESTS, None, 0),
+            Some(Duration::from_secs(1))
+        );
+        assert_eq!(
+            retry_delay(StatusCode::TOO_MANY_REQUESTS, None, 1),
+            Some(Duration::from_secs(2))
+        );
+        assert_eq!(
+            retry_delay(StatusCode::TOO_MANY_REQUESTS, None, 2),
+            Some(Duration::from_secs(4))
+        );
+    }
+
+    #[test]
+    fn ignores_unparsable_retry_after() {
+        // Graph sends seconds; an HTTP-date or junk must not abort the retry.
+        assert_eq!(
+            retry_delay(
+                StatusCode::TOO_MANY_REQUESTS,
+                Some("Wed, 21 Oct 2026 07:28:00 GMT"),
+                0
+            ),
+            Some(Duration::from_secs(1))
+        );
+    }
+
+    #[test]
+    fn caps_an_absurd_retry_after() {
+        assert_eq!(
+            retry_delay(StatusCode::TOO_MANY_REQUESTS, Some("86400"), 0),
+            Some(MAX_RETRY_DELAY)
+        );
+    }
+
+    #[test]
+    fn does_not_retry_client_errors() {
+        assert_eq!(retry_delay(StatusCode::NOT_FOUND, Some("5"), 0), None);
+        assert_eq!(retry_delay(StatusCode::BAD_REQUEST, None, 0), None);
+        assert_eq!(retry_delay(StatusCode::UNAUTHORIZED, None, 0), None);
+    }
+
+    #[test]
+    fn does_not_retry_success() {
+        assert_eq!(retry_delay(StatusCode::OK, None, 0), None);
+    }
+
+    #[test]
+    fn stops_after_max_attempts() {
+        assert_eq!(
+            retry_delay(StatusCode::TOO_MANY_REQUESTS, Some("1"), MAX_RETRY_ATTEMPTS),
+            None
+        );
     }
 }

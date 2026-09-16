@@ -53,6 +53,8 @@ pub enum Command {
     Openpanel(OpenpanelCommand),
     /// Read PostHog projects, queries, insights, persons, cohorts, dashboards, and annotations.
     Posthog(PosthogCommand),
+    /// Browse SharePoint sites, drives, and files via Microsoft Graph.
+    Sharepoint(SharepointCommand),
 }
 
 #[derive(Debug, Args)]
@@ -3165,6 +3167,131 @@ pub struct PrListArg {
     /// buried in creation order. Omitted = provider default (creation order).
     #[arg(long)]
     pub sort: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointCommand {
+    #[command(subcommand)]
+    pub resource: SharepointResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SharepointResource {
+    /// Resolve and read SharePoint sites.
+    Sites(SharepointSitesCommand),
+    /// List the document libraries (drives) of a site.
+    Drives(SharepointDrivesCommand),
+    /// List, read, download, and upload drive items.
+    Items(SharepointItemsCommand),
+    /// Call an uncommon Microsoft Graph endpoint with profile authentication.
+    Request(GenericRequest),
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointSitesCommand {
+    #[command(subcommand)]
+    pub action: SharepointSitesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SharepointSitesAction {
+    /// Search sites across the tenant.
+    List(SharepointSitesList),
+    /// Read one site by id or by its SharePoint URL.
+    Get(SharepointSiteRef),
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointSitesList {
+    /// Free-text site search. Defaults to every site the account can see.
+    #[arg(long)]
+    pub search: Option<String>,
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointSiteRef {
+    /// Site id, or a SharePoint URL such as https://contoso.sharepoint.com/sites/eng.
+    pub site: String,
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointDrivesCommand {
+    #[command(subcommand)]
+    pub action: SharepointDrivesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SharepointDrivesAction {
+    /// List the drives of a site.
+    List(SharepointSiteRef),
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointItemsCommand {
+    #[command(subcommand)]
+    pub action: SharepointItemsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum SharepointItemsAction {
+    /// List the children of a drive folder.
+    List(SharepointItemsList),
+    /// Read one drive item's metadata.
+    Get(SharepointItemRef),
+    /// Download a drive item's content to a local file.
+    Download(SharepointItemDownload),
+    /// Upload local file content to a path in a drive.
+    Upload(SharepointItemUpload),
+    /// Enumerate drive changes, optionally since a previous delta token.
+    Delta(SharepointItemsDelta),
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointItemsList {
+    pub drive_id: String,
+    /// Folder path relative to the drive root. Defaults to the root itself.
+    #[arg(long)]
+    pub path: Option<String>,
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointItemRef {
+    pub drive_id: String,
+    pub item_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointItemDownload {
+    pub drive_id: String,
+    pub item_id: String,
+    /// Local file path to write the content to.
+    #[arg(long)]
+    pub output: String,
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointItemUpload {
+    pub drive_id: String,
+    /// Destination path relative to the drive root, e.g. "Reports/q3.xlsx".
+    pub path: String,
+    /// Local file to upload.
+    #[arg(long)]
+    pub file: String,
+    /// Required: uploading replaces remote file content.
+    #[arg(long)]
+    pub allow_write: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct SharepointItemsDelta {
+    pub drive_id: String,
+    /// Delta token from a previous run's @odata.deltaLink.
+    #[arg(long)]
+    pub token: Option<String>,
 }
 
 #[cfg(test)]

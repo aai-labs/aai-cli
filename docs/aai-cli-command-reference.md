@@ -523,6 +523,38 @@ aai-cli apollo conversations get-export <export-id>
 
 For every Apollo command that accepts `--json`, typed flags override matching top-level JSON fields. Repeat `--query key=value` for Apollo parameters that do not have first-class flags.
 
+## SharePoint
+
+SharePoint is an app-only Microsoft Graph integration: commands act as the organisation's own Entra app, which reaches only the sites its administrator granted under `Sites.Selected`. A `403` on a site means that site was not granted to the app — it is not a CLI misconfiguration.
+
+Configure `profile.base_url` to override the default `https://graph.microsoft.com/v1.0`; almost never needed. `profile.tenant_id` is required: it selects the tenant-scoped token authority, and `common` cannot issue app-only tokens.
+
+```bash
+aai-cli sharepoint sites list [--search TEXT] [--limit N]
+aai-cli sharepoint sites get <site>
+aai-cli sharepoint drives list <site>
+aai-cli sharepoint items list <drive-id> [--path FOLDER] [--limit N]
+aai-cli sharepoint items get <drive-id> <item-id>
+aai-cli sharepoint items download <drive-id> <item-id> --output PATH
+aai-cli sharepoint items upload <drive-id> <path> --file PATH --allow-write
+aai-cli sharepoint items delta <drive-id> [--token TOKEN]
+aai-cli sharepoint request <method> <path> [--query k=v] [--json BODY] [--allow-write]
+```
+
+`<site>` accepts either a Graph composite site id (`host,siteGuid,webGuid`) or a SharePoint URL such as `https://contoso.sharepoint.com/sites/engineering`. URLs are rewritten to Graph's `{hostname}:/{path}` addressing; anything else is passed through untouched, so an id the caller already holds is never reinterpreted.
+
+`sites list` requires a search term and defaults to `*`. Under `Sites.Selected` the app cannot enumerate its granted sites, so it normally returns 403; agents should work from the site URLs they were configured with.
+
+`items list` takes `--path` relative to the drive root (`--path "Shared Documents/2026"`); omit it to list the root. Path segments are percent-encoded for you; do not pre-encode.
+
+`items upload` takes the **destination path**, not an item id, and creates or replaces the file there. `--allow-write` is required because it overwrites remote content. Pair it with the `excel` command group to round-trip a spreadsheet: `items download`, edit locally, `items upload`.
+
+`items delta` enumerates drive changes. The response carries `@odata.deltaLink`; pass its `token` value back as `--token` to get only what changed since. Deleted items appear with a `deleted` facet rather than disappearing.
+
+List commands trim the page-local `value` array to the fields agents need while preserving the OData envelope, so `@odata.nextLink` and `@odata.deltaLink` survive. `get` commands return the provider object untrimmed. `@microsoft.graph.downloadUrl` is dropped from listings — it is a bulky short-lived signed URL, and `items download` re-derives it.
+
+Graph throttling (`429`, and `503` during service blips) is retried automatically by the shared HTTP layer, honouring `Retry-After` up to a 60s cap for at most three retries. A throttling error that surfaces to the caller has already been retried.
+
 ## Pagination
 
 Every successful service response contains:

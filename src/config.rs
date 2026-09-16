@@ -32,6 +32,10 @@ pub struct Profile {
     pub client_secret: Option<String>,
     pub client_secret_env: Option<String>,
     pub client_secret_secret: Option<String>,
+    /// OAuth tenant for tenant-scoped authorities (Microsoft identity platform).
+    pub tenant_id: Option<String>,
+    /// OAuth scope override. Microsoft app-only profiles default to the Graph `.default` scope.
+    pub scope: Option<String>,
     pub api_token: Option<String>,
     pub api_token_env: Option<String>,
     pub api_token_secret: Option<String>,
