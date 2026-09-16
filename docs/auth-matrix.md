@@ -69,5 +69,5 @@ This project primarily consumes credentials supplied by users or agents. Microso
 - `microsoft_delegated` uses `tenant_id`, `client_id`, `scope`, and `refresh_token_secret`. Run `microsoft auth login` once; it requires `offline_access`, validates `/me` against `profile.user_id` when configured, and stores the refresh token encrypted.
 - Refresh responses can rotate the delegated refresh token. The CLI replaces the encrypted value before returning the Graph response.
 - `microsoft auth status` is noninteractive. A revoked or expired delegated credential fails with an instruction to run `microsoft auth login` again.
-- Microsoft To Do commands require `microsoft_delegated`; Graph does not support application permissions for To Do tasks. The typed commands reject app-only profiles before making a request.
+- Microsoft To Do commands require `microsoft_delegated`. Graph's application-permission support varies by To Do operation, so the typed surface uses one delegated identity for complete list/task CRUD and rejects app-only profiles before making a request.
 - Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.

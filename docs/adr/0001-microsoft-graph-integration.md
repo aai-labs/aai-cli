@@ -7,7 +7,7 @@
 
 Agents need repeatable access to Microsoft 365 without a person signing in for every run. The initial coverage must span Outlook, OneDrive, SharePoint, Teams, Microsoft To Do, and Planner while preserving the CLI's JSON output, structured errors, provider response shapes, and centralized authentication behavior.
 
-Microsoft Graph has two materially different authorization models. Client credentials are suitable for unattended organization-owned work, while some user-owned APIs—notably Microsoft To Do—require delegated authorization. Delegated access tokens are short-lived and Microsoft can rotate the refresh token when it is used.
+Microsoft Graph has two materially different authorization models. Client credentials are suitable for unattended organization-owned work, while delegated authorization preserves a user's identity and is the consistent model for complete Microsoft To Do CRUD across operations. Delegated access tokens are short-lived and Microsoft can rotate the refresh token when it is used.
 
 ## Decision
 
@@ -25,7 +25,7 @@ Expose one `microsoft` top-level command with typed resource groups and retain `
 1. Depend on Microsoft Graph PowerShell at runtime. Rejected because it would add a large runtime dependency and reintroduce interactive session state. PowerShell remains provisioning-only.
 2. Persist access tokens. Rejected because they expire quickly and do not provide durable unattended access.
 3. Create separate top-level commands for every Microsoft product. Rejected because they share one Graph authentication and pagination model; a single namespace makes profile and generic-request behavior consistent.
-4. Use app-only authorization exclusively. Rejected because Microsoft To Do does not support application permissions.
+4. Use app-only authorization exclusively. Rejected because application-permission support varies across Microsoft To Do operations, while complete list/task CRUD needs one consistent actor model.
 
 ## Consequences
 

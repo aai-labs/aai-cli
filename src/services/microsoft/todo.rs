@@ -157,7 +157,7 @@ fn ensure_delegated(ctx: &Context) -> Result<(), AppError> {
     Err(AppError::unsupported_auth(
         super::SERVICE,
         "todo",
-        "Microsoft To Do Graph APIs do not support application permissions; use a microsoft_delegated profile",
+        "Microsoft To Do application-permission support varies by operation; use a microsoft_delegated profile for this CLI's complete list/task CRUD workflow",
         Some(json!({"required_auth_type": "microsoft_delegated", "required_scope": "Tasks.ReadWrite"})),
     ))
 }

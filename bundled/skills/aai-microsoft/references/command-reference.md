@@ -15,7 +15,7 @@ microsoft auth status
 
 `auth login` is only for a `microsoft_delegated` profile. It performs one device-code login and saves the refresh token encrypted. Normal commands, including `auth status`, are noninteractive. A `microsoft_client_credentials` profile uses its encrypted client secret on every run.
 
-Microsoft To Do supports delegated auth only. Other typed commands work when the selected profile has the corresponding Graph application or delegated permissions.
+This CLI requires delegated auth for Microsoft To Do so its full list/task CRUD workflow uses one consistent identity model. Other typed commands work when the selected profile has the corresponding Graph application or delegated permissions.
 
 ## Typed commands
 
