@@ -75,7 +75,7 @@ pub enum MicrosoftResource {
     Calendar(MicrosoftCalendarCommand),
     /// Read and manage Outlook contacts.
     Contacts(MicrosoftContactsCommand),
-    /// Read and manage SharePoint lists and list items.
+    /// Transfer SharePoint files and manage lists and list items.
     Sharepoint(MicrosoftSharepointCommand),
     /// Read Teams, channels, members, messages, and chats.
     Teams(MicrosoftTeamsCommand),
@@ -213,8 +213,55 @@ pub struct MicrosoftSharepointCommand {
 
 #[derive(Debug, Subcommand)]
 pub enum MicrosoftSharepointResource {
+    /// Upload, download, or delete files in a SharePoint document library.
+    Files(MicrosoftSharepointFilesCommand),
     Lists(MicrosoftSharepointListsCommand),
     Items(MicrosoftSharepointItemsCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFilesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftSharepointFilesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointFilesAction {
+    /// Upload a local file to a SharePoint document library.
+    Upload(MicrosoftSharepointFileUpload),
+    /// Download a SharePoint document-library file to a local path.
+    Download(MicrosoftSharepointFileDownload),
+    /// Delete a file from a SharePoint document library.
+    Delete(MicrosoftSharepointFileTarget),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileTarget {
+    /// Path relative to the document-library root.
+    pub path: String,
+    /// SharePoint document-library drive ID.
+    #[arg(long)]
+    pub drive_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileUpload {
+    /// Local file containing the bytes to upload.
+    pub file: String,
+    #[command(flatten)]
+    pub target: MicrosoftSharepointFileTarget,
+    /// MIME type sent to Microsoft Graph.
+    #[arg(long, default_value = "application/octet-stream")]
+    pub mime_type: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileDownload {
+    #[command(flatten)]
+    pub target: MicrosoftSharepointFileTarget,
+    /// Local output path. File content is never written to stdout.
+    #[arg(long)]
+    pub output: String,
 }
 
 #[derive(Debug, Args)]
@@ -3927,6 +3974,31 @@ mod tests {
             r#"{"title":"updated"}"#,
         ])
         .expect("parse planner task update");
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            "report.docx",
+            "--drive-id",
+            "drive-id",
+            "--output",
+            "report.docx",
+        ])
+        .expect("parse explicit SharePoint download");
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            "report.docx",
+            "--output",
+            "report.docx",
+        ])
+        .expect_err("SharePoint file commands require --drive-id");
     }
 
     #[test]

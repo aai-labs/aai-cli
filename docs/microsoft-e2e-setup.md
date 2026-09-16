@@ -185,7 +185,7 @@ The three Given/When/Then tests exercise complete, isolated flows:
 - SharePoint list-item create/read/update/delete.
 - Microsoft To Do list/task and Planner task create/read/update/delete.
 - Team, channel, team-member, channel-message, and chat reads.
-- A minimal Word document uploaded to OneDrive, downloaded and inspected, uploaded to SharePoint, downloaded and inspected again, then deleted from both drives.
+- A minimal Word document uploaded through `microsoft files`, downloaded and inspected, uploaded through `microsoft sharepoint files`, downloaded and inspected again, then deleted from both drives.
 
 Every created resource has a best-effort cleanup guard so an assertion failure does not normally leave test data behind. The tests also explicitly verify deletion where Graph supports an immediate read-after-delete check. Run serially because they share one mailbox and collaboration workspace.
 

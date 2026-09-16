@@ -61,28 +61,29 @@ async fn files(
     action: MicrosoftFilesAction,
 ) -> Result<Value, AppError> {
     match action {
-        MicrosoftFilesAction::Upload(args) => upload(client, ctx, args).await,
-        MicrosoftFilesAction::Download(args) => download(client, ctx, args).await,
-        MicrosoftFilesAction::Delete(args) => delete(client, ctx, args).await,
+        MicrosoftFilesAction::Upload(args) => upload(client, ctx, "files.upload", args).await,
+        MicrosoftFilesAction::Download(args) => download(client, ctx, "files.download", args).await,
+        MicrosoftFilesAction::Delete(args) => delete(client, ctx, "files.delete", args).await,
     }
 }
 
-async fn upload(
+pub(super) async fn upload(
     client: &ApiClient,
     ctx: &Context,
+    operation: &'static str,
     args: MicrosoftFileUpload,
 ) -> Result<Value, AppError> {
     let bytes = fs::read(&args.file).map_err(|err| {
         AppError::invalid_input(
             SERVICE,
-            "files.upload",
+            operation,
             format!("failed to read {}: {err}", args.file),
         )
     })?;
     let response = client
         .request_bytes(
             SERVICE,
-            "files.upload",
+            operation,
             ctx.profile(),
             BytesRequest {
                 method: Method::PUT,
@@ -96,33 +97,35 @@ async fn upload(
     Ok(redact_drive_item(response.body))
 }
 
-async fn download(
+pub(super) async fn download(
     client: &ApiClient,
     ctx: &Context,
+    operation: &'static str,
     args: MicrosoftFileDownload,
 ) -> Result<Value, AppError> {
     let bytes = client
         .download(
             SERVICE,
-            "files.download",
+            operation,
             ctx.profile(),
             content_url(ctx, &args.target),
         )
         .await?;
-    let mut result = write_download(SERVICE, "files.download", &args.output, &bytes)?;
+    let mut result = write_download(SERVICE, operation, &args.output, &bytes)?;
     result["path"] = json!(args.target.path);
     Ok(result)
 }
 
-async fn delete(
+pub(super) async fn delete(
     client: &ApiClient,
     ctx: &Context,
+    operation: &'static str,
     args: MicrosoftFileTarget,
 ) -> Result<Value, AppError> {
     client
         .request(
             SERVICE,
-            "files.delete",
+            operation,
             ctx.profile(),
             Method::DELETE,
             item_url(ctx, &args),

@@ -833,6 +833,9 @@ microsoft request <get|head|post|put|patch|delete> <relative-path> [--query key=
 microsoft files upload <local-file> <remote-path> [--drive-id ID | --user-id ID] [--mime-type TYPE]
 microsoft files download <remote-path> [--drive-id ID | --user-id ID] --output PATH
 microsoft files delete <remote-path> [--drive-id ID | --user-id ID]
+microsoft sharepoint files upload <local-file> <remote-path> --drive-id ID [--mime-type TYPE]
+microsoft sharepoint files download <remote-path> --drive-id ID --output PATH
+microsoft sharepoint files delete <remote-path> --drive-id ID
 microsoft mail messages <list|get|create|update|delete> ...
 microsoft mail send [--user-id ID] --json JSON_OR_PATH
 microsoft calendar events <list|get|create|update|delete> ...
@@ -847,7 +850,7 @@ microsoft planner buckets get <ID>
 microsoft planner tasks <get|create|update|delete> ...
 ```
 
-`auth login` is the only interactive operation. It saves an encrypted delegated refresh token after verifying the configured user. Every other command acquires fresh access tokens from saved credentials. Without `--drive-id`, file commands use `--user-id` or `profile.user_id`; `--drive-id` targets a SharePoint or OneDrive document library directly. Downloaded bytes are written only to `--output`.
+`auth login` is the only interactive operation. It saves an encrypted delegated refresh token after verifying the configured user. Every other command acquires fresh access tokens from saved credentials. `microsoft files` addresses OneDrive by default; the explicit `microsoft sharepoint files` commands require `--drive-id` for the target document library. Downloaded bytes are written only to `--output`.
 
 Typed user-resource commands use `--user-id` or `profile.user_id`. Create/update bodies use `--json JSON_OR_PATH` (or `--json -` for stdin). List commands aggregate Graph's `@odata.nextLink` pages into the provider's `value` array up to `--limit`.
 

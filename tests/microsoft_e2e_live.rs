@@ -100,9 +100,18 @@ struct Cleanup {
 
 impl Cleanup {
     fn run(&mut self) {
-        for extra in [vec!["--drive-id", self.drive_id.as_str()], vec![]] {
-            let mut args = vec!["microsoft", "files", "delete", self.remote_name.as_str()];
-            args.extend(extra);
+        for args in [
+            vec![
+                "microsoft",
+                "sharepoint",
+                "files",
+                "delete",
+                self.remote_name.as_str(),
+                "--drive-id",
+                self.drive_id.as_str(),
+            ],
+            vec!["microsoft", "files", "delete", self.remote_name.as_str()],
+        ] {
             let _ = Command::new(env!("CARGO_BIN_EXE_aai-cli"))
                 .args([
                     "--config",
@@ -987,6 +996,7 @@ fn word_onedrive_to_sharepoint_roundtrip_scenario() {
         &profile,
         &[
             "microsoft",
+            "sharepoint",
             "files",
             "upload",
             from_onedrive.to_str().unwrap(),
@@ -1002,6 +1012,7 @@ fn word_onedrive_to_sharepoint_roundtrip_scenario() {
         &profile,
         &[
             "microsoft",
+            "sharepoint",
             "files",
             "download",
             &remote_name,
@@ -1018,6 +1029,7 @@ fn word_onedrive_to_sharepoint_roundtrip_scenario() {
         &profile,
         &[
             "microsoft",
+            "sharepoint",
             "files",
             "delete",
             &remote_name,
@@ -1035,6 +1047,7 @@ fn word_onedrive_to_sharepoint_roundtrip_scenario() {
         &profile,
         &[
             "microsoft",
+            "sharepoint",
             "files",
             "download",
             &remote_name,

@@ -3,8 +3,11 @@ use serde_json::Value;
 
 use crate::{
     cli::{
-        MicrosoftListItemArg, MicrosoftSharepointCommand, MicrosoftSharepointItemsAction,
-        MicrosoftSharepointListsAction, MicrosoftSharepointResource,
+        MicrosoftFileDownload, MicrosoftFileTarget, MicrosoftFileUpload, MicrosoftListItemArg,
+        MicrosoftSharepointCommand, MicrosoftSharepointFileDownload, MicrosoftSharepointFileTarget,
+        MicrosoftSharepointFileUpload, MicrosoftSharepointFilesAction,
+        MicrosoftSharepointItemsAction, MicrosoftSharepointListsAction,
+        MicrosoftSharepointResource,
     },
     config::Context,
     error::AppError,
@@ -19,6 +22,23 @@ pub(super) async fn dispatch(
     command: MicrosoftSharepointCommand,
 ) -> Result<Value, AppError> {
     match command.resource {
+        MicrosoftSharepointResource::Files(command) => match command.action {
+            MicrosoftSharepointFilesAction::Upload(args) => {
+                super::upload(client, ctx, "sharepoint.files.upload", file_upload(args)).await
+            }
+            MicrosoftSharepointFilesAction::Download(args) => {
+                super::download(
+                    client,
+                    ctx,
+                    "sharepoint.files.download",
+                    file_download(args),
+                )
+                .await
+            }
+            MicrosoftSharepointFilesAction::Delete(args) => {
+                super::delete(client, ctx, "sharepoint.files.delete", file_target(args)).await
+            }
+        },
         MicrosoftSharepointResource::Lists(command) => match command.action {
             MicrosoftSharepointListsAction::List(args) => {
                 collection(
@@ -113,6 +133,29 @@ pub(super) async fn dispatch(
                 .await
             }
         },
+    }
+}
+
+fn file_target(args: MicrosoftSharepointFileTarget) -> MicrosoftFileTarget {
+    MicrosoftFileTarget {
+        path: args.path,
+        drive_id: Some(args.drive_id),
+        user_id: None,
+    }
+}
+
+fn file_upload(args: MicrosoftSharepointFileUpload) -> MicrosoftFileUpload {
+    MicrosoftFileUpload {
+        file: args.file,
+        target: file_target(args.target),
+        mime_type: args.mime_type,
+    }
+}
+
+fn file_download(args: MicrosoftSharepointFileDownload) -> MicrosoftFileDownload {
+    MicrosoftFileDownload {
+        target: file_target(args.target),
+        output: args.output,
     }
 }
 

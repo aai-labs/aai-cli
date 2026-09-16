@@ -24,6 +24,10 @@ microsoft files upload <FILE> <PATH> [--drive-id ID | --user-id ID] [--mime-type
 microsoft files download <PATH> [--drive-id ID | --user-id ID] --output PATH
 microsoft files delete <PATH> [--drive-id ID | --user-id ID]
 
+microsoft sharepoint files upload <FILE> <PATH> --drive-id ID [--mime-type TYPE]
+microsoft sharepoint files download <PATH> --drive-id ID --output PATH
+microsoft sharepoint files delete <PATH> --drive-id ID
+
 microsoft mail messages list [--user-id ID] [--limit N]
 microsoft mail messages get <ID> [--user-id ID]
 microsoft mail messages create [--user-id ID] --json JSON_OR_PATH
