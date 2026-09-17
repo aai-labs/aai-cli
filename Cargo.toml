@@ -23,7 +23,7 @@ rustls-connector = { version = "0.22", default-features = false, features = ["we
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 thiserror = "2.0"
-tokio = { version = "1.48", features = ["macros", "rt-multi-thread"] }
+tokio = { version = "1.48", features = ["macros", "rt-multi-thread", "time"] }
 toml = "0.9"
 umya-spreadsheet = "3.0.1"
 urlencoding = "2.1"

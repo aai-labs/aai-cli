@@ -53,6 +53,745 @@ pub enum Command {
     Openpanel(OpenpanelCommand),
     /// Read PostHog projects, queries, insights, persons, cohorts, dashboards, and annotations.
     Posthog(PosthogCommand),
+    /// Authenticate to and call Microsoft Graph.
+    Microsoft(MicrosoftCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftResource {
+    /// Bootstrap or validate Microsoft authentication.
+    Auth(MicrosoftAuthCommand),
+    /// Upload, download, or delete OneDrive and SharePoint drive files.
+    Files(MicrosoftFilesCommand),
+    /// Read and manage Outlook messages, drafts, and sending.
+    Mail(MicrosoftMailCommand),
+    /// Read and manage Outlook calendar events.
+    Calendar(MicrosoftCalendarCommand),
+    /// Read and manage Outlook contacts.
+    Contacts(MicrosoftContactsCommand),
+    /// Transfer SharePoint files and manage lists and list items.
+    Sharepoint(MicrosoftSharepointCommand),
+    /// Read Teams, channels, members, messages, and chats.
+    Teams(MicrosoftTeamsCommand),
+    /// Read and manage Microsoft To Do lists and tasks (delegated only).
+    Todo(MicrosoftTodoCommand),
+    /// Read Planner plans/buckets and manage Planner tasks.
+    Planner(MicrosoftPlannerCommand),
+    /// Read and edit Excel workbooks stored in OneDrive or SharePoint.
+    Excel(MicrosoftExcelCommand),
+    /// Call a Microsoft Graph endpoint with profile authentication.
+    Request(GenericRequest),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftExcelResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelResource {
+    /// Inspect and manage workbook worksheets.
+    Worksheets(MicrosoftExcelWorksheetsCommand),
+    /// Read, update, or clear worksheet ranges.
+    Ranges(MicrosoftExcelRangesCommand),
+    /// Inspect and manage workbook tables and rows.
+    Tables(MicrosoftExcelTablesCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftWorkbookTarget {
+    /// Drive item ID of the .xlsx workbook.
+    #[arg(long, conflicts_with = "path", required_unless_present = "path")]
+    pub item_id: Option<String>,
+    /// Path to the .xlsx workbook relative to the selected drive root.
+    #[arg(long, conflicts_with = "item_id", required_unless_present = "item_id")]
+    pub path: Option<String>,
+    /// SharePoint or OneDrive drive ID. Omit to use the configured user's OneDrive.
+    #[arg(long, conflicts_with = "user_id")]
+    pub drive_id: Option<String>,
+    /// User ID whose OneDrive should be used. Defaults to profile.user_id.
+    #[arg(long, conflicts_with = "drive_id")]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelWorksheetsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelWorksheetsAction {
+    /// List worksheet tabs in a workbook.
+    List(MicrosoftExcelWorksheetTarget),
+    /// Add a worksheet tab.
+    Add(MicrosoftExcelWorksheetMutation),
+    /// Rename a worksheet tab.
+    Rename(MicrosoftExcelWorksheetRename),
+    /// Delete a worksheet tab.
+    Delete(MicrosoftExcelWorksheetDelete),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetDelete {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetMutation {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Name for the new worksheet.
+    pub name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetRename {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or current name.
+    pub worksheet: String,
+    /// New worksheet name.
+    pub name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelRangesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelRangesAction {
+    /// Read a worksheet range.
+    Get(MicrosoftExcelRangeTarget),
+    /// Update values, formulas, or number formats in a range.
+    Update(MicrosoftExcelRangeUpdate),
+    /// Clear values, formats, or all content in a range.
+    Clear(MicrosoftExcelRangeClear),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+    /// A1 range address, such as A1:C5.
+    pub range: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeUpdate {
+    #[command(flatten)]
+    pub target: MicrosoftExcelRangeTarget,
+    /// JSON matrix for the Graph `values` property.
+    #[arg(long)]
+    pub values: Option<String>,
+    /// JSON matrix for the Graph `formulas` property.
+    #[arg(long)]
+    pub formulas: Option<String>,
+    /// JSON matrix for the Graph `numberFormat` property.
+    #[arg(long)]
+    pub number_format: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeClear {
+    #[command(flatten)]
+    pub target: MicrosoftExcelRangeTarget,
+    /// Clear scope: Contents, Formats, or All.
+    #[arg(long, default_value = "Contents")]
+    pub apply_to: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTablesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelTablesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelTablesAction {
+    /// List workbook tables.
+    List(MicrosoftExcelTableWorkbookTarget),
+    /// Create a table over a worksheet range.
+    Create(MicrosoftExcelTableCreate),
+    /// Delete a table.
+    Delete(MicrosoftExcelTableTarget),
+    /// Inspect and append table rows.
+    #[command(subcommand)]
+    Rows(MicrosoftExcelTableRowsCommand),
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelTableRowsCommand {
+    /// List rows in a table.
+    List(MicrosoftExcelTableRowsList),
+    /// Append one or more rows to a table.
+    Append(MicrosoftExcelTableRowsAppend),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableWorkbookTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Table ID or name.
+    pub table: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableRowsList {
+    #[command(flatten)]
+    pub target: MicrosoftExcelTableTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableCreate {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+    /// Table range, such as A1:C10.
+    pub range: String,
+    /// Whether the first row is a header row.
+    #[arg(long)]
+    pub has_headers: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableRowsAppend {
+    #[command(flatten)]
+    pub target: MicrosoftExcelTableTarget,
+    /// JSON array of row arrays, for example [["Ada", "Ready"], ["Grace", "Blocked"]].
+    #[arg(long)]
+    pub values: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListArgs {
+    /// Maximum number of resources to aggregate across Graph pages.
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserArg {
+    /// User ID or UPN. Defaults to profile.user_id.
+    #[arg(long)]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserListArgs {
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserItemArg {
+    pub id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserCreate {
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    /// Provider JSON object, inline or from a path; use - to read stdin.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserUpdate {
+    pub id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    /// Provider JSON object, inline or from a path; use - to read stdin.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftMailCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftMailResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftMailResource {
+    Messages(MicrosoftMessagesCommand),
+    /// Send a message. JSON must contain the Graph sendMail request body.
+    Send(MicrosoftUserCreate),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftMessagesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftMessagesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftMessagesAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    /// Create a draft message.
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftCalendarCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftCalendarResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftCalendarResource {
+    Events(MicrosoftEventsCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftEventsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftEventsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftEventsAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftContactsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftContactsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftContactsAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftSharepointResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointResource {
+    /// Upload, download, or delete files in a SharePoint document library.
+    Files(MicrosoftSharepointFilesCommand),
+    Lists(MicrosoftSharepointListsCommand),
+    Items(MicrosoftSharepointItemsCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFilesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftSharepointFilesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointFilesAction {
+    /// Upload a local file to a SharePoint document library.
+    Upload(MicrosoftSharepointFileUpload),
+    /// Download a SharePoint document-library file to a local path.
+    Download(MicrosoftSharepointFileDownload),
+    /// Delete a file from a SharePoint document library.
+    Delete(MicrosoftSharepointFileTarget),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileTarget {
+    /// Path relative to the document-library root.
+    pub path: String,
+    /// SharePoint document-library drive ID.
+    #[arg(long)]
+    pub drive_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileUpload {
+    /// Local file containing the bytes to upload.
+    pub file: String,
+    #[command(flatten)]
+    pub target: MicrosoftSharepointFileTarget,
+    /// MIME type sent to Microsoft Graph.
+    #[arg(long, default_value = "application/octet-stream")]
+    pub mime_type: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileDownload {
+    #[command(flatten)]
+    pub target: MicrosoftSharepointFileTarget,
+    /// Local output path. File content is never written to stdout.
+    #[arg(long)]
+    pub output: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointListsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftSharepointListsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointListsAction {
+    List(MicrosoftSiteListArgs),
+    Get(MicrosoftSiteListArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointItemsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftSharepointItemsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointItemsAction {
+    List(MicrosoftListItemListArgs),
+    Get(MicrosoftListItemArg),
+    Create(MicrosoftListItemCreate),
+    Update(MicrosoftListItemUpdate),
+    Delete(MicrosoftListItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSiteListArgs {
+    pub site_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSiteListArg {
+    pub site_id: String,
+    pub list_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemListArgs {
+    pub site_id: String,
+    pub list_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemArg {
+    pub site_id: String,
+    pub list_id: String,
+    pub item_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemCreate {
+    pub site_id: String,
+    pub list_id: String,
+    /// Graph listItem JSON. Usually `{ "fields": { ... } }`.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemUpdate {
+    pub site_id: String,
+    pub list_id: String,
+    pub item_id: String,
+    /// Fields JSON object sent to the list item's `/fields` endpoint.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTeamsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftTeamsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTeamsAction {
+    Get(MicrosoftTeamArg),
+    Channels(MicrosoftTeamListArgs),
+    Channel(MicrosoftChannelArg),
+    Members(MicrosoftTeamListArgs),
+    Messages(MicrosoftChannelListArgs),
+    Chats(MicrosoftUserListArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTeamArg {
+    pub team_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTeamListArgs {
+    pub team_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftChannelArg {
+    pub team_id: String,
+    pub channel_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftChannelListArgs {
+    pub team_id: String,
+    pub channel_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftTodoResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTodoResource {
+    Lists(MicrosoftTodoListsCommand),
+    Tasks(MicrosoftTodoTasksCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoListsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftTodoListsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTodoListsAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTasksCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftTodoTasksAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTodoTasksAction {
+    List(MicrosoftTodoTaskListArgs),
+    Get(MicrosoftTodoTaskArg),
+    Create(MicrosoftTodoTaskCreate),
+    Update(MicrosoftTodoTaskUpdate),
+    Delete(MicrosoftTodoTaskArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskListArgs {
+    pub list_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskArg {
+    pub list_id: String,
+    pub task_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskCreate {
+    pub list_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskUpdate {
+    pub list_id: String,
+    pub task_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftPlannerResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftPlannerResource {
+    Plans(MicrosoftPlannerPlansCommand),
+    Buckets(MicrosoftPlannerBucketsCommand),
+    Tasks(MicrosoftPlannerTasksCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerPlansCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftPlannerGetAction,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerBucketsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftPlannerGetAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftPlannerGetAction {
+    Get(IdArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerTasksCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftPlannerTasksAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftPlannerTasksAction {
+    Get(IdArg),
+    Create(MicrosoftJsonCreate),
+    Update(MicrosoftPlannerTaskUpdate),
+    Delete(MicrosoftPlannerTaskDelete),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftJsonCreate {
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerTaskUpdate {
+    pub id: String,
+    /// Last observed Planner task ETag.
+    #[arg(long)]
+    pub etag: String,
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerTaskDelete {
+    pub id: String,
+    /// Last observed Planner task ETag.
+    #[arg(long)]
+    pub etag: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFilesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftFilesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftFilesAction {
+    Upload(MicrosoftFileUpload),
+    Download(MicrosoftFileDownload),
+    Delete(MicrosoftFileTarget),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFileTarget {
+    /// Path relative to the drive root.
+    pub path: String,
+    /// SharePoint or OneDrive drive ID. Omit to use the configured user's OneDrive.
+    #[arg(long, conflicts_with = "user_id")]
+    pub drive_id: Option<String>,
+    /// User ID whose OneDrive should be used. Defaults to profile.user_id.
+    #[arg(long, conflicts_with = "drive_id")]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFileUpload {
+    /// Local file containing the bytes to upload.
+    pub file: String,
+    #[command(flatten)]
+    pub target: MicrosoftFileTarget,
+    /// MIME type sent to Microsoft Graph.
+    #[arg(long, default_value = "application/octet-stream")]
+    pub mime_type: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFileDownload {
+    #[command(flatten)]
+    pub target: MicrosoftFileTarget,
+    /// Local output path. File content is never written to stdout.
+    #[arg(long)]
+    pub output: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftAuthCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftAuthAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftAuthAction {
+    /// Sign in once with device code and save the refresh token encrypted.
+    Login,
+    /// Prove saved credentials can acquire a token without interaction.
+    Status,
 }
 
 #[derive(Debug, Args)]
@@ -3404,6 +4143,87 @@ mod tests {
             let help = String::from_utf8(help).unwrap();
             assert!(help.contains("request"), "{service} help lacks request");
         }
+    }
+
+    #[test]
+    fn microsoft_typed_resources_are_discoverable_and_parse() {
+        let mut command = Cli::command();
+        let microsoft = command
+            .find_subcommand_mut("microsoft")
+            .expect("microsoft command");
+        let mut help = Vec::new();
+        microsoft.write_long_help(&mut help).unwrap();
+        let help = String::from_utf8(help).unwrap();
+
+        for resource in [
+            "auth",
+            "files",
+            "mail",
+            "calendar",
+            "contacts",
+            "sharepoint",
+            "teams",
+            "todo",
+            "planner",
+            "excel",
+            "request",
+        ] {
+            assert!(help.contains(resource), "microsoft help lacks {resource}");
+        }
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "planner",
+            "tasks",
+            "update",
+            "task-id",
+            "--etag",
+            "etag-value",
+            "--json",
+            r#"{"title":"updated"}"#,
+        ])
+        .expect("parse planner task update");
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            "report.docx",
+            "--drive-id",
+            "drive-id",
+            "--output",
+            "report.docx",
+        ])
+        .expect("parse explicit SharePoint download");
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            "report.docx",
+            "--output",
+            "report.docx",
+        ])
+        .expect_err("SharePoint file commands require --drive-id");
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "excel",
+            "tables",
+            "rows",
+            "append",
+            "--item-id",
+            "workbook-id",
+            "Table1",
+            "--values",
+            r#"[["Ada",42]]"#,
+        ])
+        .expect("parse Graph Excel table row append");
     }
 
     #[test]

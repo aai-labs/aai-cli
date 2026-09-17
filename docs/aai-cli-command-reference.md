@@ -824,3 +824,48 @@ Covered GitHub operations (uses page-based GitHub pagination):
 - `github source history`
 
 Set the smallest useful `--limit`. Large limits increase latency and rate-limit pressure.
+## Microsoft Graph
+
+```text
+microsoft auth login
+microsoft auth status
+microsoft request <get|head|post|put|patch|delete> <relative-path> [--query key=value] [--json JSON_OR_PATH] [--allow-write]
+microsoft files upload <local-file> <remote-path> [--drive-id ID | --user-id ID] [--mime-type TYPE]
+microsoft files download <remote-path> [--drive-id ID | --user-id ID] --output PATH
+microsoft files delete <remote-path> [--drive-id ID | --user-id ID]
+microsoft sharepoint files upload <local-file> <remote-path> --drive-id ID [--mime-type TYPE]
+microsoft sharepoint files download <remote-path> --drive-id ID --output PATH
+microsoft sharepoint files delete <remote-path> --drive-id ID
+microsoft excel worksheets list [--item-id ID | --path PATH] [--drive-id ID] [--limit N]
+microsoft excel worksheets add [--item-id ID | --path PATH] NAME [--drive-id ID]
+microsoft excel worksheets rename [--item-id ID | --path PATH] <WORKSHEET> <NAME> [--drive-id ID]
+microsoft excel worksheets delete [--item-id ID | --path PATH] <WORKSHEET> [--drive-id ID]
+microsoft excel ranges get [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID]
+microsoft excel ranges update [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--values JSON_OR_PATH] [--formulas JSON_OR_PATH] [--number-format JSON_OR_PATH]
+microsoft excel ranges clear [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--apply-to Contents|Formats|All]
+microsoft excel tables list [--item-id ID | --path PATH] [--drive-id ID] [--limit N]
+microsoft excel tables create [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--has-headers]
+microsoft excel tables delete [--item-id ID | --path PATH] <TABLE> [--drive-id ID]
+microsoft excel tables rows list [--item-id ID | --path PATH] <TABLE> [--drive-id ID] [--limit N]
+microsoft excel tables rows append [--item-id ID | --path PATH] <TABLE> --values JSON_OR_PATH [--drive-id ID]
+microsoft mail messages <list|get|create|update|delete> ...
+microsoft mail send [--user-id ID] --json JSON_OR_PATH
+microsoft calendar events <list|get|create|update|delete> ...
+microsoft contacts <list|get|create|update|delete> ...
+microsoft sharepoint lists <list|get> ...
+microsoft sharepoint items <list|get|create|update|delete> ...
+microsoft teams <get|channels|channel|members|messages|chats> ...
+microsoft todo lists <list|get|create|update|delete> ...
+microsoft todo tasks <list|get|create|update|delete> ...
+microsoft planner plans get <ID>
+microsoft planner buckets get <ID>
+microsoft planner tasks <get|create|update|delete> ...
+```
+
+`auth login` is the only interactive operation. It saves an encrypted delegated refresh token after verifying the configured user. Every other command acquires fresh access tokens from saved credentials. `microsoft files` addresses OneDrive by default; the explicit `microsoft sharepoint files` commands require `--drive-id` for the target document library. Downloaded bytes are written only to `--output`.
+
+`microsoft excel` uses Graph's remote workbook API for worksheet, range, table, and table-row operations. Create or obtain an `.xlsx` separately, upload it through `microsoft files` or `microsoft sharepoint files`, then address it by item ID or path; the typed Graph surface does not create workbooks. It requires a delegated profile with `Files.ReadWrite`; application profiles are rejected because Graph does not support application permissions for workbook operations. For SharePoint workbooks, pass the document-library `--drive-id`. Word documents have no typed editor here: download the `.docx`, edit it with an external library or program, and upload the complete replacement. The same file workflow applies to unsupported Excel features.
+
+Typed user-resource commands use `--user-id` or `profile.user_id`. Create/update bodies use `--json JSON_OR_PATH` (or `--json -` for stdin). List commands aggregate Graph's `@odata.nextLink` pages into the provider's `value` array up to `--limit`.
+
+Microsoft To Do requires a delegated profile in this CLI because Graph's application-permission support varies across operations and the typed surface guarantees one consistent identity for complete list/task CRUD. Planner task update/delete require the last observed `@odata.etag` through `--etag`. Teams commands are read-only in this initial coverage: team/channel metadata, team members, channel messages, and chats. The exact argument shapes and safe CRUD workflow are included in the bundled `aai-microsoft` skill.
