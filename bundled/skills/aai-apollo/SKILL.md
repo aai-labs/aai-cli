@@ -13,4 +13,4 @@ Apollo keeps discovery records and saved records separate. Use `people` and `org
 
 For Sally-style sales workflows, treat Apollo as the source for sourcing, enrichment, sequence membership, and Apollo-run outreach activity. Do not treat Apollo as the final CRM unless the task explicitly says so. If respondents are handed into Pipedrive manually, call that out clearly.
 
-Successful output is JSON on stdout. Errors are structured JSON on stderr. See [the command reference](references/command-reference.md) for command shapes, response notes, and real example output captured from a live Pipedrive account.
+Successful output is JSON on stdout. Errors are structured JSON on stderr. See [the command reference](references/command-reference.md) for command shapes, response notes, and real example output captured from a live Apollo account.
