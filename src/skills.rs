@@ -18,6 +18,7 @@ const BUNDLED_SKILLS_ZIP: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/aai-
 const SERVICE: &str = "skills";
 
 const SKILL_COMMANDS: &[(&str, &[&str])] = &[
+    ("aai-apollo", &["apollo"]),
     ("aai-bitbucket", &["bitbucket"]),
     ("aai-confluence", &["confluence"]),
     ("aai-excel", &["excel"]),
