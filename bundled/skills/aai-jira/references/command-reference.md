@@ -242,7 +242,7 @@ aai-cli jira issues update <ISSUE_KEY_OR_ID> [--json JSON_OR_PATH]
 |---|---|---|
 | `ISSUE_KEY_OR_ID` | **yes** | Issue key or numeric ID |
 | `--summary` | no | New summary text |
-| `--description` | no | New description (auto-converted to ADF) |
+| `--description` | no | New description (auto-converted to ADF; blank lines become paragraphs, single newlines become line breaks) |
 | `--json` | no | Raw Jira issue-update body. Flags override matching fields |
 
 **Example**
@@ -360,7 +360,7 @@ aai-cli jira issues comments get SCRUM-1 10001
 
 ### issues comments create
 
-Add a comment to an issue. Use `--body` for plain text (auto-converted to ADF), or `--json` for pre-built ADF content.
+Add a comment to an issue. Use `--body` for plain text (auto-converted to ADF: blank lines become paragraphs, single newlines become line breaks), or `--json` for pre-built ADF content.
 
 ```
 aai-cli jira issues comments create <ISSUE_KEY_OR_ID> [--body TEXT] [--json JSON_OR_PATH]
@@ -369,7 +369,7 @@ aai-cli jira issues comments create <ISSUE_KEY_OR_ID> [--body TEXT] [--json JSON
 | Argument / Flag | Required | Description |
 |---|---|---|
 | `ISSUE_KEY_OR_ID` | **yes** | Issue key or numeric ID |
-| `--body` | **yes** (unless `--json` covers it) | Plain text body. Auto-converted to ADF. Overrides `body` inside `--json` if both are given |
+| `--body` | **yes** (unless `--json` covers it) | Plain text body. Auto-converted to ADF; blank lines become paragraphs, single newlines become line breaks. Overrides `body` inside `--json` if both are given |
 | `--json` | no | Raw Jira comment body JSON |
 
 **Example**
@@ -633,7 +633,7 @@ aai-cli jira ideas update <IDEA_KEY_OR_ID> [--json JSON_OR_PATH]
 |---|---|---|
 | `IDEA_KEY_OR_ID` | **yes** | Idea key or numeric ID |
 | `--summary` | no | New summary text |
-| `--description` | no | New description (auto-converted to ADF) |
+| `--description` | no | New description (auto-converted to ADF; blank lines become paragraphs, single newlines become line breaks) |
 | `--json` | no | Raw Jira issue-update body, e.g. `{"fields":{"customfield_10011":{"id":"11"}}}`. Flags override matching fields |
 
 **Example**
