@@ -682,9 +682,12 @@ async fn users(
             let mut users =
                 request_json(client, ctx, "users.list", Method::GET, "/v1/users", None).await?;
             // Pipedrive returns every user in one unpaginated response, so the list is
-            // complete; say so instead of leaving pagination status "unknown".
+            // complete. The marker tells the pagination layer and never reaches the output.
             if let Some(object) = users.as_object_mut() {
-                object.insert("truncated".to_string(), Value::Bool(false));
+                object.insert(
+                    crate::pagination::COMPLETE_MARKER.to_string(),
+                    Value::Bool(true),
+                );
             }
             Ok(users)
         }
@@ -1940,10 +1943,11 @@ mod tests {
             .unwrap();
         server.join().unwrap();
 
-        assert_eq!(
-            crate::pagination::annotate(result, &[])["_aai"]["pagination"]["status"],
-            "complete"
-        );
+        let output = crate::pagination::annotate(result, &[]);
+        assert_eq!(output["_aai"]["pagination"]["status"], "complete");
+        // The provider's response shape is preserved: no CLI fields outside `_aai`.
+        assert!(output.get(crate::pagination::COMPLETE_MARKER).is_none());
+        assert!(output.get("truncated").is_none());
     }
 
     fn file_list(

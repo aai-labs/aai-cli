@@ -20,12 +20,19 @@ const COLLECTION_KEYS: &[&str] = &[
     "permissions",
 ];
 
+/// Internal flag a service sets on a response it knows is complete although the provider
+/// sends no pagination metadata (an endpoint that is never paginated). Like
+/// `_aai_provider_next_url`, it is read here and removed before output, so the provider's
+/// response shape is untouched.
+pub(crate) const COMPLETE_MARKER: &str = "_aai_complete";
+
 pub(crate) fn annotate(value: Value, command_args: &[String]) -> Value {
     let analysis = analyze(&value, command_args);
     let metadata = json!({ "pagination": analysis });
     match value {
         Value::Object(mut object) => {
             object.remove("_aai_provider_next_url");
+            object.remove(COMPLETE_MARKER);
             object.insert("_aai".to_string(), metadata);
             Value::Object(object)
         }
@@ -202,7 +209,8 @@ fn offset_continuation(value: &Value) -> Option<Continuation> {
 }
 
 fn explicit_completion(value: &Value) -> Option<bool> {
-    if value.get("isLast").and_then(Value::as_bool) == Some(true)
+    if value.get(COMPLETE_MARKER).and_then(Value::as_bool) == Some(true)
+        || value.get("isLast").and_then(Value::as_bool) == Some(true)
         || value
             .pointer("/pagination/more_items_in_collection")
             .and_then(Value::as_bool)
