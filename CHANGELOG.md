@@ -14,5 +14,6 @@ All notable user-visible changes to `aai-cli` are recorded here.
 
 ### Changed
 
+- Pipedrive list aggregation requests only the records still needed, so a limit above 500 that is not a multiple of 500 no longer leaves the tail of the last page behind the continuation marker. Aggregates now report their final state: v2 lists end with `next_cursor: null` and v1 lists with the correct `more_items_in_collection`, and `_aai.pagination` treats Pipedrive's null cursor as `complete` instead of `unknown`.
 - File downloads now follow redirects themselves and send credentials only to the original origin. Previously a provider-specific auth header, such as Pipedrive's `x-api-token`, was forwarded to a cross-origin redirect target. The origin includes the scheme, so an http to https hop on the same host also drops credentials, where reqwest compared only host and port.
 - Microsoft Graph `value` collections now participate in the shared pagination metadata contract, including `@odata.nextLink` discovery and `--limit` aggregation.

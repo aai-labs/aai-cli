@@ -930,10 +930,9 @@ async fn paginate_cursor(
     let mut cursor: Option<String> = None;
     let mut first_page = None;
     let mut values = Vec::new();
-    let page_size = limit.clamp(1, 500);
 
     loop {
-        query.set("limit", page_size.to_string());
+        query.set("limit", page_limit(limit, values.len()).to_string());
         if let Some(cursor) = cursor.as_deref() {
             query.set("cursor", cursor.to_string());
         }
@@ -971,11 +970,7 @@ async fn paginate_cursor(
         }
     }
 
-    set_optional_at(
-        &mut first_page,
-        &["additional_data", "next_cursor"],
-        cursor.map(Value::String),
-    );
+    finish_cursor_pagination(&mut first_page, cursor);
     Ok(aggregate_response(first_page, array_path, values))
 }
 
@@ -1003,14 +998,13 @@ async fn paginate_start(
         return Ok(empty_aggregate(array_path));
     }
 
-    let page_size = limit.clamp(1, 500);
     let mut start = 0u64;
     let mut continuation: Option<u64>;
     let mut first_page = None;
     let mut values = Vec::new();
 
     loop {
-        query.set("limit", page_size.to_string());
+        query.set("limit", page_limit(limit, values.len()).to_string());
         query.set("start", start.to_string());
         let mut url = format!("{}{}", pipedrive_base(ctx.profile()), path);
         query.append_to(&mut url);
@@ -1045,11 +1039,7 @@ async fn paginate_start(
         }
     }
 
-    set_optional_at(
-        &mut first_page,
-        &["additional_data", "pagination", "next_start"],
-        continuation.map(|value| json!(value)),
-    );
+    finish_start_pagination(&mut first_page, continuation);
     Ok(aggregate_response(first_page, array_path, values))
 }
 
@@ -1216,6 +1206,39 @@ fn aggregate_response(first_page: Option<Value>, array_path: &[&str], values: Ve
     let mut response = first_page.unwrap_or_else(|| json!({}));
     set_array_at(&mut response, array_path, values);
     response
+}
+
+/// Request only what is still wanted, so a page is never cut short: the continuation
+/// marker points past the whole page, and records dropped from its tail would be skipped
+/// by the next call.
+fn page_limit(limit: u32, collected: usize) -> u32 {
+    let remaining = (limit as usize).saturating_sub(collected);
+    remaining.clamp(1, 500) as u32
+}
+
+/// The aggregate carries the first page's metadata; rewrite its cursor to the final
+/// state. Pipedrive marks the last page with an explicit `null` cursor.
+fn finish_cursor_pagination(first_page: &mut Option<Value>, cursor: Option<String>) {
+    set_optional_at(
+        first_page,
+        &["additional_data", "next_cursor"],
+        Some(cursor.map_or(Value::Null, Value::String)),
+    );
+}
+
+/// As `finish_cursor_pagination`, for v1 offsets: the first page's
+/// `more_items_in_collection` is stale once later pages have been read.
+fn finish_start_pagination(first_page: &mut Option<Value>, next_start: Option<u64>) {
+    set_optional_at(
+        first_page,
+        &["additional_data", "pagination", "more_items_in_collection"],
+        Some(Value::Bool(next_start.is_some())),
+    );
+    set_optional_at(
+        first_page,
+        &["additional_data", "pagination", "next_start"],
+        next_start.map(|value| json!(value)),
+    );
 }
 
 fn set_optional_at(response: &mut Option<Value>, path: &[&str], value: Option<Value>) {
@@ -1457,6 +1480,36 @@ mod tests {
         assert!(response.unwrap()["additional_data"]
             .get("next_cursor")
             .is_none());
+    }
+
+    #[test]
+    fn page_limit_never_fetches_past_the_requested_limit() {
+        // A 500-item page cut down to fit the limit would leave its tail behind the
+        // continuation marker, so a follow-up call would skip those records.
+        assert_eq!(page_limit(700, 500), 200);
+        assert_eq!(page_limit(700, 0), 500);
+        assert_eq!(page_limit(30, 0), 30);
+    }
+
+    #[test]
+    fn exhausted_cursor_pagination_ends_with_a_null_cursor() {
+        let mut response = Some(json!({"additional_data": {"next_cursor": "page-2"}}));
+        finish_cursor_pagination(&mut response, None);
+        assert_eq!(
+            response.unwrap()["additional_data"]["next_cursor"],
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn exhausted_start_pagination_clears_the_first_pages_more_flag() {
+        let mut response = Some(json!({
+            "additional_data": {"pagination": {"next_start": 500, "more_items_in_collection": true}}
+        }));
+        finish_start_pagination(&mut response, None);
+        let pagination = &response.unwrap()["additional_data"]["pagination"];
+        assert!(pagination.get("next_start").is_none());
+        assert_eq!(pagination["more_items_in_collection"], false);
     }
 
     #[test]

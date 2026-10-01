@@ -213,6 +213,11 @@ fn explicit_completion(value: &Value) -> Option<bool> {
             == Some(false)
         || value.get("has_more").and_then(Value::as_bool) == Some(false)
         || value.get("truncated").and_then(Value::as_bool) == Some(false)
+        // Pipedrive v2 marks its last page with an explicit null cursor.
+        || value
+            .pointer("/additional_data")
+            .and_then(|data| data.get("next_cursor"))
+            == Some(&Value::Null)
     {
         return Some(true);
     }
@@ -548,6 +553,16 @@ mod tests {
             &strings(&["aai-cli", "github", "prs", "comments", "get", "7"]),
         );
         assert_eq!(output["_aai"]["pagination"]["status"], "not_applicable");
+    }
+
+    #[test]
+    fn pipedrive_null_next_cursor_is_complete() {
+        let output = annotate(
+            json!({"data": [{"id": 1}], "additional_data": {"next_cursor": null}}),
+            &strings(&["aai-cli", "pipedrive", "fields", "deals", "list"]),
+        );
+        assert_eq!(output["_aai"]["pagination"]["status"], "complete");
+        assert_eq!(output["_aai"]["pagination"]["has_more"], false);
     }
 
     #[test]
