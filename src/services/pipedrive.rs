@@ -9,7 +9,7 @@ use crate::{
     input,
     services::{
         generic_request,
-        shared::{enc, pipedrive_base, CtxProfile},
+        shared::{enc, pipedrive_base, write_download, CtxProfile},
     },
 };
 
@@ -26,6 +26,43 @@ pub(crate) async fn dispatch(
         PipedriveResource::Labels(command) => labels(client, ctx, command).await,
         PipedriveResource::Activities(command) => activities(client, ctx, command).await,
         PipedriveResource::Notes(command) => notes(client, ctx, command).await,
+        PipedriveResource::Files(command) => files(client, ctx, command).await,
+        PipedriveResource::Fields(command) => fields(client, ctx, command).await,
+        PipedriveResource::Users(command) => users(client, ctx, command).await,
+        PipedriveResource::Pipelines(command) => match command.action {
+            PipedrivePipelinesAction::List(args) => {
+                sorted_list(
+                    client,
+                    ctx,
+                    "pipelines.list",
+                    "/api/v2/pipelines",
+                    Query::new(),
+                    args,
+                )
+                .await
+            }
+            PipedrivePipelinesAction::Get(args) => {
+                get(client, ctx, "pipelines.get", "/api/v2/pipelines", &args.id).await
+            }
+        },
+        PipedriveResource::Stages(command) => match command.action {
+            PipedriveStagesAction::List(args) => {
+                let mut query = Query::new();
+                query.push("pipeline_id", args.pipeline_id.as_deref());
+                sorted_list(
+                    client,
+                    ctx,
+                    "stages.list",
+                    "/api/v2/stages",
+                    query,
+                    args.list,
+                )
+                .await
+            }
+            PipedriveStagesAction::Get(args) => {
+                get(client, ctx, "stages.get", "/api/v2/stages", &args.id).await
+            }
+        },
         PipedriveResource::Mailbox(command) => mailbox(client, ctx, command).await,
         PipedriveResource::Request(args) => {
             generic_request::dispatch(
@@ -95,14 +132,15 @@ async fn leads(
         }
         PipedriveLeadsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = args.labels.clone();
             let body = lead_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "leads.update",
-                Method::PATCH,
                 &format!("/v1/leads/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
@@ -211,19 +249,23 @@ async fn persons(
         }
         PipedrivePersonsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = args.labels.clone();
             let body = person_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "persons.update",
-                Method::PATCH,
                 &format!("/api/v2/persons/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
         PipedrivePersonsAction::Delete(args) => {
             delete(client, ctx, "persons.delete", "/api/v2/persons", &args.id).await
+        }
+        PipedrivePersonsAction::Merge(args) => {
+            merge(client, ctx, "persons.merge", "persons", args).await
         }
     }
 }
@@ -318,14 +360,15 @@ async fn organizations(
         }
         PipedriveOrganizationsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = args.labels.clone();
             let body = organization_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "organizations.update",
-                Method::PATCH,
                 &format!("/api/v2/organizations/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
@@ -338,6 +381,9 @@ async fn organizations(
                 &args.id,
             )
             .await
+        }
+        PipedriveOrganizationsAction::Merge(args) => {
+            merge(client, ctx, "organizations.merge", "organizations", args).await
         }
     }
 }
@@ -436,20 +482,22 @@ async fn deals(
         }
         PipedriveDealsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = args.labels.clone();
             let body = deal_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "deals.update",
-                Method::PATCH,
                 &format!("/api/v2/deals/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
         PipedriveDealsAction::Delete(args) => {
             delete(client, ctx, "deals.delete", "/api/v2/deals", &args.id).await
         }
+        PipedriveDealsAction::Merge(args) => merge(client, ctx, "deals.merge", "deals", args).await,
     }
 }
 
@@ -499,7 +547,275 @@ async fn activities(
             )
             .await
         }
+        PipedriveActivitiesAction::Create(args) => {
+            let body = activity_create_body(*args)?;
+            request_json(
+                client,
+                ctx,
+                "activities.create",
+                Method::POST,
+                "/api/v2/activities",
+                Some(body),
+            )
+            .await
+        }
+        PipedriveActivitiesAction::Update(args) => {
+            let id = args.id.clone();
+            let body = activity_update_body(*args)?;
+            request_json(
+                client,
+                ctx,
+                "activities.update",
+                Method::PATCH,
+                &format!("/api/v2/activities/{}", enc(&id)),
+                Some(body),
+            )
+            .await
+        }
+        PipedriveActivitiesAction::Delete(args) => {
+            delete(
+                client,
+                ctx,
+                "activities.delete",
+                "/api/v2/activities",
+                &args.id,
+            )
+            .await
+        }
     }
+}
+
+/// PATCH a record, first resolving any label additions or removals against the labels
+/// it currently has.
+async fn update_record(
+    client: &ApiClient,
+    ctx: &Context,
+    operation: &'static str,
+    path: &str,
+    labels: PipedriveLabelEdits,
+    mut body: Value,
+) -> Result<Value, AppError> {
+    if labels.add_label_ids.is_some() || labels.remove_label_ids.is_some() {
+        let record = request_json(client, ctx, operation, Method::GET, path, None).await?;
+        let current = current_label_ids(&record, operation)?;
+        let add = labels.add_label_ids.as_deref().map(parse_csv).transpose()?;
+        let remove = labels
+            .remove_label_ids
+            .as_deref()
+            .map(parse_csv)
+            .transpose()?;
+        input::ensure_object(&mut body).insert(
+            "label_ids".to_string(),
+            Value::Array(merge_label_ids(
+                current,
+                &add.unwrap_or_default(),
+                &remove.unwrap_or_default(),
+            )),
+        );
+    }
+    request_json(client, ctx, operation, Method::PATCH, path, Some(body)).await
+}
+
+/// The labels a record has now. A record without the `label_ids` key is refused rather
+/// than read as unlabelled: writing back an empty list would erase its real labels.
+/// Pipedrive sends a literal `null` for a record with no labels.
+fn current_label_ids(record: &Value, operation: &'static str) -> Result<Vec<Value>, AppError> {
+    match record.pointer("/data/label_ids") {
+        Some(Value::Array(ids)) => Ok(ids.clone()),
+        Some(Value::Null) => Ok(Vec::new()),
+        Some(_) => Err(AppError::internal(
+            "pipedrive",
+            operation,
+            "the record's label_ids is not a list; refusing to rewrite its labels",
+        )),
+        None => Err(AppError::internal(
+            "pipedrive",
+            operation,
+            "the record came back without label_ids; refusing to rewrite its labels",
+        )),
+    }
+}
+
+fn merge_label_ids(current: Vec<Value>, add: &[Value], remove: &[Value]) -> Vec<Value> {
+    // Deal/person/organization label IDs are numbers and lead label IDs are UUIDs, and a
+    // CSV "5" parses to a number, so compare by rendered text.
+    let key = |id: &Value| match id {
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    };
+    let removed = |id: &Value| remove.iter().any(|other| key(other) == key(id));
+    let mut ids: Vec<Value> = current.into_iter().filter(|id| !removed(id)).collect();
+    for id in add {
+        if !removed(id) && !ids.iter().any(|existing| key(existing) == key(id)) {
+            ids.push(id.clone());
+        }
+    }
+    ids
+}
+
+/// Pipedrive merges `id` into `merge_with_id`: the latter remains and its data wins.
+async fn merge(
+    client: &ApiClient,
+    ctx: &Context,
+    operation: &'static str,
+    collection: &str,
+    args: PipedriveMergeArgs,
+) -> Result<Value, AppError> {
+    request_json(
+        client,
+        ctx,
+        operation,
+        Method::PUT,
+        &format!("/v1/{collection}/{}/merge", enc(&args.id)),
+        Some(json!({ "merge_with_id": id_value(&args.merge_with_id) })),
+    )
+    .await
+}
+
+async fn users(
+    client: &ApiClient,
+    ctx: &Context,
+    command: PipedriveUsersCommand,
+) -> Result<Value, AppError> {
+    match command.action {
+        PipedriveUsersAction::List => {
+            let mut users =
+                request_json(client, ctx, "users.list", Method::GET, "/v1/users", None).await?;
+            // Pipedrive returns every user in one unpaginated response, so the list is
+            // complete. The marker tells the pagination layer and never reaches the output.
+            if let Some(object) = users.as_object_mut() {
+                object.insert(
+                    crate::pagination::COMPLETE_MARKER.to_string(),
+                    Value::Bool(true),
+                );
+            }
+            Ok(users)
+        }
+        PipedriveUsersAction::Get(args) => {
+            get(client, ctx, "users.get", "/v1/users", &args.id).await
+        }
+        PipedriveUsersAction::Me => {
+            request_json(client, ctx, "users.me", Method::GET, "/v1/users/me", None).await
+        }
+        PipedriveUsersAction::Find(args) => {
+            let mut query = Query::new();
+            query.push_value("term", &args.term);
+            if args.search_by_email {
+                query.push_value("search_by_email", "1");
+            }
+            let mut path = "/v1/users/find".to_string();
+            query.append_to(&mut path);
+            request_json(client, ctx, "users.find", Method::GET, &path, None).await
+        }
+    }
+}
+
+async fn sorted_list(
+    client: &ApiClient,
+    ctx: &Context,
+    operation: &'static str,
+    path: &str,
+    mut query: Query,
+    args: PipedriveSortedList,
+) -> Result<Value, AppError> {
+    query.push("sort_by", args.sort_by.as_deref());
+    query.push(
+        "sort_direction",
+        sort_direction(args.sort_direction.as_ref()),
+    );
+    list_v2(client, ctx, operation, path, query, args.limit).await
+}
+
+async fn fields(
+    client: &ApiClient,
+    ctx: &Context,
+    command: PipedriveFieldsCommand,
+) -> Result<Value, AppError> {
+    let (path, (list_operation, get_operation), command) = match command.resource {
+        PipedriveFieldResource::Deals(command) => (
+            "/api/v2/dealFields",
+            ("fields.deals.list", "fields.deals.get"),
+            command,
+        ),
+        PipedriveFieldResource::Persons(command) => (
+            "/api/v2/personFields",
+            ("fields.persons.list", "fields.persons.get"),
+            command,
+        ),
+        PipedriveFieldResource::Organizations(command) => (
+            "/api/v2/organizationFields",
+            ("fields.organizations.list", "fields.organizations.get"),
+            command,
+        ),
+        PipedriveFieldResource::Activities(command) => (
+            "/api/v2/activityFields",
+            ("fields.activities.list", "fields.activities.get"),
+            command,
+        ),
+    };
+    match command.action {
+        PipedriveFieldAction::List(args) => {
+            list_v2(client, ctx, list_operation, path, Query::new(), args.limit).await
+        }
+        PipedriveFieldAction::Get(args) => {
+            get(client, ctx, get_operation, path, &args.field_code).await
+        }
+    }
+}
+
+async fn files(
+    client: &ApiClient,
+    ctx: &Context,
+    command: PipedriveFilesCommand,
+) -> Result<Value, AppError> {
+    match command.action {
+        PipedriveFilesAction::List(args) => {
+            let mut query = Query::new();
+            query.push("sort", args.sort.as_deref());
+            list_v1(
+                client,
+                ctx,
+                "files.list",
+                &file_list_path(&args),
+                query,
+                args.limit,
+            )
+            .await
+        }
+        PipedriveFilesAction::Get(args) => {
+            get(client, ctx, "files.get", "/v1/files", &args.id).await
+        }
+        PipedriveFilesAction::Download(args) => {
+            let operation = "files.download";
+            let url = format!(
+                "{}/v1/files/{}/download",
+                pipedrive_base(ctx.profile()),
+                enc(&args.id)
+            );
+            let bytes = client
+                .download("pipedrive", operation, ctx.profile(), url)
+                .await?;
+            let mut result = write_download("pipedrive", operation, &args.output, &bytes)?;
+            result["file_id"] = json!(args.id);
+            Ok(result)
+        }
+    }
+}
+
+/// Pipedrive lists a record's files under the record itself, not through a filter on
+/// `/v1/files`, so the scope picks the endpoint.
+fn file_list_path(args: &PipedriveFileList) -> String {
+    [
+        ("deals", &args.deal_id),
+        ("persons", &args.person_id),
+        ("organizations", &args.org_id),
+    ]
+    .into_iter()
+    .find_map(|(collection, id)| {
+        id.as_deref()
+            .map(|id| format!("/v1/{collection}/{}/files", enc(id)))
+    })
+    .unwrap_or_else(|| "/v1/files".to_string())
 }
 
 async fn notes(
@@ -523,6 +839,34 @@ async fn notes(
         }
         PipedriveNotesAction::Get(args) => {
             get(client, ctx, "notes.get", "/v1/notes", &args.id).await
+        }
+        PipedriveNotesAction::Create(args) => {
+            let body = note_create_body(args)?;
+            request_json(
+                client,
+                ctx,
+                "notes.create",
+                Method::POST,
+                "/v1/notes",
+                Some(body),
+            )
+            .await
+        }
+        PipedriveNotesAction::Update(args) => {
+            let id = args.id.clone();
+            let body = note_update_body(args)?;
+            request_json(
+                client,
+                ctx,
+                "notes.update",
+                Method::PUT,
+                &format!("/v1/notes/{}", enc(&id)),
+                Some(body),
+            )
+            .await
+        }
+        PipedriveNotesAction::Delete(args) => {
+            delete(client, ctx, "notes.delete", "/v1/notes", &args.id).await
         }
     }
 }
@@ -930,10 +1274,9 @@ async fn paginate_cursor(
     let mut cursor: Option<String> = None;
     let mut first_page = None;
     let mut values = Vec::new();
-    let page_size = limit.clamp(1, 500);
 
     loop {
-        query.set("limit", page_size.to_string());
+        query.set("limit", page_limit(limit, values.len()).to_string());
         if let Some(cursor) = cursor.as_deref() {
             query.set("cursor", cursor.to_string());
         }
@@ -971,11 +1314,7 @@ async fn paginate_cursor(
         }
     }
 
-    set_optional_at(
-        &mut first_page,
-        &["additional_data", "next_cursor"],
-        cursor.map(Value::String),
-    );
+    finish_cursor_pagination(&mut first_page, cursor);
     Ok(aggregate_response(first_page, array_path, values))
 }
 
@@ -1003,14 +1342,13 @@ async fn paginate_start(
         return Ok(empty_aggregate(array_path));
     }
 
-    let page_size = limit.clamp(1, 500);
     let mut start = 0u64;
     let mut continuation: Option<u64>;
     let mut first_page = None;
     let mut values = Vec::new();
 
     loop {
-        query.set("limit", page_size.to_string());
+        query.set("limit", page_limit(limit, values.len()).to_string());
         query.set("start", start.to_string());
         let mut url = format!("{}{}", pipedrive_base(ctx.profile()), path);
         query.append_to(&mut url);
@@ -1045,11 +1383,7 @@ async fn paginate_start(
         }
     }
 
-    set_optional_at(
-        &mut first_page,
-        &["additional_data", "pagination", "next_start"],
-        continuation.map(|value| json!(value)),
-    );
+    finish_start_pagination(&mut first_page, continuation);
     Ok(aggregate_response(first_page, array_path, values))
 }
 
@@ -1141,6 +1475,58 @@ fn deal_update_body(args: PipedriveDealUpdate) -> Result<Value, AppError> {
     Ok(body)
 }
 
+fn note_create_body(args: PipedriveNoteWrite) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "notes.create", args.json.as_deref())?;
+    input::set_string(&mut body, "content", &Some(args.content));
+    set_note_links(&mut body, args.links);
+    Ok(body)
+}
+
+fn note_update_body(args: PipedriveNoteUpdate) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "notes.update", args.json.as_deref())?;
+    input::set_string(&mut body, "content", &args.content);
+    set_note_links(&mut body, args.links);
+    Ok(body)
+}
+
+fn set_note_links(body: &mut Value, links: PipedriveNoteLinks) {
+    set_id(body, "deal_id", links.deal_id.as_deref());
+    set_id(body, "person_id", links.person_id.as_deref());
+    set_id(body, "org_id", links.org_id.as_deref());
+    // Lead IDs are UUIDs; Pipedrive rejects them as numbers.
+    input::set_string(body, "lead_id", &links.lead_id);
+}
+
+fn activity_create_body(args: PipedriveActivityWrite) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "activities.create", args.json.as_deref())?;
+    input::set_string(&mut body, "subject", &Some(args.subject));
+    set_activity_fields(&mut body, args.fields);
+    Ok(body)
+}
+
+fn activity_update_body(args: PipedriveActivityUpdate) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "activities.update", args.json.as_deref())?;
+    input::set_string(&mut body, "subject", &args.subject);
+    set_activity_fields(&mut body, args.fields);
+    Ok(body)
+}
+
+fn set_activity_fields(body: &mut Value, fields: PipedriveActivityFields) {
+    input::set_string(body, "type", &fields.activity_type);
+    input::set_string(body, "due_date", &fields.due_date);
+    input::set_string(body, "due_time", &fields.due_time);
+    input::set_string(body, "duration", &fields.duration);
+    set_id(body, "deal_id", fields.deal_id.as_deref());
+    input::set_string(body, "lead_id", &fields.lead_id);
+    set_id(body, "person_id", fields.person_id.as_deref());
+    set_id(body, "org_id", fields.org_id.as_deref());
+    set_id(body, "owner_id", fields.owner_id.as_deref());
+    input::set_string(body, "note", &fields.note);
+    if let Some(done) = fields.done {
+        input::ensure_object(body).insert("done".to_string(), Value::Bool(done));
+    }
+}
+
 fn set_contact_field(body: &mut Value, key: &str, value: Option<&str>) {
     if let Some(value) = value {
         input::ensure_object(body).insert(key.to_string(), json!([{ "value": value }]));
@@ -1216,6 +1602,39 @@ fn aggregate_response(first_page: Option<Value>, array_path: &[&str], values: Ve
     let mut response = first_page.unwrap_or_else(|| json!({}));
     set_array_at(&mut response, array_path, values);
     response
+}
+
+/// Request only what is still wanted, so a page is never cut short: the continuation
+/// marker points past the whole page, and records dropped from its tail would be skipped
+/// by the next call.
+fn page_limit(limit: u32, collected: usize) -> u32 {
+    let remaining = (limit as usize).saturating_sub(collected);
+    remaining.clamp(1, 500) as u32
+}
+
+/// The aggregate carries the first page's metadata; rewrite its cursor to the final
+/// state. Pipedrive marks the last page with an explicit `null` cursor.
+fn finish_cursor_pagination(first_page: &mut Option<Value>, cursor: Option<String>) {
+    set_optional_at(
+        first_page,
+        &["additional_data", "next_cursor"],
+        Some(cursor.map_or(Value::Null, Value::String)),
+    );
+}
+
+/// As `finish_cursor_pagination`, for v1 offsets: the first page's
+/// `more_items_in_collection` is stale once later pages have been read.
+fn finish_start_pagination(first_page: &mut Option<Value>, next_start: Option<u64>) {
+    set_optional_at(
+        first_page,
+        &["additional_data", "pagination", "more_items_in_collection"],
+        Some(Value::Bool(next_start.is_some())),
+    );
+    set_optional_at(
+        first_page,
+        &["additional_data", "pagination", "next_start"],
+        next_start.map(|value| json!(value)),
+    );
 }
 
 fn set_optional_at(response: &mut Option<Value>, path: &[&str], value: Option<Value>) {
@@ -1354,6 +1773,288 @@ impl Query {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        config::Profile,
+        test_support::{json_response, request_body, serve},
+    };
+    use clap::Parser;
+
+    fn served_ctx(address: &str) -> Context {
+        Context {
+            profile: Profile {
+                auth_type: Some("pipedrive_personal_token".to_string()),
+                api_token: Some("pd-secret".to_string()),
+                base_url: Some(format!("http://{address}")),
+                ..Profile::default()
+            },
+            secrets_file: Default::default(),
+            key_file: Default::default(),
+        }
+    }
+
+    fn pipedrive_command(args: &[&str]) -> PipedriveCommand {
+        let cli = Cli::try_parse_from(["aai-cli", "pipedrive"].iter().chain(args)).unwrap();
+        let Command::Pipedrive(command) = cli.command else {
+            panic!("not a pipedrive command");
+        };
+        command
+    }
+
+    #[tokio::test]
+    async fn label_edits_read_then_write_every_record_type() {
+        // Leads are v1 with UUID labels; deals, persons and organizations are v2 with
+        // numeric labels. Each must GET the record, then PATCH the merged list.
+        let cases = [
+            (
+                "leads",
+                "/v1/leads/l1",
+                r#"["a1","b2"]"#,
+                "b2",
+                "c3",
+                json!(["a1", "c3"]),
+            ),
+            ("deals", "/api/v2/deals/5", "[1,2]", "2", "3", json!([1, 3])),
+            (
+                "persons",
+                "/api/v2/persons/6",
+                "[1,2]",
+                "1",
+                "4",
+                json!([2, 4]),
+            ),
+            (
+                "organizations",
+                "/api/v2/organizations/7",
+                "[9]",
+                "9",
+                "8",
+                json!([8]),
+            ),
+        ];
+        for (resource, path, current, remove, add, expected) in cases {
+            let id = path.rsplit('/').next().unwrap();
+            let (address, server) = serve(vec![
+                json_response(&format!(
+                    r#"{{"data":{{"id":"{id}","label_ids":{current}}}}}"#
+                )),
+                json_response(r#"{"data":{"id":1}}"#),
+            ]);
+            let command = pipedrive_command(&[
+                resource,
+                "update",
+                id,
+                "--remove-label-ids",
+                remove,
+                "--add-label-ids",
+                add,
+            ]);
+
+            dispatch(&ApiClient::new().unwrap(), &served_ctx(&address), command)
+                .await
+                .unwrap();
+            let requests = server.join().unwrap();
+
+            assert!(
+                requests[0].starts_with(&format!("get {path} ")),
+                "{resource}: {}",
+                requests[0]
+            );
+            assert!(
+                requests[1].starts_with(&format!("patch {path} ")),
+                "{resource}: {}",
+                requests[1]
+            );
+            let body: Value = serde_json::from_str(request_body(&requests[1])).unwrap();
+            assert_eq!(body["label_ids"], expected, "{resource}");
+        }
+    }
+
+    #[tokio::test]
+    async fn label_edits_treat_null_as_no_labels() {
+        let (address, server) = serve(vec![
+            json_response(r#"{"data":{"id":5,"label_ids":null}}"#),
+            json_response(r#"{"data":{"id":5}}"#),
+        ]);
+        let command = pipedrive_command(&["deals", "update", "5", "--add-label-ids", "3"]);
+
+        dispatch(&ApiClient::new().unwrap(), &served_ctx(&address), command)
+            .await
+            .unwrap();
+        let requests = server.join().unwrap();
+
+        let body: Value = serde_json::from_str(request_body(&requests[1])).unwrap();
+        assert_eq!(body["label_ids"], json!([3]));
+    }
+
+    #[tokio::test]
+    async fn label_edits_refuse_a_record_without_label_ids() {
+        // Reading a missing key as "no labels" would PATCH label_ids: [] and erase them.
+        let (address, server) = serve(vec![json_response(r#"{"data":{"id":5}}"#)]);
+        let command = pipedrive_command(&["deals", "update", "5", "--remove-label-ids", "2"]);
+
+        let error = dispatch(&ApiClient::new().unwrap(), &served_ctx(&address), command)
+            .await
+            .unwrap_err();
+        let requests = server.join().unwrap();
+
+        assert_eq!(requests.len(), 1, "nothing may be written");
+        assert!(error.message.contains("label_ids"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn files_download_writes_the_file_and_reports_it() {
+        let dir = tempfile::tempdir().unwrap();
+        let output = dir.path().join("notes/transcript.pdf");
+        let (address, server) = serve(vec![
+            b"HTTP/1.1 200 OK\r\nContent-Length: 9\r\nConnection: close\r\n\r\npdf-bytes".to_vec(),
+        ]);
+        let command = pipedrive_command(&[
+            "files",
+            "download",
+            "42",
+            "--output",
+            output.to_str().unwrap(),
+        ]);
+
+        let result = dispatch(&ApiClient::new().unwrap(), &served_ctx(&address), command)
+            .await
+            .unwrap();
+        let requests = server.join().unwrap();
+
+        assert!(
+            requests[0].starts_with("get /v1/files/42/download "),
+            "{}",
+            requests[0]
+        );
+        assert!(requests[0].contains("x-api-token: pd-secret"));
+        assert_eq!(std::fs::read(&output).unwrap(), b"pdf-bytes");
+        assert_eq!(result["file_id"], "42");
+        assert_eq!(result["bytes"], 9);
+        assert_eq!(result["output"], output.to_str().unwrap());
+    }
+
+    #[tokio::test]
+    async fn users_list_is_marked_complete() {
+        let (address, server) = serve(vec![json_response(r#"{"success":true,"data":[{"id":1}]}"#)]);
+        let command = pipedrive_command(&["users", "list"]);
+
+        let result = dispatch(&ApiClient::new().unwrap(), &served_ctx(&address), command)
+            .await
+            .unwrap();
+        server.join().unwrap();
+
+        let output = crate::pagination::annotate(result, &[]);
+        assert_eq!(output["_aai"]["pagination"]["status"], "complete");
+        // The provider's response shape is preserved: no CLI fields outside `_aai`.
+        assert!(output.get(crate::pagination::COMPLETE_MARKER).is_none());
+        assert!(output.get("truncated").is_none());
+    }
+
+    fn file_list(
+        deal_id: Option<&str>,
+        person_id: Option<&str>,
+        org_id: Option<&str>,
+    ) -> PipedriveFileList {
+        PipedriveFileList {
+            limit: 50,
+            deal_id: deal_id.map(str::to_string),
+            person_id: person_id.map(str::to_string),
+            org_id: org_id.map(str::to_string),
+            sort: None,
+        }
+    }
+
+    #[test]
+    fn file_list_uses_the_record_scoped_endpoint() {
+        assert_eq!(file_list_path(&file_list(None, None, None)), "/v1/files");
+        assert_eq!(
+            file_list_path(&file_list(Some("12"), None, None)),
+            "/v1/deals/12/files"
+        );
+        assert_eq!(
+            file_list_path(&file_list(None, Some("5"), None)),
+            "/v1/persons/5/files"
+        );
+        assert_eq!(
+            file_list_path(&file_list(None, None, Some("3"))),
+            "/v1/organizations/3/files"
+        );
+    }
+
+    #[test]
+    fn label_changes_keep_existing_labels() {
+        assert_eq!(
+            merge_label_ids(vec![json!(5), json!(6)], &[json!(7), json!(5)], &[json!(6)]),
+            vec![json!(5), json!(7)]
+        );
+        assert_eq!(
+            merge_label_ids(
+                vec![json!("b4b7ce80-9c69-11f1-99c7-b5ebf9228c75")],
+                &[json!("586d25c0-9c79-11f1-8028-1583155158d7")],
+                &[json!("b4b7ce80-9c69-11f1-99c7-b5ebf9228c75")],
+            ),
+            vec![json!("586d25c0-9c79-11f1-8028-1583155158d7")]
+        );
+    }
+
+    #[test]
+    fn note_body_links_records_and_keeps_lead_ids_as_strings() {
+        let body = note_create_body(PipedriveNoteWrite {
+            json: None,
+            content: "Discovery call summary".to_string(),
+            links: PipedriveNoteLinks {
+                deal_id: Some("12".to_string()),
+                person_id: None,
+                org_id: Some("3".to_string()),
+                lead_id: Some("1f6f1c7e-0000-4000-8000-000000000000".to_string()),
+            },
+        })
+        .unwrap();
+        assert_eq!(
+            body,
+            json!({
+                "content": "Discovery call summary",
+                "deal_id": 12,
+                "org_id": 3,
+                "lead_id": "1f6f1c7e-0000-4000-8000-000000000000"
+            })
+        );
+    }
+
+    #[test]
+    fn activity_typed_flags_override_json_payload() {
+        let body = activity_update_body(PipedriveActivityUpdate {
+            id: "5".to_string(),
+            json: Some(r#"{"subject":"old","done":false,"note":"keep"}"#.to_string()),
+            subject: Some("Follow up".to_string()),
+            fields: PipedriveActivityFields {
+                activity_type: Some("call".to_string()),
+                due_date: Some("2026-10-01".to_string()),
+                due_time: None,
+                duration: None,
+                deal_id: Some("12".to_string()),
+                lead_id: None,
+                person_id: None,
+                org_id: None,
+                owner_id: Some("28".to_string()),
+                note: None,
+                done: Some(true),
+            },
+        })
+        .unwrap();
+        assert_eq!(
+            body,
+            json!({
+                "subject": "Follow up",
+                "type": "call",
+                "due_date": "2026-10-01",
+                "deal_id": 12,
+                "owner_id": 28,
+                "done": true,
+                "note": "keep"
+            })
+        );
+    }
 
     #[test]
     fn parse_csv_keeps_numeric_and_string_ids() {
@@ -1376,6 +2077,7 @@ mod tests {
             pipeline_id: None,
             stage_id: None,
             label_ids: Some("blue,7".to_string()),
+            labels: PipedriveLabelEdits::default(),
         })
         .unwrap();
 
@@ -1457,6 +2159,36 @@ mod tests {
         assert!(response.unwrap()["additional_data"]
             .get("next_cursor")
             .is_none());
+    }
+
+    #[test]
+    fn page_limit_never_fetches_past_the_requested_limit() {
+        // A 500-item page cut down to fit the limit would leave its tail behind the
+        // continuation marker, so a follow-up call would skip those records.
+        assert_eq!(page_limit(700, 500), 200);
+        assert_eq!(page_limit(700, 0), 500);
+        assert_eq!(page_limit(30, 0), 30);
+    }
+
+    #[test]
+    fn exhausted_cursor_pagination_ends_with_a_null_cursor() {
+        let mut response = Some(json!({"additional_data": {"next_cursor": "page-2"}}));
+        finish_cursor_pagination(&mut response, None);
+        assert_eq!(
+            response.unwrap()["additional_data"]["next_cursor"],
+            Value::Null
+        );
+    }
+
+    #[test]
+    fn exhausted_start_pagination_clears_the_first_pages_more_flag() {
+        let mut response = Some(json!({
+            "additional_data": {"pagination": {"next_start": 500, "more_items_in_collection": true}}
+        }));
+        finish_start_pagination(&mut response, None);
+        let pagination = &response.unwrap()["additional_data"]["pagination"];
+        assert!(pagination.get("next_start").is_none());
+        assert_eq!(pagination["more_items_in_collection"], false);
     }
 
     #[test]

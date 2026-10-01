@@ -2,7 +2,7 @@
 
 ## CLI Scope
 
-Pipedrive commands cover leads, persons, organizations, deals, labels, activities, notes, deal update/flow history, and synced email history. Use the full command reference for exact flags:
+Pipedrive commands cover leads, persons, organizations, deals, labels, activities, notes, file attachments (list, metadata, download), field definitions, users, pipelines and stages, note and activity writes, record merges, deal update/flow history, and synced email history. Use the full command reference for exact flags:
 
 - [aai-cli command reference](../aai-cli-command-reference.md#pipedrive)
 - [Auth matrix](../auth-matrix.md#cli-implications)

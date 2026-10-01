@@ -20,12 +20,19 @@ const COLLECTION_KEYS: &[&str] = &[
     "permissions",
 ];
 
+/// Internal flag a service sets on a response it knows is complete although the provider
+/// sends no pagination metadata (an endpoint that is never paginated). Like
+/// `_aai_provider_next_url`, it is read here and removed before output, so the provider's
+/// response shape is untouched.
+pub(crate) const COMPLETE_MARKER: &str = "_aai_complete";
+
 pub(crate) fn annotate(value: Value, command_args: &[String]) -> Value {
     let analysis = analyze(&value, command_args);
     let metadata = json!({ "pagination": analysis });
     match value {
         Value::Object(mut object) => {
             object.remove("_aai_provider_next_url");
+            object.remove(COMPLETE_MARKER);
             object.insert("_aai".to_string(), metadata);
             Value::Object(object)
         }
@@ -202,7 +209,8 @@ fn offset_continuation(value: &Value) -> Option<Continuation> {
 }
 
 fn explicit_completion(value: &Value) -> Option<bool> {
-    if value.get("isLast").and_then(Value::as_bool) == Some(true)
+    if value.get(COMPLETE_MARKER).and_then(Value::as_bool) == Some(true)
+        || value.get("isLast").and_then(Value::as_bool) == Some(true)
         || value
             .pointer("/pagination/more_items_in_collection")
             .and_then(Value::as_bool)
@@ -213,6 +221,11 @@ fn explicit_completion(value: &Value) -> Option<bool> {
             == Some(false)
         || value.get("has_more").and_then(Value::as_bool) == Some(false)
         || value.get("truncated").and_then(Value::as_bool) == Some(false)
+        // Pipedrive v2 marks its last page with an explicit null cursor.
+        || value
+            .pointer("/additional_data")
+            .and_then(|data| data.get("next_cursor"))
+            == Some(&Value::Null)
     {
         return Some(true);
     }
@@ -548,6 +561,16 @@ mod tests {
             &strings(&["aai-cli", "github", "prs", "comments", "get", "7"]),
         );
         assert_eq!(output["_aai"]["pagination"]["status"], "not_applicable");
+    }
+
+    #[test]
+    fn pipedrive_null_next_cursor_is_complete() {
+        let output = annotate(
+            json!({"data": [{"id": 1}], "additional_data": {"next_cursor": null}}),
+            &strings(&["aai-cli", "pipedrive", "fields", "deals", "list"]),
+        );
+        assert_eq!(output["_aai"]["pagination"]["status"], "complete");
+        assert_eq!(output["_aai"]["pagination"]["has_more"], false);
     }
 
     #[test]
