@@ -222,7 +222,7 @@ aai-cli pipedrive leads list [--limit N] [--owner-id ID] [--person-id ID] [--org
 aai-cli pipedrive leads search --term TEXT [--fields LIST] [--exact-match] [--person-id ID] [--organization-id ID] [--limit N]
 aai-cli pipedrive leads get <lead-id>
 aai-cli pipedrive leads create [--json <path|->] --title TEXT [--person-id ID] [--organization-id ID] [--label-ids CSV]
-aai-cli pipedrive leads update <lead-id> [--json <path|->] [--title TEXT] [--person-id ID] [--organization-id ID] [--label-ids CSV]
+aai-cli pipedrive leads update <lead-id> [--json <path|->] [--title TEXT] [--person-id ID] [--organization-id ID] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive leads delete <lead-id>
 aai-cli pipedrive leads convert <lead-id> [--json <path|->]
 ```
@@ -236,8 +236,9 @@ aai-cli pipedrive persons activities <person-id> [--limit N]
 aai-cli pipedrive persons notes <person-id> [--limit N]
 aai-cli pipedrive persons mail-messages <person-id> [--limit N]
 aai-cli pipedrive persons create [--json <path|->] --name TEXT [--org-id ID] [--email EMAIL] [--phone PHONE] [--label-ids CSV]
-aai-cli pipedrive persons update <person-id> [--json <path|->] [--name TEXT] [--org-id ID] [--email EMAIL] [--phone PHONE] [--label-ids CSV]
+aai-cli pipedrive persons update <person-id> [--json <path|->] [--name TEXT] [--org-id ID] [--email EMAIL] [--phone PHONE] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive persons delete <person-id>
+aai-cli pipedrive persons merge <person-id> --merge-with-id ID
 ```
 
 ```bash
@@ -249,8 +250,9 @@ aai-cli pipedrive organizations activities <organization-id> [--limit N]
 aai-cli pipedrive organizations notes <organization-id> [--limit N]
 aai-cli pipedrive organizations mail-messages <organization-id> [--limit N]
 aai-cli pipedrive organizations create [--json <path|->] --name TEXT [--address TEXT] [--label-ids CSV]
-aai-cli pipedrive organizations update <organization-id> [--json <path|->] [--name TEXT] [--address TEXT] [--label-ids CSV]
+aai-cli pipedrive organizations update <organization-id> [--json <path|->] [--name TEXT] [--address TEXT] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive organizations delete <organization-id>
+aai-cli pipedrive organizations merge <organization-id> --merge-with-id ID
 ```
 
 ```bash
@@ -263,8 +265,9 @@ aai-cli pipedrive deals notes <deal-id> [--limit N]
 aai-cli pipedrive deals mail-messages <deal-id> [--limit N]
 aai-cli pipedrive deals flow <deal-id> [--limit N]
 aai-cli pipedrive deals create [--json <path|->] --title TEXT [--person-id ID] [--org-id ID] [--value NUM] [--currency CODE] [--pipeline-id ID] [--stage-id ID] [--label-ids CSV]
-aai-cli pipedrive deals update <deal-id> [--json <path|->] [--title TEXT] [--person-id ID] [--org-id ID] [--value NUM] [--currency CODE] [--pipeline-id ID] [--stage-id ID] [--label-ids CSV]
+aai-cli pipedrive deals update <deal-id> [--json <path|->] [--title TEXT] [--person-id ID] [--org-id ID] [--value NUM] [--currency CODE] [--pipeline-id ID] [--stage-id ID] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive deals delete <deal-id>
+aai-cli pipedrive deals merge <deal-id> --merge-with-id ID
 ```
 
 ```bash
@@ -282,9 +285,31 @@ Use `view` for a combined JSON response containing the CRM record, activities, a
 ```bash
 aai-cli pipedrive activities list [--deal-id ID] [--lead-id ID] [--person-id ID] [--org-id ID] [--owner-id ID] [--done true|false] [--updated-since TS] [--updated-until TS] [--sort-by FIELD] [--sort-direction asc|desc] [--include-attendees] [--limit N]
 aai-cli pipedrive activities get <activity-id>
+aai-cli pipedrive activities create [--json <path|->] --subject TEXT [--type KEY] [--due-date DATE] [--due-time HH:MM] [--duration HH:MM] [--deal-id ID] [--lead-id UUID] [--person-id ID] [--org-id ID] [--owner-id ID] [--note TEXT] [--done true|false]
+aai-cli pipedrive activities update <activity-id> [--json <path|->] [--subject TEXT] [same flags as create]
+aai-cli pipedrive activities delete <activity-id>
 
 aai-cli pipedrive notes list [--deal-id ID] [--lead-id ID] [--person-id ID] [--org-id ID] [--user-id ID] [--sort SORT] [--start-date DATE] [--end-date DATE] [--updated-since TS] [--limit N]
 aai-cli pipedrive notes get <note-id>
+aai-cli pipedrive notes create [--json <path|->] --content TEXT [--deal-id ID] [--person-id ID] [--org-id ID] [--lead-id UUID]
+aai-cli pipedrive notes update <note-id> [--json <path|->] [--content TEXT] [--deal-id ID] [--person-id ID] [--org-id ID] [--lead-id UUID]
+aai-cli pipedrive notes delete <note-id>
+
+aai-cli pipedrive files list [--deal-id ID | --person-id ID | --org-id ID] [--sort SORT] [--limit N]
+aai-cli pipedrive files get <file-id>
+aai-cli pipedrive files download <file-id> --output PATH
+
+aai-cli pipedrive fields <deals|persons|organizations|activities> list [--limit N]
+aai-cli pipedrive fields <deals|persons|organizations|activities> get <field-code>
+
+aai-cli pipedrive users list
+aai-cli pipedrive users get <user-id>
+aai-cli pipedrive users me
+aai-cli pipedrive users find --term TEXT [--search-by-email]
+aai-cli pipedrive pipelines list [--sort-by FIELD] [--sort-direction asc|desc] [--limit N]
+aai-cli pipedrive pipelines get <pipeline-id>
+aai-cli pipedrive stages list [--pipeline-id ID] [--sort-by FIELD] [--sort-direction asc|desc] [--limit N]
+aai-cli pipedrive stages get <stage-id>
 
 aai-cli pipedrive mailbox messages get <message-id> [--include-body]
 aai-cli pipedrive mailbox threads list [--folder inbox|drafts|sent|archive] [--limit N]
@@ -577,6 +602,10 @@ Covered operations:
 - `pipedrive deals search`
 - `pipedrive activities list`
 - `pipedrive notes list`
+- `pipedrive files list`
+- `pipedrive fields <resource> list`
+- `pipedrive pipelines list`
+- `pipedrive stages list`
 - associated activities, notes, and mail-message lists
 - `pipedrive mailbox threads list`
 - `apollo people search`

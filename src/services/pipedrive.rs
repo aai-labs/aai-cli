@@ -9,7 +9,7 @@ use crate::{
     input,
     services::{
         generic_request,
-        shared::{enc, pipedrive_base, CtxProfile},
+        shared::{enc, pipedrive_base, write_download, CtxProfile},
     },
 };
 
@@ -26,6 +26,43 @@ pub(crate) async fn dispatch(
         PipedriveResource::Labels(command) => labels(client, ctx, command).await,
         PipedriveResource::Activities(command) => activities(client, ctx, command).await,
         PipedriveResource::Notes(command) => notes(client, ctx, command).await,
+        PipedriveResource::Files(command) => files(client, ctx, command).await,
+        PipedriveResource::Fields(command) => fields(client, ctx, command).await,
+        PipedriveResource::Users(command) => users(client, ctx, command).await,
+        PipedriveResource::Pipelines(command) => match command.action {
+            PipedrivePipelinesAction::List(args) => {
+                sorted_list(
+                    client,
+                    ctx,
+                    "pipelines.list",
+                    "/api/v2/pipelines",
+                    Query::new(),
+                    args,
+                )
+                .await
+            }
+            PipedrivePipelinesAction::Get(args) => {
+                get(client, ctx, "pipelines.get", "/api/v2/pipelines", &args.id).await
+            }
+        },
+        PipedriveResource::Stages(command) => match command.action {
+            PipedriveStagesAction::List(args) => {
+                let mut query = Query::new();
+                query.push("pipeline_id", args.pipeline_id.as_deref());
+                sorted_list(
+                    client,
+                    ctx,
+                    "stages.list",
+                    "/api/v2/stages",
+                    query,
+                    args.list,
+                )
+                .await
+            }
+            PipedriveStagesAction::Get(args) => {
+                get(client, ctx, "stages.get", "/api/v2/stages", &args.id).await
+            }
+        },
         PipedriveResource::Mailbox(command) => mailbox(client, ctx, command).await,
         PipedriveResource::Request(args) => {
             generic_request::dispatch(
@@ -95,14 +132,18 @@ async fn leads(
         }
         PipedriveLeadsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = LabelChanges {
+                add: args.add_label_ids.clone(),
+                remove: args.remove_label_ids.clone(),
+            };
             let body = lead_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "leads.update",
-                Method::PATCH,
                 &format!("/v1/leads/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
@@ -211,19 +252,26 @@ async fn persons(
         }
         PipedrivePersonsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = LabelChanges {
+                add: args.add_label_ids.clone(),
+                remove: args.remove_label_ids.clone(),
+            };
             let body = person_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "persons.update",
-                Method::PATCH,
                 &format!("/api/v2/persons/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
         PipedrivePersonsAction::Delete(args) => {
             delete(client, ctx, "persons.delete", "/api/v2/persons", &args.id).await
+        }
+        PipedrivePersonsAction::Merge(args) => {
+            merge(client, ctx, "persons.merge", "persons", args).await
         }
     }
 }
@@ -318,14 +366,18 @@ async fn organizations(
         }
         PipedriveOrganizationsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = LabelChanges {
+                add: args.add_label_ids.clone(),
+                remove: args.remove_label_ids.clone(),
+            };
             let body = organization_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "organizations.update",
-                Method::PATCH,
                 &format!("/api/v2/organizations/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
@@ -338,6 +390,9 @@ async fn organizations(
                 &args.id,
             )
             .await
+        }
+        PipedriveOrganizationsAction::Merge(args) => {
+            merge(client, ctx, "organizations.merge", "organizations", args).await
         }
     }
 }
@@ -436,20 +491,25 @@ async fn deals(
         }
         PipedriveDealsAction::Update(args) => {
             let id = args.id.clone();
+            let labels = LabelChanges {
+                add: args.add_label_ids.clone(),
+                remove: args.remove_label_ids.clone(),
+            };
             let body = deal_update_body(args)?;
-            request_json(
+            update_record(
                 client,
                 ctx,
                 "deals.update",
-                Method::PATCH,
                 &format!("/api/v2/deals/{}", enc(&id)),
-                Some(body),
+                labels,
+                body,
             )
             .await
         }
         PipedriveDealsAction::Delete(args) => {
             delete(client, ctx, "deals.delete", "/api/v2/deals", &args.id).await
         }
+        PipedriveDealsAction::Merge(args) => merge(client, ctx, "deals.merge", "deals", args).await,
     }
 }
 
@@ -499,7 +559,261 @@ async fn activities(
             )
             .await
         }
+        PipedriveActivitiesAction::Create(args) => {
+            let body = activity_create_body(*args)?;
+            request_json(
+                client,
+                ctx,
+                "activities.create",
+                Method::POST,
+                "/api/v2/activities",
+                Some(body),
+            )
+            .await
+        }
+        PipedriveActivitiesAction::Update(args) => {
+            let id = args.id.clone();
+            let body = activity_update_body(*args)?;
+            request_json(
+                client,
+                ctx,
+                "activities.update",
+                Method::PATCH,
+                &format!("/api/v2/activities/{}", enc(&id)),
+                Some(body),
+            )
+            .await
+        }
+        PipedriveActivitiesAction::Delete(args) => {
+            delete(
+                client,
+                ctx,
+                "activities.delete",
+                "/api/v2/activities",
+                &args.id,
+            )
+            .await
+        }
     }
+}
+
+/// Label edits that keep the record's other labels, unlike `--label-ids`, which
+/// replaces the whole set.
+struct LabelChanges {
+    add: Option<String>,
+    remove: Option<String>,
+}
+
+/// PATCH a record, first resolving any label additions or removals against the labels
+/// it currently has.
+async fn update_record(
+    client: &ApiClient,
+    ctx: &Context,
+    operation: &'static str,
+    path: &str,
+    labels: LabelChanges,
+    mut body: Value,
+) -> Result<Value, AppError> {
+    if labels.add.is_some() || labels.remove.is_some() {
+        let record = request_json(client, ctx, operation, Method::GET, path, None).await?;
+        let current = record
+            .pointer("/data/label_ids")
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        let add = labels.add.as_deref().map(parse_csv).transpose()?;
+        let remove = labels.remove.as_deref().map(parse_csv).transpose()?;
+        input::ensure_object(&mut body).insert(
+            "label_ids".to_string(),
+            Value::Array(merge_label_ids(
+                current,
+                &add.unwrap_or_default(),
+                &remove.unwrap_or_default(),
+            )),
+        );
+    }
+    request_json(client, ctx, operation, Method::PATCH, path, Some(body)).await
+}
+
+fn merge_label_ids(current: Vec<Value>, add: &[Value], remove: &[Value]) -> Vec<Value> {
+    // Deal/person/organization label IDs are numbers and lead label IDs are UUIDs, and a
+    // CSV "5" parses to a number, so compare by rendered text.
+    let key = |id: &Value| match id {
+        Value::String(text) => text.clone(),
+        other => other.to_string(),
+    };
+    let removed = |id: &Value| remove.iter().any(|other| key(other) == key(id));
+    let mut ids: Vec<Value> = current.into_iter().filter(|id| !removed(id)).collect();
+    for id in add {
+        if !removed(id) && !ids.iter().any(|existing| key(existing) == key(id)) {
+            ids.push(id.clone());
+        }
+    }
+    ids
+}
+
+/// Pipedrive merges `id` into `merge_with_id`: the latter remains and its data wins.
+async fn merge(
+    client: &ApiClient,
+    ctx: &Context,
+    operation: &'static str,
+    collection: &str,
+    args: PipedriveMergeArgs,
+) -> Result<Value, AppError> {
+    request_json(
+        client,
+        ctx,
+        operation,
+        Method::PUT,
+        &format!("/v1/{collection}/{}/merge", enc(&args.id)),
+        Some(json!({ "merge_with_id": id_value(&args.merge_with_id) })),
+    )
+    .await
+}
+
+async fn users(
+    client: &ApiClient,
+    ctx: &Context,
+    command: PipedriveUsersCommand,
+) -> Result<Value, AppError> {
+    match command.action {
+        PipedriveUsersAction::List => {
+            request_json(client, ctx, "users.list", Method::GET, "/v1/users", None).await
+        }
+        PipedriveUsersAction::Get(args) => {
+            get(client, ctx, "users.get", "/v1/users", &args.id).await
+        }
+        PipedriveUsersAction::Me => {
+            request_json(client, ctx, "users.me", Method::GET, "/v1/users/me", None).await
+        }
+        PipedriveUsersAction::Find(args) => {
+            let mut query = Query::new();
+            query.push_value("term", &args.term);
+            if args.search_by_email {
+                query.push_value("search_by_email", "1");
+            }
+            let mut url = format!("{}/v1/users/find", pipedrive_base(ctx.profile()));
+            query.append_to(&mut url);
+            client
+                .request(
+                    "pipedrive",
+                    "users.find",
+                    ctx.profile(),
+                    Method::GET,
+                    url,
+                    None,
+                )
+                .await
+        }
+    }
+}
+
+async fn sorted_list(
+    client: &ApiClient,
+    ctx: &Context,
+    operation: &'static str,
+    path: &str,
+    mut query: Query,
+    args: PipedriveSortedList,
+) -> Result<Value, AppError> {
+    query.push("sort_by", args.sort_by.as_deref());
+    query.push(
+        "sort_direction",
+        sort_direction(args.sort_direction.as_ref()),
+    );
+    list_v2(client, ctx, operation, path, query, args.limit).await
+}
+
+async fn fields(
+    client: &ApiClient,
+    ctx: &Context,
+    command: PipedriveFieldsCommand,
+) -> Result<Value, AppError> {
+    let (path, (list_operation, get_operation), command) = match command.resource {
+        PipedriveFieldResource::Deals(command) => (
+            "/api/v2/dealFields",
+            ("fields.deals.list", "fields.deals.get"),
+            command,
+        ),
+        PipedriveFieldResource::Persons(command) => (
+            "/api/v2/personFields",
+            ("fields.persons.list", "fields.persons.get"),
+            command,
+        ),
+        PipedriveFieldResource::Organizations(command) => (
+            "/api/v2/organizationFields",
+            ("fields.organizations.list", "fields.organizations.get"),
+            command,
+        ),
+        PipedriveFieldResource::Activities(command) => (
+            "/api/v2/activityFields",
+            ("fields.activities.list", "fields.activities.get"),
+            command,
+        ),
+    };
+    match command.action {
+        PipedriveFieldAction::List(args) => {
+            list_v2(client, ctx, list_operation, path, Query::new(), args.limit).await
+        }
+        PipedriveFieldAction::Get(args) => {
+            get(client, ctx, get_operation, path, &args.field_code).await
+        }
+    }
+}
+
+async fn files(
+    client: &ApiClient,
+    ctx: &Context,
+    command: PipedriveFilesCommand,
+) -> Result<Value, AppError> {
+    match command.action {
+        PipedriveFilesAction::List(args) => {
+            let mut query = Query::new();
+            query.push("sort", args.sort.as_deref());
+            list_v1(
+                client,
+                ctx,
+                "files.list",
+                &file_list_path(&args),
+                query,
+                args.limit,
+            )
+            .await
+        }
+        PipedriveFilesAction::Get(args) => {
+            get(client, ctx, "files.get", "/v1/files", &args.id).await
+        }
+        PipedriveFilesAction::Download(args) => {
+            let operation = "files.download";
+            let url = format!(
+                "{}/v1/files/{}/download",
+                pipedrive_base(ctx.profile()),
+                enc(&args.id)
+            );
+            let bytes = client
+                .download("pipedrive", operation, ctx.profile(), url)
+                .await?;
+            let mut result = write_download("pipedrive", operation, &args.output, &bytes)?;
+            result["file_id"] = json!(args.id);
+            Ok(result)
+        }
+    }
+}
+
+/// Pipedrive lists a record's files under the record itself, not through a filter on
+/// `/v1/files`, so the scope picks the endpoint.
+fn file_list_path(args: &PipedriveFileList) -> String {
+    [
+        ("deals", &args.deal_id),
+        ("persons", &args.person_id),
+        ("organizations", &args.org_id),
+    ]
+    .into_iter()
+    .find_map(|(collection, id)| {
+        id.as_deref()
+            .map(|id| format!("/v1/{collection}/{}/files", enc(id)))
+    })
+    .unwrap_or_else(|| "/v1/files".to_string())
 }
 
 async fn notes(
@@ -523,6 +837,34 @@ async fn notes(
         }
         PipedriveNotesAction::Get(args) => {
             get(client, ctx, "notes.get", "/v1/notes", &args.id).await
+        }
+        PipedriveNotesAction::Create(args) => {
+            let body = note_create_body(args)?;
+            request_json(
+                client,
+                ctx,
+                "notes.create",
+                Method::POST,
+                "/v1/notes",
+                Some(body),
+            )
+            .await
+        }
+        PipedriveNotesAction::Update(args) => {
+            let id = args.id.clone();
+            let body = note_update_body(args)?;
+            request_json(
+                client,
+                ctx,
+                "notes.update",
+                Method::PUT,
+                &format!("/v1/notes/{}", enc(&id)),
+                Some(body),
+            )
+            .await
+        }
+        PipedriveNotesAction::Delete(args) => {
+            delete(client, ctx, "notes.delete", "/v1/notes", &args.id).await
         }
     }
 }
@@ -1131,6 +1473,76 @@ fn deal_update_body(args: PipedriveDealUpdate) -> Result<Value, AppError> {
     Ok(body)
 }
 
+fn note_create_body(args: PipedriveNoteWrite) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "notes.create", args.json.as_deref())?;
+    input::set_string(&mut body, "content", &Some(args.content));
+    set_note_links(
+        &mut body,
+        args.deal_id,
+        args.person_id,
+        args.org_id,
+        args.lead_id,
+    );
+    Ok(body)
+}
+
+fn note_update_body(args: PipedriveNoteUpdate) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "notes.update", args.json.as_deref())?;
+    input::set_string(&mut body, "content", &args.content);
+    set_note_links(
+        &mut body,
+        args.deal_id,
+        args.person_id,
+        args.org_id,
+        args.lead_id,
+    );
+    Ok(body)
+}
+
+fn set_note_links(
+    body: &mut Value,
+    deal_id: Option<String>,
+    person_id: Option<String>,
+    org_id: Option<String>,
+    lead_id: Option<String>,
+) {
+    set_id(body, "deal_id", deal_id.as_deref());
+    set_id(body, "person_id", person_id.as_deref());
+    set_id(body, "org_id", org_id.as_deref());
+    // Lead IDs are UUIDs; Pipedrive rejects them as numbers.
+    input::set_string(body, "lead_id", &lead_id);
+}
+
+fn activity_create_body(args: PipedriveActivityWrite) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "activities.create", args.json.as_deref())?;
+    input::set_string(&mut body, "subject", &Some(args.subject));
+    set_activity_fields(&mut body, args.fields);
+    Ok(body)
+}
+
+fn activity_update_body(args: PipedriveActivityUpdate) -> Result<Value, AppError> {
+    let mut body = input::read_json_arg("pipedrive", "activities.update", args.json.as_deref())?;
+    input::set_string(&mut body, "subject", &args.subject);
+    set_activity_fields(&mut body, args.fields);
+    Ok(body)
+}
+
+fn set_activity_fields(body: &mut Value, fields: PipedriveActivityFields) {
+    input::set_string(body, "type", &fields.activity_type);
+    input::set_string(body, "due_date", &fields.due_date);
+    input::set_string(body, "due_time", &fields.due_time);
+    input::set_string(body, "duration", &fields.duration);
+    set_id(body, "deal_id", fields.deal_id.as_deref());
+    input::set_string(body, "lead_id", &fields.lead_id);
+    set_id(body, "person_id", fields.person_id.as_deref());
+    set_id(body, "org_id", fields.org_id.as_deref());
+    set_id(body, "owner_id", fields.owner_id.as_deref());
+    input::set_string(body, "note", &fields.note);
+    if let Some(done) = fields.done {
+        input::ensure_object(body).insert("done".to_string(), Value::Bool(done));
+    }
+}
+
 fn set_contact_field(body: &mut Value, key: &str, value: Option<&str>) {
     if let Some(value) = value {
         input::ensure_object(body).insert(key.to_string(), json!([{ "value": value }]));
@@ -1378,6 +1790,110 @@ impl Query {
 mod tests {
     use super::*;
 
+    fn file_list(
+        deal_id: Option<&str>,
+        person_id: Option<&str>,
+        org_id: Option<&str>,
+    ) -> PipedriveFileList {
+        PipedriveFileList {
+            limit: 50,
+            deal_id: deal_id.map(str::to_string),
+            person_id: person_id.map(str::to_string),
+            org_id: org_id.map(str::to_string),
+            sort: None,
+        }
+    }
+
+    #[test]
+    fn file_list_uses_the_record_scoped_endpoint() {
+        assert_eq!(file_list_path(&file_list(None, None, None)), "/v1/files");
+        assert_eq!(
+            file_list_path(&file_list(Some("12"), None, None)),
+            "/v1/deals/12/files"
+        );
+        assert_eq!(
+            file_list_path(&file_list(None, Some("5"), None)),
+            "/v1/persons/5/files"
+        );
+        assert_eq!(
+            file_list_path(&file_list(None, None, Some("3"))),
+            "/v1/organizations/3/files"
+        );
+    }
+
+    #[test]
+    fn label_changes_keep_existing_labels() {
+        assert_eq!(
+            merge_label_ids(vec![json!(5), json!(6)], &[json!(7), json!(5)], &[json!(6)]),
+            vec![json!(5), json!(7)]
+        );
+        assert_eq!(
+            merge_label_ids(
+                vec![json!("b4b7ce80-9c69-11f1-99c7-b5ebf9228c75")],
+                &[json!("586d25c0-9c79-11f1-8028-1583155158d7")],
+                &[json!("b4b7ce80-9c69-11f1-99c7-b5ebf9228c75")],
+            ),
+            vec![json!("586d25c0-9c79-11f1-8028-1583155158d7")]
+        );
+    }
+
+    #[test]
+    fn note_body_links_records_and_keeps_lead_ids_as_strings() {
+        let body = note_create_body(PipedriveNoteWrite {
+            json: None,
+            content: "Discovery call summary".to_string(),
+            deal_id: Some("12".to_string()),
+            person_id: None,
+            org_id: Some("3".to_string()),
+            lead_id: Some("1f6f1c7e-0000-4000-8000-000000000000".to_string()),
+        })
+        .unwrap();
+        assert_eq!(
+            body,
+            json!({
+                "content": "Discovery call summary",
+                "deal_id": 12,
+                "org_id": 3,
+                "lead_id": "1f6f1c7e-0000-4000-8000-000000000000"
+            })
+        );
+    }
+
+    #[test]
+    fn activity_typed_flags_override_json_payload() {
+        let body = activity_update_body(PipedriveActivityUpdate {
+            id: "5".to_string(),
+            json: Some(r#"{"subject":"old","done":false,"note":"keep"}"#.to_string()),
+            subject: Some("Follow up".to_string()),
+            fields: PipedriveActivityFields {
+                activity_type: Some("call".to_string()),
+                due_date: Some("2026-10-01".to_string()),
+                due_time: None,
+                duration: None,
+                deal_id: Some("12".to_string()),
+                lead_id: None,
+                person_id: None,
+                org_id: None,
+                owner_id: Some("28".to_string()),
+                note: None,
+                done: Some(true),
+            },
+        })
+        .unwrap();
+        assert_eq!(
+            body,
+            json!({
+                "subject": "Follow up",
+                "type": "call",
+                "due_date": "2026-10-01",
+                "deal_id": 12,
+                "owner_id": 28,
+                "done": true,
+                "note": "keep"
+            })
+        );
+    }
+
     #[test]
     fn parse_csv_keeps_numeric_and_string_ids() {
         assert_eq!(
@@ -1399,6 +1915,8 @@ mod tests {
             pipeline_id: None,
             stage_id: None,
             label_ids: Some("blue,7".to_string()),
+            add_label_ids: None,
+            remove_label_ids: None,
         })
         .unwrap();
 

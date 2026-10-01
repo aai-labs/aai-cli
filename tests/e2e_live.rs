@@ -1678,6 +1678,260 @@ fn pipedrive_crm_crud_and_labels() {
     );
 }
 
+const PD: &str = "AAI_E2E_PIPEDRIVE_PROFILE";
+
+fn pipedrive_id(value: &Value) -> String {
+    match &value["data"]["id"] {
+        Value::String(id) => id.clone(),
+        id => id.to_string(),
+    }
+}
+
+fn pagination_status(value: &Value) -> &str {
+    value["_aai"]["pagination"]["status"].as_str().unwrap_or("")
+}
+
+#[test]
+#[ignore = "requires live Pipedrive credentials"]
+fn pipedrive_reference_data_resolves_ids() {
+    let Some(me) = cli(PD, &["pipedrive", "users", "me"]) else {
+        return;
+    };
+    let users = cli_required(PD, &["pipedrive", "users", "list"]);
+    assert!(users["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|user| user["id"] == me["data"]["id"]));
+
+    let pipelines = cli_required(PD, &["pipedrive", "pipelines", "list"]);
+    assert_eq!(pagination_status(&pipelines), "complete");
+    let pipeline = pipelines["data"][0]["id"].clone();
+    let pipeline_id = pipeline.to_string();
+    let stages = cli_required(
+        PD,
+        &["pipedrive", "stages", "list", "--pipeline-id", &pipeline_id],
+    );
+    assert!(stages["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|stage| stage["pipeline_id"] == pipeline));
+
+    let fields = cli_required(PD, &["pipedrive", "fields", "organizations", "list"]);
+    assert_eq!(pagination_status(&fields), "complete");
+    assert!(fields["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|field| field["options"].is_array()));
+}
+
+#[test]
+#[ignore = "requires live Pipedrive credentials and disposable CRM records"]
+fn pipedrive_notes_activities_merges_and_label_edits() {
+    let Some(org) = cli(
+        PD,
+        &[
+            "pipedrive",
+            "organizations",
+            "create",
+            "--name",
+            &unique("aai-e2e-org"),
+        ],
+    ) else {
+        return;
+    };
+    let org_id = pipedrive_id(&org);
+    let keep = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "persons",
+            "create",
+            "--name",
+            &unique("aai-e2e-keep"),
+            "--org-id",
+            &org_id,
+        ],
+    ));
+    let merged = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "persons",
+            "create",
+            "--name",
+            &unique("aai-e2e-merged"),
+            "--email",
+            "aai-e2e-merged@example.com",
+        ],
+    ));
+    let deal_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "deals",
+            "create",
+            "--title",
+            &unique("aai-e2e-deal"),
+            "--org-id",
+            &org_id,
+        ],
+    ));
+
+    let note_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "notes",
+            "create",
+            "--content",
+            "aai-e2e note",
+            "--deal-id",
+            &deal_id,
+        ],
+    ));
+    let note = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "notes",
+            "update",
+            &note_id,
+            "--content",
+            "aai-e2e note edited",
+        ],
+    );
+    assert_eq!(note["data"]["content"], "aai-e2e note edited");
+    assert_eq!(note["data"]["deal_id"].to_string(), deal_id);
+    cli_required(PD, &["pipedrive", "notes", "delete", &note_id]);
+
+    let activity_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "activities",
+            "create",
+            "--subject",
+            "aai-e2e follow-up",
+            "--type",
+            "call",
+            "--due-date",
+            "2030-01-15",
+            "--deal-id",
+            &deal_id,
+        ],
+    ));
+    let activity = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "activities",
+            "update",
+            &activity_id,
+            "--done",
+            "true",
+        ],
+    );
+    assert_eq!(activity["data"]["done"], true);
+    cli_required(PD, &["pipedrive", "activities", "delete", &activity_id]);
+
+    let label_a = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "labels",
+            "leads",
+            "create",
+            "--name",
+            &unique("aai-e2e-a"),
+            "--color",
+            "green",
+        ],
+    ));
+    let label_b = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "labels",
+            "leads",
+            "create",
+            "--name",
+            &unique("aai-e2e-b"),
+            "--color",
+            "blue",
+        ],
+    ));
+    let lead_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "leads",
+            "create",
+            "--title",
+            &unique("aai-e2e-lead"),
+            "--organization-id",
+            &org_id,
+            "--label-ids",
+            &label_a,
+        ],
+    ));
+    let lead = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "leads",
+            "update",
+            &lead_id,
+            "--add-label-ids",
+            &label_b,
+        ],
+    );
+    assert_eq!(
+        lead["data"]["label_ids"],
+        serde_json::json!([label_a, label_b])
+    );
+    let lead = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "leads",
+            "update",
+            &lead_id,
+            "--remove-label-ids",
+            &label_a,
+        ],
+    );
+    assert_eq!(lead["data"]["label_ids"], serde_json::json!([label_b]));
+
+    let result = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "persons",
+            "merge",
+            &merged,
+            "--merge-with-id",
+            &keep,
+        ],
+    );
+    assert_eq!(pipedrive_id(&result), keep);
+    let kept = cli_required(PD, &["pipedrive", "persons", "get", &keep]);
+    assert!(kept["data"]["emails"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|email| email["value"] == "aai-e2e-merged@example.com"));
+
+    cli_required(PD, &["pipedrive", "leads", "delete", &lead_id]);
+    cli_required(PD, &["pipedrive", "labels", "leads", "delete", &label_a]);
+    cli_required(PD, &["pipedrive", "labels", "leads", "delete", &label_b]);
+    cli_required(PD, &["pipedrive", "deals", "delete", &deal_id]);
+    cli_required(PD, &["pipedrive", "persons", "delete", &keep]);
+    cli_required(PD, &["pipedrive", "organizations", "delete", &org_id]);
+}
+
 #[test]
 #[ignore = "requires live Slack credentials and a seeded test channel"]
 fn slack_channel_read_and_canvas_download() {

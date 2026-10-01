@@ -2253,6 +2253,16 @@ pub enum PipedriveResource {
     Activities(PipedriveActivitiesCommand),
     /// List or get notes across CRM records.
     Notes(PipedriveNotesCommand),
+    /// List, inspect, and download files attached to CRM records.
+    Files(PipedriveFilesCommand),
+    /// Read field definitions: custom-field keys, types, and option labels.
+    Fields(PipedriveFieldsCommand),
+    /// Look up company users (deal owners, note authors).
+    Users(PipedriveUsersCommand),
+    /// List or get sales pipelines.
+    Pipelines(PipedrivePipelinesCommand),
+    /// List or get pipeline stages.
+    Stages(PipedriveStagesCommand),
     /// Inspect synced email messages and threads.
     Mailbox(PipedriveMailboxCommand),
     /// Call an uncommon Pipedrive REST endpoint with profile authentication.
@@ -2339,6 +2349,12 @@ pub struct PipedriveLeadUpdate {
     pub organization_id: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    /// Label IDs to add, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub add_label_ids: Option<String>,
+    /// Label IDs to remove, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub remove_label_ids: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -2376,6 +2392,8 @@ pub enum PipedrivePersonsAction {
     Update(PipedrivePersonUpdate),
     /// Delete a person.
     Delete(PipedriveIdArg),
+    /// Merge this person into another; `--merge-with-id` survives and its data wins conflicts.
+    Merge(PipedriveMergeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -2449,6 +2467,12 @@ pub struct PipedrivePersonUpdate {
     pub phone: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    /// Label IDs to add, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub add_label_ids: Option<String>,
+    /// Label IDs to remove, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub remove_label_ids: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -2479,6 +2503,8 @@ pub enum PipedriveOrganizationsAction {
     Update(PipedriveOrganizationUpdate),
     /// Delete an organization.
     Delete(PipedriveIdArg),
+    /// Merge this organization into another; `--merge-with-id` survives and its data wins conflicts.
+    Merge(PipedriveMergeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -2538,6 +2564,12 @@ pub struct PipedriveOrganizationUpdate {
     pub address: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    /// Label IDs to add, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub add_label_ids: Option<String>,
+    /// Label IDs to remove, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub remove_label_ids: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -2570,6 +2602,8 @@ pub enum PipedriveDealsAction {
     Update(PipedriveDealUpdate),
     /// Delete a deal.
     Delete(PipedriveIdArg),
+    /// Merge this deal into another; `--merge-with-id` survives and its data wins conflicts.
+    Merge(PipedriveMergeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -2665,6 +2699,12 @@ pub struct PipedriveDealUpdate {
     pub stage_id: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    /// Label IDs to add, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub add_label_ids: Option<String>,
+    /// Label IDs to remove, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub remove_label_ids: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -3668,6 +3708,12 @@ pub enum PipedriveActivitiesAction {
     List(Box<PipedriveActivityList>),
     /// Get one activity.
     Get(PipedriveIdArg),
+    /// Create an activity (call, meeting, task, ...) from flags and/or JSON.
+    Create(Box<PipedriveActivityWrite>),
+    /// Update an activity from flags and/or JSON, e.g. mark it done.
+    Update(Box<PipedriveActivityUpdate>),
+    /// Delete an activity.
+    Delete(PipedriveIdArg),
 }
 
 #[derive(Debug, Args)]
@@ -3717,6 +3763,12 @@ pub enum PipedriveNotesAction {
     List(PipedriveNoteList),
     /// Get one note.
     Get(PipedriveIdArg),
+    /// Create a note on a deal, person, organization, or lead.
+    Create(PipedriveNoteWrite),
+    /// Update a note's content or links.
+    Update(PipedriveNoteUpdate),
+    /// Delete a note.
+    Delete(PipedriveIdArg),
 }
 
 #[derive(Debug, Args)]
@@ -3742,6 +3794,268 @@ pub struct PipedriveNoteList {
     pub end_date: Option<String>,
     #[arg(long)]
     pub updated_since: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveMergeArgs {
+    /// ID of the record merged away.
+    pub id: String,
+    /// ID of the record that remains after the merge.
+    #[arg(long)]
+    pub merge_with_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveNoteWrite {
+    #[arg(long)]
+    pub json: Option<String>,
+    /// Note body. Pipedrive accepts basic HTML.
+    #[arg(long)]
+    pub content: String,
+    #[arg(long)]
+    pub deal_id: Option<String>,
+    #[arg(long)]
+    pub person_id: Option<String>,
+    #[arg(long)]
+    pub org_id: Option<String>,
+    #[arg(long)]
+    pub lead_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveNoteUpdate {
+    pub id: String,
+    #[arg(long)]
+    pub json: Option<String>,
+    #[arg(long)]
+    pub content: Option<String>,
+    #[arg(long)]
+    pub deal_id: Option<String>,
+    #[arg(long)]
+    pub person_id: Option<String>,
+    #[arg(long)]
+    pub org_id: Option<String>,
+    #[arg(long)]
+    pub lead_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveActivityFields {
+    /// Activity type key, e.g. call, meeting, task, deadline, email, lunch.
+    #[arg(long = "type")]
+    pub activity_type: Option<String>,
+    /// Due date, YYYY-MM-DD.
+    #[arg(long)]
+    pub due_date: Option<String>,
+    /// Due time in UTC, HH:MM.
+    #[arg(long)]
+    pub due_time: Option<String>,
+    /// Duration, HH:MM.
+    #[arg(long)]
+    pub duration: Option<String>,
+    #[arg(long)]
+    pub deal_id: Option<String>,
+    #[arg(long)]
+    pub lead_id: Option<String>,
+    #[arg(long)]
+    pub person_id: Option<String>,
+    #[arg(long)]
+    pub org_id: Option<String>,
+    /// User ID the activity is assigned to.
+    #[arg(long)]
+    pub owner_id: Option<String>,
+    /// Private note on the activity.
+    #[arg(long)]
+    pub note: Option<String>,
+    #[arg(long)]
+    pub done: Option<bool>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveActivityWrite {
+    #[arg(long)]
+    pub json: Option<String>,
+    #[arg(long)]
+    pub subject: String,
+    #[command(flatten)]
+    pub fields: PipedriveActivityFields,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveActivityUpdate {
+    pub id: String,
+    #[arg(long)]
+    pub json: Option<String>,
+    #[arg(long)]
+    pub subject: Option<String>,
+    #[command(flatten)]
+    pub fields: PipedriveActivityFields,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveUsersCommand {
+    #[command(subcommand)]
+    pub action: PipedriveUsersAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveUsersAction {
+    /// List every user in the company. Pipedrive returns them in one response.
+    List,
+    /// Get one user.
+    Get(PipedriveIdArg),
+    /// Get the user the API token belongs to.
+    Me,
+    /// Find users by name, or by email with --search-by-email.
+    Find(PipedriveUserFind),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveUserFind {
+    #[arg(long)]
+    pub term: String,
+    /// Match the term against email addresses instead of names.
+    #[arg(long)]
+    pub search_by_email: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedrivePipelinesCommand {
+    #[command(subcommand)]
+    pub action: PipedrivePipelinesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedrivePipelinesAction {
+    /// List pipelines.
+    List(PipedriveSortedList),
+    /// Get one pipeline.
+    Get(PipedriveIdArg),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveStagesCommand {
+    #[command(subcommand)]
+    pub action: PipedriveStagesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveStagesAction {
+    /// List stages, across all pipelines or in one.
+    List(PipedriveStageList),
+    /// Get one stage.
+    Get(PipedriveIdArg),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveSortedList {
+    /// Maximum records to aggregate.
+    #[arg(long, default_value_t = 500)]
+    pub limit: u32,
+    /// Sort field, e.g. id, update_time, or add_time.
+    #[arg(long)]
+    pub sort_by: Option<String>,
+    #[arg(long, value_enum)]
+    pub sort_direction: Option<PipedriveSortDirection>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveStageList {
+    /// Only stages in this pipeline.
+    #[arg(long)]
+    pub pipeline_id: Option<String>,
+    #[command(flatten)]
+    pub list: PipedriveSortedList,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldsCommand {
+    #[command(subcommand)]
+    pub resource: PipedriveFieldResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveFieldResource {
+    /// Deal fields. Leads use the deal field definitions for their custom fields.
+    Deals(PipedriveFieldCommand),
+    /// Person fields.
+    Persons(PipedriveFieldCommand),
+    /// Organization fields, including Industry and other option fields.
+    Organizations(PipedriveFieldCommand),
+    /// Activity fields.
+    Activities(PipedriveFieldCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldCommand {
+    #[command(subcommand)]
+    pub action: PipedriveFieldAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveFieldAction {
+    /// List field definitions with their option labels.
+    List(PipedriveFieldList),
+    /// Get one field definition by its field code (the key used in record payloads).
+    Get(PipedriveFieldCodeArg),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldList {
+    /// Maximum fields to aggregate. Defaults high because a partial field map silently
+    /// leaves custom-field keys and option IDs unresolved.
+    #[arg(long, default_value_t = 500)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldCodeArg {
+    /// Field code, e.g. a custom field's 40-character hash key.
+    pub field_code: String,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFilesCommand {
+    #[command(subcommand)]
+    pub action: PipedriveFilesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveFilesAction {
+    /// List files, either account-wide or attached to one deal, person, or organization.
+    List(PipedriveFileList),
+    /// Get one file's metadata.
+    Get(PipedriveIdArg),
+    /// Download one file's content to --output.
+    Download(PipedriveFileDownload),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFileList {
+    /// Maximum files to aggregate.
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+    /// Only files attached to this deal.
+    #[arg(long, conflicts_with_all = ["person_id", "org_id"])]
+    pub deal_id: Option<String>,
+    /// Only files attached to this person.
+    #[arg(long, conflicts_with = "org_id")]
+    pub person_id: Option<String>,
+    /// Only files attached to this organization.
+    #[arg(long)]
+    pub org_id: Option<String>,
+    /// Pipedrive sort expression, e.g. "add_time DESC".
+    #[arg(long)]
+    pub sort: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFileDownload {
+    /// Pipedrive file ID.
+    pub id: String,
+    /// Path to write the file content to. Content never goes to stdout.
+    #[arg(long)]
+    pub output: String,
 }
 
 #[derive(Debug, Args)]
@@ -3994,6 +4308,185 @@ mod tests {
         // Content must never land on stdout, so there is no default for --output.
         Cli::try_parse_from(["aai-cli", "drive", "files", "download", "1AbC"])
             .expect_err("download without --output must fail");
+    }
+
+    #[test]
+    fn pipedrive_field_lists_default_to_the_whole_field_map() {
+        let cli = Cli::try_parse_from(["aai-cli", "pipedrive", "fields", "organizations", "list"])
+            .expect("parse organization field list");
+        let Command::Pipedrive(command) = cli.command else {
+            panic!("expected pipedrive command");
+        };
+        let PipedriveResource::Fields(PipedriveFieldsCommand {
+            resource: PipedriveFieldResource::Organizations(command),
+        }) = command.resource
+        else {
+            panic!("expected organization fields");
+        };
+        let PipedriveFieldAction::List(args) = command.action else {
+            panic!("expected list");
+        };
+        assert_eq!(args.limit, 500);
+    }
+
+    #[test]
+    fn pipedrive_label_edits_cannot_be_combined_with_a_full_replacement() {
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "deals",
+            "update",
+            "1",
+            "--add-label-ids",
+            "7",
+            "--remove-label-ids",
+            "6",
+        ])
+        .expect("parse label add and remove");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "leads",
+            "update",
+            "abc",
+            "--label-ids",
+            "7",
+            "--add-label-ids",
+            "8",
+        ])
+        .expect_err("--label-ids replaces the set, so it conflicts with add/remove");
+    }
+
+    #[test]
+    fn pipedrive_merge_requires_the_surviving_record() {
+        for resource in ["persons", "organizations", "deals"] {
+            Cli::try_parse_from([
+                "aai-cli",
+                "pipedrive",
+                resource,
+                "merge",
+                "7",
+                "--merge-with-id",
+                "9",
+            ])
+            .unwrap_or_else(|err| panic!("parse {resource} merge: {err}"));
+            Cli::try_parse_from(["aai-cli", "pipedrive", resource, "merge", "7"])
+                .expect_err("merge requires --merge-with-id");
+        }
+    }
+
+    #[test]
+    fn pipedrive_note_create_requires_content() {
+        Cli::try_parse_from(["aai-cli", "pipedrive", "notes", "create", "--deal-id", "1"])
+            .expect_err("a note needs content");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "notes",
+            "create",
+            "--content",
+            "Call notes",
+            "--deal-id",
+            "1",
+        ])
+        .expect("parse note create");
+    }
+
+    #[test]
+    fn pipedrive_activity_update_accepts_done() {
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "activities",
+            "update",
+            "5",
+            "--done",
+            "true",
+        ])
+        .expect("parse activity completion");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "activities",
+            "create",
+            "--type",
+            "call",
+        ])
+        .expect_err("an activity needs a subject");
+    }
+
+    #[test]
+    fn pipedrive_user_find_requires_a_term() {
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "users",
+            "find",
+            "--term",
+            "ana@example.com",
+            "--search-by-email",
+        ])
+        .expect("parse user find by email");
+        Cli::try_parse_from(["aai-cli", "pipedrive", "users", "find"])
+            .expect_err("user find requires --term");
+    }
+
+    #[test]
+    fn pipedrive_stages_list_can_scope_to_one_pipeline() {
+        let cli = Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "stages",
+            "list",
+            "--pipeline-id",
+            "3",
+            "--sort-direction",
+            "desc",
+        ])
+        .expect("parse pipeline-scoped stage list");
+        let Command::Pipedrive(command) = cli.command else {
+            panic!("expected pipedrive command");
+        };
+        let PipedriveResource::Stages(PipedriveStagesCommand {
+            action: PipedriveStagesAction::List(args),
+        }) = command.resource
+        else {
+            panic!("expected stage list");
+        };
+        assert_eq!(args.pipeline_id.as_deref(), Some("3"));
+        assert_eq!(args.list.limit, 500);
+    }
+
+    #[test]
+    fn pipedrive_field_get_takes_a_field_code() {
+        Cli::try_parse_from(["aai-cli", "pipedrive", "fields", "deals", "get", "abc123"])
+            .expect("parse deal field get");
+        Cli::try_parse_from(["aai-cli", "pipedrive", "fields", "deals", "get"])
+            .expect_err("field get requires a field code");
+    }
+
+    #[test]
+    fn pipedrive_files_download_requires_an_output_path() {
+        // Content must never land on stdout, so there is no default for --output.
+        Cli::try_parse_from(["aai-cli", "pipedrive", "files", "download", "7"])
+            .expect_err("download without --output must fail");
+    }
+
+    #[test]
+    fn pipedrive_files_list_accepts_one_record_filter_at_most() {
+        Cli::try_parse_from(["aai-cli", "pipedrive", "files", "list", "--deal-id", "12"])
+            .expect("parse deal-scoped file list");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "files",
+            "list",
+            "--deal-id",
+            "12",
+            "--org-id",
+            "3",
+        ])
+        .expect_err("a file list is scoped to one record");
     }
 
     #[test]
