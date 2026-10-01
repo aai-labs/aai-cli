@@ -14,4 +14,5 @@ All notable user-visible changes to `aai-cli` are recorded here.
 
 ### Changed
 
+- File downloads now follow redirects themselves and send credentials only to the original origin. Previously a provider-specific auth header, such as Pipedrive's `x-api-token`, was forwarded to a cross-origin redirect target. The origin includes the scheme, so an http to https hop on the same host also drops credentials, where reqwest compared only host and port.
 - Microsoft Graph `value` collections now participate in the shared pagination metadata contract, including `@odata.nextLink` discovery and `--limit` aggregation.

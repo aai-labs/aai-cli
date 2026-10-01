@@ -182,41 +182,47 @@ impl ApiClient {
             token: Some(token),
             ..profile.clone()
         };
-        let mut request = self.client.request(Method::GET, &url);
-        request = apply_auth(request, service, operation, &effective)?;
-        request = request.header("Accept", accept);
-
-        let response = request.send().await.map_err(|err| {
-            AppError::internal(service, operation, format!("request failed: {err}"))
-        })?;
-        let status = response.status();
-        let bytes = response.bytes().await.map_err(|err| {
-            AppError::internal(
-                service,
-                operation,
-                format!("failed to read response: {err}"),
-            )
-        })?;
-
-        if status.is_success() {
-            Ok(bytes.to_vec())
-        } else {
-            let details = std::str::from_utf8(&bytes)
-                .ok()
-                .and_then(|text| serde_json::from_str(text).ok())
-                .or_else(|| {
-                    Some(Value::String(
-                        String::from_utf8_lossy(&bytes).chars().take(4096).collect(),
-                    ))
-                });
-            Err(AppError::api(
-                service,
-                operation,
-                status,
-                format!("provider returned HTTP {}", status.as_u16()),
-                details,
-            ))
+        let mut target = parse_url(service, operation, &url)?;
+        // Origin includes the scheme, so an http -> https hop on the same host also drops
+        // credentials. reqwest compared only host and port; this is the stricter choice.
+        let credentialed_origin = target.origin();
+        // Redirects are followed here rather than by reqwest, which strips only the
+        // standard auth headers on a cross-origin hop: a provider-specific header such as
+        // Pipedrive's x-api-token would otherwise reach a signed-storage host.
+        for _ in 0..=MAX_DOWNLOAD_REDIRECTS {
+            let mut request = self
+                .no_redirect_client
+                .request(Method::GET, target.clone())
+                .header("Accept", accept);
+            if target.origin() == credentialed_origin {
+                request = apply_auth(request, service, operation, &effective)?;
+            }
+            let response = request.send().await.map_err(|err| {
+                AppError::internal(service, operation, format!("request failed: {err}"))
+            })?;
+            if !response.status().is_redirection() {
+                return read_download(service, operation, response).await;
+            }
+            let Some(location) = response
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|value| value.to_str().ok())
+            else {
+                return read_download(service, operation, response).await;
+            };
+            target = target.join(location).map_err(|err| {
+                AppError::internal(
+                    service,
+                    operation,
+                    format!("invalid redirect location {location:?}: {err}"),
+                )
+            })?;
         }
+        Err(AppError::internal(
+            service,
+            operation,
+            format!("download exceeded {MAX_DOWNLOAD_REDIRECTS} redirects"),
+        ))
     }
 
     /// Send an already-encoded byte body and parse the JSON reply.
@@ -401,6 +407,53 @@ fn attach_provider_next_url(value: Value, next_url: Option<String>) -> Value {
     }
 }
 
+const MAX_DOWNLOAD_REDIRECTS: usize = 10;
+
+fn parse_url(
+    service: &'static str,
+    operation: &'static str,
+    url: &str,
+) -> Result<reqwest::Url, AppError> {
+    reqwest::Url::parse(url).map_err(|err| {
+        AppError::internal(service, operation, format!("invalid URL {url:?}: {err}"))
+    })
+}
+
+async fn read_download(
+    service: &'static str,
+    operation: &'static str,
+    response: reqwest::Response,
+) -> Result<Vec<u8>, AppError> {
+    let status = response.status();
+    let bytes = response.bytes().await.map_err(|err| {
+        AppError::internal(
+            service,
+            operation,
+            format!("failed to read response: {err}"),
+        )
+    })?;
+
+    if status.is_success() {
+        Ok(bytes.to_vec())
+    } else {
+        let details = std::str::from_utf8(&bytes)
+            .ok()
+            .and_then(|text| serde_json::from_str(text).ok())
+            .or_else(|| {
+                Some(Value::String(
+                    String::from_utf8_lossy(&bytes).chars().take(4096).collect(),
+                ))
+            });
+        Err(AppError::api(
+            service,
+            operation,
+            status,
+            format!("provider returned HTTP {}", status.as_u16()),
+            details,
+        ))
+    }
+}
+
 fn apply_auth(
     request: RequestBuilder,
     service: &'static str,
@@ -505,6 +558,7 @@ fn apply_auth(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::serve;
     use reqwest::Method;
     use std::{
         io::{Read, Write},
@@ -635,5 +689,119 @@ mod tests {
 
         assert_eq!(error.code, "provider_api_error");
         assert_eq!(error.status, Some(302));
+    }
+
+    /// Answer one request per response, in order, and hand back the raw request texts.
+    fn redirect_to(location: &str) -> Vec<u8> {
+        format!("HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\n\r\n")
+            .into_bytes()
+    }
+
+    const FILE_RESPONSE: &[u8] = b"HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\npdf-bytes";
+
+    fn pipedrive_profile() -> Profile {
+        Profile {
+            auth_type: Some("pipedrive_personal_token".to_string()),
+            api_token: Some("pd-secret".to_string()),
+            ..Profile::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn download_does_not_forward_credentials_to_the_redirect_target() {
+        let (storage, storage_server) = serve(vec![FILE_RESPONSE.to_vec()]);
+        let (api, api_server) = serve(vec![redirect_to(&format!(
+            "http://{storage}/signed?sig=abc"
+        ))]);
+
+        let bytes = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap();
+        let api_requests = api_server.join().unwrap();
+        let storage_requests = storage_server.join().unwrap();
+
+        assert_eq!(bytes, b"pdf-bytes");
+        assert!(api_requests[0].contains("x-api-token: pd-secret"));
+        assert!(
+            !storage_requests[0].contains("pd-secret"),
+            "credentials reached the redirect target:\n{}",
+            storage_requests[0]
+        );
+    }
+
+    #[tokio::test]
+    async fn download_keeps_credentials_on_a_same_origin_redirect() {
+        let (api, api_server) = serve(vec![
+            redirect_to("/v1/files/7/content"),
+            FILE_RESPONSE.to_vec(),
+        ]);
+
+        let bytes = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap();
+        let requests = api_server.join().unwrap();
+
+        assert_eq!(bytes, b"pdf-bytes");
+        assert!(requests[1].starts_with("get /v1/files/7/content"));
+        assert!(requests[1].contains("x-api-token: pd-secret"));
+    }
+
+    #[tokio::test]
+    async fn download_stops_after_the_redirect_limit() {
+        let responses = (0..=MAX_DOWNLOAD_REDIRECTS)
+            .map(|hop| redirect_to(&format!("/v1/files/7/hop{hop}")))
+            .collect();
+        let (api, api_server) = serve(responses);
+
+        let error = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap_err();
+        let requests = api_server.join().unwrap();
+
+        assert_eq!(requests.len(), MAX_DOWNLOAD_REDIRECTS + 1);
+        assert!(error.to_string().contains("redirects"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn download_reports_a_redirect_without_a_location() {
+        let (api, api_server) = serve(vec![
+            b"HTTP/1.1 302 Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_vec(),
+        ]);
+
+        let error = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap_err();
+        let requests = api_server.join().unwrap();
+
+        assert_eq!(requests.len(), 1);
+        assert!(error.to_string().contains("302"), "{error}");
     }
 }

@@ -9,6 +9,8 @@ mod pagination;
 mod secrets;
 mod services;
 mod skills;
+#[cfg(test)]
+mod test_support;
 
 use std::process::ExitCode;
 
