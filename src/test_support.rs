@@ -25,3 +25,17 @@ pub(crate) fn serve(responses: Vec<Vec<u8>>) -> (String, thread::JoinHandle<Vec<
     });
     (address, server)
 }
+
+/// A 200 response carrying `body` as JSON, closing the connection afterwards.
+pub(crate) fn json_response(body: &str) -> Vec<u8> {
+    format!(
+        "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+        body.len()
+    )
+    .into_bytes()
+}
+
+/// The body of a raw request returned by [`serve`].
+pub(crate) fn request_body(request: &str) -> &str {
+    request.split_once("\r\n\r\n").map_or("", |(_, body)| body)
+}

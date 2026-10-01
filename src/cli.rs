@@ -2349,12 +2349,8 @@ pub struct PipedriveLeadUpdate {
     pub organization_id: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
-    /// Label IDs to add, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub add_label_ids: Option<String>,
-    /// Label IDs to remove, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub remove_label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -2467,12 +2463,8 @@ pub struct PipedrivePersonUpdate {
     pub phone: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
-    /// Label IDs to add, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub add_label_ids: Option<String>,
-    /// Label IDs to remove, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub remove_label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -2564,12 +2556,8 @@ pub struct PipedriveOrganizationUpdate {
     pub address: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
-    /// Label IDs to add, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub add_label_ids: Option<String>,
-    /// Label IDs to remove, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub remove_label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -2699,12 +2687,8 @@ pub struct PipedriveDealUpdate {
     pub stage_id: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
-    /// Label IDs to add, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub add_label_ids: Option<String>,
-    /// Label IDs to remove, keeping the record's other labels.
-    #[arg(long, conflicts_with = "label_ids")]
-    pub remove_label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -3812,14 +3796,8 @@ pub struct PipedriveNoteWrite {
     /// Note body. Pipedrive accepts basic HTML.
     #[arg(long)]
     pub content: String,
-    #[arg(long)]
-    pub deal_id: Option<String>,
-    #[arg(long)]
-    pub person_id: Option<String>,
-    #[arg(long)]
-    pub org_id: Option<String>,
-    #[arg(long)]
-    pub lead_id: Option<String>,
+    #[command(flatten)]
+    pub links: PipedriveNoteLinks,
 }
 
 #[derive(Debug, Args)]
@@ -3829,6 +3807,25 @@ pub struct PipedriveNoteUpdate {
     pub json: Option<String>,
     #[arg(long)]
     pub content: Option<String>,
+    #[command(flatten)]
+    pub links: PipedriveNoteLinks,
+}
+
+/// Label edits that keep the record's other labels, unlike `--label-ids`, which replaces
+/// the whole set. Flattened into each record type's update command.
+#[derive(Debug, Clone, Default, Args)]
+pub struct PipedriveLabelEdits {
+    /// Label IDs to add, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub add_label_ids: Option<String>,
+    /// Label IDs to remove, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub remove_label_ids: Option<String>,
+}
+
+/// The records a note is attached to.
+#[derive(Debug, Default, Args)]
+pub struct PipedriveNoteLinks {
     #[arg(long)]
     pub deal_id: Option<String>,
     #[arg(long)]

@@ -179,7 +179,7 @@ aai-cli pipedrive leads update <lead-id> [--json JSON_OR_PATH] [--title TEXT]
 aai-cli pipedrive leads delete <lead-id>
 ```
 
-**Labels on update.** `--label-ids` replaces the record's whole label set. To change one label without dropping the others, use `--add-label-ids` / `--remove-label-ids`: the CLI reads the current labels, applies the change, and writes the result. The same flags exist on `deals`, `persons`, and `organizations update`.
+**Labels on update.** `--label-ids` replaces the record's whole label set. To change one label without dropping the others, use `--add-label-ids` / `--remove-label-ids`: the CLI reads the current labels, applies the change, and writes the result. The same flags exist on `deals`, `persons`, and `organizations update`. The read and the write are separate requests, so a label change someone else makes in between is overwritten; if the record comes back without `label_ids`, the CLI refuses rather than writing an empty set.
 
 `get`/`create`/`update` return the same single-record shape as `leads list` items (unwrapped, not the search `item` wrapper). `delete` returns `{ "data": { "id": "<lead-id>" }, "success": true }`.
 
@@ -633,7 +633,7 @@ aai-cli pipedrive stages list [--pipeline-id ID] [--limit N] [--sort-by FIELD] [
 aai-cli pipedrive stages get <stage-id>
 ```
 
-Use these to turn `owner_id`, `user_id`, `pipeline_id`, and `stage_id` values in records into names. `users list` returns every user in one response (Pipedrive does not paginate it), so its `_aai.pagination.status` is `unknown` even though the list is complete. `users me` is the user the API token belongs to — notes and activities written through the CLI are attributed to them.
+Use these to turn `owner_id`, `user_id`, `pipeline_id`, and `stage_id` values in records into names. `users list` returns every user in one response (Pipedrive does not paginate it) and reports `_aai.pagination.status: complete`. `users me` is the user the API token belongs to — notes and activities written through the CLI are attributed to them.
 
 ## Mailbox
 
