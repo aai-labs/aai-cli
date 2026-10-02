@@ -37,6 +37,7 @@ const ALLOWED_PROFILE_FIELDS: &[&str] = &[
     "username",
     "tenant_id",
     "scope",
+    "token_url",
     "client_id",
     "client_secret_secret",
     "refresh_token_secret",
@@ -335,26 +336,31 @@ fn validate_profile_table(
             "bearer_token",
             "token_secret",
         ),
-        "microsoft" => {
-            required_string(profile, "tenant_id", operation)?;
-            required_string(profile, "client_id", operation)?;
-            match auth_type {
-                "microsoft_client_credentials" => {
-                    required_string(profile, "client_secret_secret", operation)?;
-                    Ok(())
-                }
-                "microsoft_delegated" => {
-                    required_string(profile, "refresh_token_secret", operation)?;
-                    required_string(profile, "scope", operation)?;
-                    Ok(())
-                }
-                _ => Err(AppError::invalid_input(
-                    "config",
-                    operation,
-                    "auth_type must be microsoft_client_credentials or microsoft_delegated for this provider",
-                )),
+        "microsoft" => match auth_type {
+            "microsoft_client_credentials" => {
+                required_string(profile, "tenant_id", operation)?;
+                required_string(profile, "client_id", operation)?;
+                required_string(profile, "client_secret_secret", operation)?;
+                Ok(())
             }
-        }
+            "microsoft_delegated" => {
+                required_string(profile, "tenant_id", operation)?;
+                required_string(profile, "client_id", operation)?;
+                required_string(profile, "refresh_token_secret", operation)?;
+                required_string(profile, "scope", operation)?;
+                Ok(())
+            }
+            "token_url" => {
+                required_string(profile, "token_url", operation)?;
+                required_string(profile, "api_token_secret", operation)?;
+                Ok(())
+            }
+            _ => Err(AppError::invalid_input(
+                "config",
+                operation,
+                "auth_type must be microsoft_client_credentials, microsoft_delegated or token_url for this provider",
+            )),
+        },
         "jira" | "confluence" | "bitbucket" => require_auth(
             profile,
             operation,
@@ -724,6 +730,51 @@ token_secret = "github.token"
             profile.insert(secret_field.into(), TomlValue::String("reference".into()));
             validate_profile_table(&profile, "profiles.validate").unwrap();
         }
+    }
+
+    #[test]
+    fn microsoft_token_url_requires_url_and_platform_key_but_no_app_registration() {
+        let mut profile = TomlMap::new();
+        profile.insert("provider".into(), TomlValue::String("microsoft".into()));
+        profile.insert("auth_type".into(), TomlValue::String("token_url".into()));
+
+        let error = validate_profile_table(&profile, "profiles.validate").unwrap_err();
+        assert!(error.message.contains("token_url"));
+
+        profile.insert(
+            "token_url".into(),
+            TomlValue::String("https://platform.example/token".into()),
+        );
+        let error = validate_profile_table(&profile, "profiles.validate").unwrap_err();
+        assert!(error.message.contains("api_token_secret"));
+
+        profile.insert(
+            "api_token_secret".into(),
+            TomlValue::String("platform.key".into()),
+        );
+        validate_profile_table(&profile, "profiles.validate").unwrap();
+    }
+
+    #[test]
+    fn microsoft_app_registration_auth_types_still_require_tenant_and_client() {
+        let mut profile = TomlMap::new();
+        profile.insert("provider".into(), TomlValue::String("microsoft".into()));
+        profile.insert(
+            "auth_type".into(),
+            TomlValue::String("microsoft_client_credentials".into()),
+        );
+        profile.insert(
+            "client_secret_secret".into(),
+            TomlValue::String("microsoft.secret".into()),
+        );
+
+        let error = validate_profile_table(&profile, "profiles.validate").unwrap_err();
+        assert!(error.message.contains("tenant_id"));
+    }
+
+    #[test]
+    fn token_url_is_a_settable_profile_field() {
+        assert!(ALLOWED_PROFILE_FIELDS.contains(&"token_url"));
     }
 
     #[test]
