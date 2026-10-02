@@ -6,6 +6,7 @@ All notable user-visible changes to `aai-cli` are recorded here.
 
 ### Added
 
+- Added the `token_url` auth type for Microsoft profiles: each command fetches its bearer from a configured endpoint, authenticated with the profile's `api_token_secret`, so a platform can keep the Microsoft credential out of the CLI's environment. `microsoft auth status` confirms the endpoint returns a token.
 - Added `pipedrive files list`, `files get`, and `files download --output` for file attachments on deals, persons, and organizations, so meeting transcripts and other documents can be retrieved.
 - Added `pipedrive fields deals|persons|organizations|activities list/get`, returning field definitions with option labels so custom-field keys and option IDs in record payloads can be resolved to names. `list` defaults to `--limit 500`.
 - Added `pipedrive users list/get/me/find`, `pipelines list/get`, and `stages list/get` for resolving owner, pipeline, and stage IDs.

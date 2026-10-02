@@ -61,6 +61,16 @@ impl ApiClient {
         })
     }
 
+    /// Resolve the profile's bearer token without making a provider request.
+    pub async fn bearer(
+        &self,
+        service: &'static str,
+        operation: &'static str,
+        profile: &crate::config::Profile,
+    ) -> Result<String, AppError> {
+        crate::oauth::resolve_token(profile, &self.client, service, operation).await
+    }
+
     pub async fn request(
         &self,
         service: &'static str,

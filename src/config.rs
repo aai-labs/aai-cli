@@ -31,6 +31,7 @@ pub struct Profile {
     pub client_id: Option<String>,
     pub tenant_id: Option<String>,
     pub scope: Option<String>,
+    pub token_url: Option<String>,
     pub client_secret: Option<String>,
     pub client_secret_env: Option<String>,
     pub client_secret_secret: Option<String>,
