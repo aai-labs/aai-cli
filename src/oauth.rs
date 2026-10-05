@@ -202,17 +202,23 @@ async fn access_token(
     flow: &'static str,
 ) -> Result<String, AppError> {
     let status = response.status();
-    let body: Value = response
-        .json()
+    let text = response
+        .text()
         .await
         .map_err(|err| AppError::internal(service, flow, err.to_string()))?;
+    // The status comes first: an error from a proxy in front of the endpoint is often not JSON.
     if !status.is_success() {
+        let detail = serde_json::from_str::<Value>(&text)
+            .map(|body| body.to_string())
+            .unwrap_or_else(|_| text.chars().take(512).collect());
         return Err(AppError::auth(
             service,
             flow,
-            format!("token request failed (HTTP {}): {body}", status.as_u16()),
+            format!("token request failed (HTTP {}): {detail}", status.as_u16()),
         ));
     }
+    let body: Value = serde_json::from_str(&text)
+        .map_err(|err| AppError::internal(service, flow, err.to_string()))?;
     body.get("access_token")
         .and_then(Value::as_str)
         .map(str::to_string)
@@ -352,6 +358,30 @@ mod token_url_tests {
         assert_eq!(error.code, "auth_error");
         assert_eq!(error.service, "microsoft");
         assert!(error.message.contains("HTTP 404"));
+    }
+
+    #[tokio::test]
+    async fn token_url_reports_the_status_of_a_non_json_error() {
+        // A proxy in front of the endpoint answers with HTML, not JSON.
+        let body = "<html><body>502 Bad Gateway</body></html>";
+        let (address, server) = serve(vec![format!(
+            "HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+        .into_bytes()]);
+
+        let error = resolve_token(
+            &token_url_profile(&address),
+            &Client::new(),
+            "microsoft",
+            "sites.list",
+        )
+        .await
+        .unwrap_err();
+        server.join().unwrap();
+
+        assert_eq!(error.code, "auth_error");
+        assert!(error.message.contains("HTTP 502"));
     }
 
     #[tokio::test]
