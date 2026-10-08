@@ -59,7 +59,7 @@ This project primarily consumes credentials supplied by users or agents. Microso
 
 ## CLI Implications
 
-- Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `github_app`, `oauth_user`, or `service_account`.
+- Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `microsoft_client_credentials`, `microsoft_delegated`, `token_url`, `github_app`, `oauth_user`, or `service_account`.
 - Never infer service-account semantics from a token string alone.
 - Keep provider profiles isolated; do not reuse an Atlassian token across Jira, Confluence, and Bitbucket unless the provider docs explicitly support it.
 - Prefer env var overrides for secrets and config-file fields for non-secret metadata such as site URL, workspace, region, account email, and default scopes.
@@ -67,8 +67,10 @@ This project primarily consumes credentials supplied by users or agents. Microso
 
 - `microsoft_client_credentials` uses `tenant_id`, `client_id`, and `client_secret_secret`. Each command obtains an app-only token for `https://graph.microsoft.com/.default` without user interaction.
 - `microsoft_delegated` uses `tenant_id`, `client_id`, `scope`, and `refresh_token_secret`. Run `microsoft auth login` once; it requires `offline_access`, validates `/me` against `profile.user_id` when configured, and stores the refresh token encrypted.
+- `token_url` uses `token_url` and `api_token_secret`, and needs no app registration on the profile. Each request first POSTs to `token_url` with the stored value as its bearer and uses the `access_token` from the JSON response. Use it when a platform holds the Microsoft credential and must keep it out of the CLI's environment. The token carries whatever identity and permissions that platform grants; the CLI never falls back to sending the stored value to Graph.
 - Refresh responses can rotate the delegated refresh token. The CLI replaces the encrypted value before returning the Graph response.
 - `microsoft auth status` is noninteractive. A revoked or expired delegated credential fails with an instruction to run `microsoft auth login` again.
+- `microsoft auth status` on a `token_url` profile confirms a token can be fetched; it makes no Graph identity call.
 - Microsoft To Do commands require `microsoft_delegated`. Graph's application-permission support varies by To Do operation, so the typed surface uses one delegated identity for complete list/task CRUD and rejects app-only profiles before making a request.
 - Microsoft Excel workbook commands require `microsoft_delegated` with `Files.ReadWrite`; Graph does not support application permissions for workbook operations and the CLI rejects app-only profiles before making a request.
 - Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.

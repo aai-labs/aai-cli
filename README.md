@@ -22,7 +22,7 @@ The goal is not to replace full SDKs. The goal is to make common agent tasks saf
 | Slack | Channel metadata, files, bookmarks, links, channel canvas download (read-only, bot token) | [docs/services/slack.md](docs/services/slack.md) | [Slack Web API](https://docs.slack.dev/reference/methods) |
 | Slack | Channel metadata, files, bookmarks, links, channel canvas download (read-only, bot token) | [docs/services/slack.md](docs/services/slack.md) | [Slack Web API](https://docs.slack.dev/reference/methods) |
 | OpenPanel | Projects, raw event export, insights (metrics, pages, referrers, devices, geo), profiles (read-only, client ID/secret) | [docs/services/openpanel.md](docs/services/openpanel.md) | [OpenPanel API docs](https://openpanel.dev/docs/api) |
-| Microsoft Graph | Durable app-only and delegated authentication; Outlook mail/calendar/contacts; OneDrive and SharePoint files/lists; delegated Graph Excel worksheets/ranges/tables; Teams reads; To Do lists/tasks; Planner tasks; generic Graph requests | [docs/microsoft-e2e-setup.md](docs/microsoft-e2e-setup.md) | [Microsoft Graph REST API](https://learn.microsoft.com/en-us/graph/api/overview) |
+| Microsoft Graph | Durable app-only and delegated authentication, or tokens fetched from a platform `token_url`; Outlook mail/calendar/contacts; OneDrive and SharePoint files/lists; delegated Graph Excel worksheets/ranges/tables; Teams reads; To Do lists/tasks; Planner tasks; generic Graph requests | [docs/microsoft-e2e-setup.md](docs/microsoft-e2e-setup.md) | [Microsoft Graph REST API](https://learn.microsoft.com/en-us/graph/api/overview) |
 
 Project features that are not provider services:
 

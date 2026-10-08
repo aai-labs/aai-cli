@@ -14,6 +14,16 @@ aai-cli --config local/e2e.config.toml \
 
 The profile scope must contain `offline_access`. The CLI verifies the returned `/me` identity against `profile.user_id` when configured, then stores the refresh token under `refresh_token_secret`. Every later request exchanges that saved value noninteractively and persists Microsoft's rotated replacement token. Validate the durable session from a new process with `microsoft auth status`.
 
+A `token_url` profile stores no Microsoft credential at all. Each request first POSTs to the profile's `token_url`, presenting the value under `api_token_secret` as its bearer, and uses the returned `access_token`. Refresh, caching and rotation are the endpoint's job: the CLI keeps no token between requests, so a paginated list or a chunked upload asks the endpoint once per HTTP request, and the endpoint should cache.
+
+```toml
+[profiles.sharepoint-work]
+provider = "microsoft"
+auth_type = "token_url"
+token_url = "https://platform.example/token"
+api_token_secret = "platform.key"
+```
+
 ---
 
 ## Gmail

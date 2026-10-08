@@ -35,6 +35,7 @@ Validation enforces these provider/auth/reference combinations:
 - HubSpot: `hubspot_service_key` or `hubspot_legacy_private_app` with `token_secret`
 - Slack: `bearer_token` with `token_secret`
 - Jira, Confluence, and Bitbucket: `basic_api_token` with `api_token_secret`
+- Microsoft: `microsoft_client_credentials` with `tenant_id`, `client_id`, and `client_secret_secret`; `microsoft_delegated` with `tenant_id`, `client_id`, `scope`, and `refresh_token_secret`; or `token_url` with `token_url` and `api_token_secret`
 
 ## Generic Authenticated Requests
 

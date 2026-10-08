@@ -6,9 +6,10 @@ use crate::{config::Profile, error::AppError};
 /// Resolve an access token for the given profile.
 ///
 /// Priority:
-///   1. If refresh_token + client_id + client_secret are all set → exchange for a fresh token
-///   2. If a stored access token (token / api_token) is present → use it directly
-///   3. Otherwise → error
+///   1. If auth_type is token_url → fetch a bearer from the configured endpoint
+///   2. If refresh_token + client_id + client_secret are all set → exchange for a fresh token
+///   3. If a stored access token (token / api_token) is present → use it directly
+///   4. Otherwise → error
 pub(crate) async fn resolve_token(
     profile: &Profile,
     client: &Client,
@@ -25,6 +26,11 @@ pub(crate) async fn resolve_token(
         }
         Some("microsoft_delegated") => {
             return microsoft_refresh(client, profile).await;
+        }
+        // Must precede the stored-token fallthrough, which would hand back the
+        // platform key itself as the provider bearer.
+        Some("token_url") => {
+            return fetch_from_token_url(client, profile, service).await;
         }
         _ => {}
     }
@@ -88,7 +94,31 @@ async fn microsoft_client_credentials(
         .send()
         .await
         .map_err(|err| AppError::internal("microsoft", "token", err.to_string()))?;
-    access_token(response, "client_credentials").await
+    access_token(response, "microsoft", "client_credentials").await
+}
+
+/// Fetch a short-lived bearer from a platform endpoint that holds the real
+/// credential, presenting the profile's api_token to authenticate.
+async fn fetch_from_token_url(
+    client: &Client,
+    profile: &Profile,
+    service: &'static str,
+) -> Result<String, AppError> {
+    let token_url = profile
+        .token_url
+        .as_deref()
+        .filter(|value| !value.trim().is_empty())
+        .ok_or_else(|| AppError::auth(service, "token_url", "profile is missing token_url"))?;
+    let api_token = profile.api_token.as_deref().ok_or_else(|| {
+        AppError::auth(service, "token_url", "profile is missing api_token_secret")
+    })?;
+    let response = client
+        .post(token_url)
+        .bearer_auth(api_token)
+        .send()
+        .await
+        .map_err(|err| AppError::internal(service, "token_url", err.to_string()))?;
+    access_token(response, service, "token_url").await
 }
 
 async fn microsoft_refresh(client: &Client, profile: &Profile) -> Result<String, AppError> {
@@ -166,23 +196,33 @@ fn persist_microsoft_refresh_token(profile: &Profile, token: &str) -> Result<(),
     crate::secrets::set_at(secrets_file, key_file, key, token)
 }
 
-async fn access_token(response: reqwest::Response, flow: &'static str) -> Result<String, AppError> {
+async fn access_token(
+    response: reqwest::Response,
+    service: &'static str,
+    flow: &'static str,
+) -> Result<String, AppError> {
     let status = response.status();
-    let body: Value = response
-        .json()
+    let text = response
+        .text()
         .await
-        .map_err(|err| AppError::internal("microsoft", flow, err.to_string()))?;
+        .map_err(|err| AppError::internal(service, flow, err.to_string()))?;
+    // The status comes first: an error from a proxy in front of the endpoint is often not JSON.
     if !status.is_success() {
+        let detail = serde_json::from_str::<Value>(&text)
+            .map(|body| body.to_string())
+            .unwrap_or_else(|_| text.chars().take(512).collect());
         return Err(AppError::auth(
-            "microsoft",
+            service,
             flow,
-            format!("token request failed (HTTP {}): {body}", status.as_u16()),
+            format!("token request failed (HTTP {}): {detail}", status.as_u16()),
         ));
     }
+    let body: Value = serde_json::from_str(&text)
+        .map_err(|err| AppError::internal(service, flow, err.to_string()))?;
     body.get("access_token")
         .and_then(Value::as_str)
         .map(str::to_string)
-        .ok_or_else(|| AppError::auth("microsoft", flow, "token response missing access_token"))
+        .ok_or_else(|| AppError::auth(service, flow, "token response missing access_token"))
 }
 
 async fn exchange(
@@ -257,5 +297,138 @@ mod microsoft_tests {
             crate::secrets::get(&ctx, "microsoft.refresh").unwrap(),
             Some("rotated-token".to_string())
         );
+    }
+}
+
+#[cfg(test)]
+mod token_url_tests {
+    use super::*;
+    use crate::test_support::{json_response, serve};
+
+    fn token_url_profile(address: &str) -> Profile {
+        Profile {
+            provider: Some("microsoft".to_string()),
+            auth_type: Some("token_url".to_string()),
+            token_url: Some(format!("http://{address}/token")),
+            api_token: Some("platform-key".to_string()),
+            ..Profile::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn token_url_fetches_bearer_with_platform_key() {
+        let (address, server) = serve(vec![json_response(
+            r#"{"access_token":"graph-token","expires_in":3599}"#,
+        )]);
+
+        let token = resolve_token(
+            &token_url_profile(&address),
+            &Client::new(),
+            "microsoft",
+            "sites.list",
+        )
+        .await
+        .unwrap();
+        let requests = server.join().unwrap();
+
+        assert_eq!(token, "graph-token");
+        assert!(requests[0].starts_with("post /token "));
+        assert!(requests[0].contains("authorization: bearer platform-key"));
+    }
+
+    #[tokio::test]
+    async fn token_url_reports_non_success_status_as_auth_error() {
+        let body = r#"{"detail":"not connected"}"#;
+        let (address, server) = serve(vec![format!(
+            "HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+        .into_bytes()]);
+
+        let error = resolve_token(
+            &token_url_profile(&address),
+            &Client::new(),
+            "microsoft",
+            "sites.list",
+        )
+        .await
+        .unwrap_err();
+        server.join().unwrap();
+
+        assert_eq!(error.code, "auth_error");
+        assert_eq!(error.service, "microsoft");
+        assert!(error.message.contains("HTTP 404"));
+    }
+
+    #[tokio::test]
+    async fn token_url_reports_the_status_of_a_non_json_error() {
+        // A proxy in front of the endpoint answers with HTML, not JSON.
+        let body = "<html><body>502 Bad Gateway</body></html>";
+        let (address, server) = serve(vec![format!(
+            "HTTP/1.1 502 Bad Gateway\r\nContent-Type: text/html\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{body}",
+            body.len()
+        )
+        .into_bytes()]);
+
+        let error = resolve_token(
+            &token_url_profile(&address),
+            &Client::new(),
+            "microsoft",
+            "sites.list",
+        )
+        .await
+        .unwrap_err();
+        server.join().unwrap();
+
+        assert_eq!(error.code, "auth_error");
+        assert!(error.message.contains("HTTP 502"));
+    }
+
+    #[tokio::test]
+    async fn token_url_rejects_response_without_access_token() {
+        let (address, server) = serve(vec![json_response(r#"{"token_type":"Bearer"}"#)]);
+
+        let error = resolve_token(
+            &token_url_profile(&address),
+            &Client::new(),
+            "microsoft",
+            "sites.list",
+        )
+        .await
+        .unwrap_err();
+        server.join().unwrap();
+
+        assert_eq!(error.code, "auth_error");
+        assert!(error.message.contains("missing access_token"));
+    }
+
+    #[tokio::test]
+    async fn token_url_never_falls_back_to_the_platform_key() {
+        let profile = Profile {
+            token_url: None,
+            ..token_url_profile("127.0.0.1:9")
+        };
+
+        let error = resolve_token(&profile, &Client::new(), "microsoft", "sites.list")
+            .await
+            .unwrap_err();
+
+        assert_eq!(error.code, "auth_error");
+        assert!(error.message.contains("token_url"));
+    }
+
+    #[tokio::test]
+    async fn token_url_requires_the_platform_key() {
+        let profile = Profile {
+            api_token: None,
+            ..token_url_profile("127.0.0.1:9")
+        };
+
+        let error = resolve_token(&profile, &Client::new(), "microsoft", "sites.list")
+            .await
+            .unwrap_err();
+
+        assert_eq!(error.code, "auth_error");
+        assert!(error.message.contains("api_token_secret"));
     }
 }

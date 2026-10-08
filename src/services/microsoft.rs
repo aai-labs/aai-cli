@@ -219,10 +219,20 @@ async fn status(client: &ApiClient, ctx: &Context) -> Result<Value, AppError> {
                 "credential": "encrypted_client_secret",
             }))
         }
+        // The token's identity is the platform's, so no Graph identity call:
+        // a Sites.Selected app token can read neither /me nor /organization.
+        Some("token_url") => {
+            client.bearer(SERVICE, "auth.status", ctx.profile()).await?;
+            Ok(json!({
+                "authenticated": true,
+                "mode": "token_url",
+                "credential": "token_url",
+            }))
+        }
         _ => Err(AppError::service_config(
             SERVICE,
             "auth.status",
-            "profile auth_type must be microsoft_delegated or microsoft_client_credentials",
+            "profile auth_type must be microsoft_delegated, microsoft_client_credentials or token_url",
         )),
     }
 }
@@ -424,6 +434,7 @@ fn value_u64(value: &Value, field: &str) -> Result<u64, AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::{json_response, serve};
 
     #[test]
     fn drive_paths_encode_each_segment_without_losing_folders() {
@@ -449,6 +460,29 @@ mod tests {
         assert_eq!(
             item_url(&ctx, &target),
             "https://graph.microsoft.com/v1.0/me/drive/root:/report.docx:"
+        );
+    }
+
+    #[tokio::test]
+    async fn status_for_token_url_profile_confirms_a_token_without_showing_it() {
+        let (address, server) = serve(vec![json_response(r#"{"access_token":"graph-token"}"#)]);
+        let ctx = Context {
+            profile: crate::config::Profile {
+                auth_type: Some("token_url".to_string()),
+                token_url: Some(format!("http://{address}/token")),
+                api_token: Some("platform-key".to_string()),
+                ..Default::default()
+            },
+            secrets_file: Default::default(),
+            key_file: Default::default(),
+        };
+
+        let result = status(&ApiClient::new().unwrap(), &ctx).await.unwrap();
+        server.join().unwrap();
+
+        assert_eq!(
+            result,
+            json!({"authenticated": true, "mode": "token_url", "credential": "token_url"})
         );
     }
 
