@@ -46,7 +46,7 @@ Project features that are not provider services:
 
 ## Quick Start
 
-Install from the checked-out repository:
+Install from the checked-out repository:  this is a test
 
 ```bash
 cargo install --path .
