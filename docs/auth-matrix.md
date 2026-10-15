@@ -82,3 +82,11 @@ This project primarily consumes credentials supplied by users or agents. Microso
 - Microsoft Excel workbook commands require `microsoft_delegated` with `Files.ReadWrite`; Graph does not support application permissions for workbook operations and the CLI rejects app-only profiles before making a request.
 - Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.
 - Word files are transferred through OneDrive/SharePoint file commands only. The CLI does not semantically edit `.docx` content; agents must download, edit externally, and upload the complete replacement.
+
+## Multica
+
+- Personal access token: `auth_type = "bearer_token"`, supplied with existing `token_env`/`token_secret` or local token fields. Shared HTTP sends `Authorization: Bearer`. No OAuth acquisition or refresh.
+- Require an explicit `base_url` ending in `/api` for hosted or self-hosted deployments.
+- `workspace` accepts a UUID or slug; `--workspace` overrides it. Shared HTTP sends `X-Workspace-ID` or `X-Workspace-Slug` for Multica only. Administrative URL targets require `--workspace-id UUID`.
+- Generic requests use the same auth/scope. Provider permissions, visibility, expired tokens, and missing endpoints remain structured provider errors.
+- See [Multica setup and workflows](services/multica.md).

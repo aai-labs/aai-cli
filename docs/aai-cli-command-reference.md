@@ -924,3 +924,7 @@ microsoft planner tasks <get|create|update|delete> ...
 Typed user-resource commands use `--user-id` or `profile.user_id`. Create/update bodies use `--json JSON_OR_PATH` (or `--json -` for stdin). List commands aggregate Graph's `@odata.nextLink` pages into the provider's `value` array up to `--limit`.
 
 Microsoft To Do requires a delegated profile in this CLI because Graph's application-permission support varies across operations and the typed surface guarantees one consistent identity for complete list/task CRUD. Planner task update/delete require the last observed `@odata.etag` through `--etag`. Teams commands are read-only in this initial coverage: team/channel metadata, team members, channel messages, and chats. The exact argument shapes and safe CRUD workflow are included in the bundled `aai-microsoft` skill.
+
+## Multica
+
+`aai-cli multica` maps the Multica application API to dedicated commands. See the [service guide](services/multica.md), [complete command map](../bundled/skills/aai-multica/references/command-reference.md), and [agent workflows](../bundled/skills/aai-multica/references/workflows.md). Inbox reads never mark items read. Use explicit read/archive actions after triage.

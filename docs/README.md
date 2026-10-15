@@ -62,3 +62,7 @@ Apollo docs include an implementation summary for auth, base URLs, rate limits, 
 - `docs/adr/0002-office-file-boundaries.md` records the typed Graph Excel boundary and the download/edit/upload workflow for Word files.
 - `docs/drive-command-test-results.md` is the live-run report for the `aai-cli drive` command surface. Regenerate it with `scripts/drive-command-report.sh`.
 - `docs/atlassian/adf.md` summarizes the Atlassian Document Format files needed for Jira/Confluence implementation.
+
+## Multica application API
+
+The [Multica service guide](services/multica.md) links the full endpoint map and pinned upstream sources. Offline route fixtures are in `tests/fixtures/multica/routes.json`, grounded in revision `83527872634824012dd26bb183aa216fab631c05`.

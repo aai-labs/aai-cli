@@ -1,0 +1,2457 @@
+[
+  {
+    "args": [
+      "issues",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/issues",
+    "response": {
+      "issues": []
+    },
+    "upstream_handler": "ListIssues"
+  },
+  {
+    "args": [
+      "issues",
+      "search"
+    ],
+    "method": "GET",
+    "path": "/api/issues/search",
+    "response": {
+      "issues": []
+    },
+    "upstream_handler": "SearchIssues"
+  },
+  {
+    "args": [
+      "issues",
+      "get",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "create",
+      "--json",
+      "{\"title\": \"fixture-value\"}"
+    ],
+    "method": "POST",
+    "path": "/api/issues",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "update",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/issues/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "delete",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/issues/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "move",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/move",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "MoveIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "rerun",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/rerun",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RerunIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "children",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/children",
+    "response": {
+      "issues": []
+    },
+    "upstream_handler": "ListChildIssues"
+  },
+  {
+    "args": [
+      "issues",
+      "timeline",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/timeline",
+    "response": [],
+    "upstream_handler": "ListTimeline"
+  },
+  {
+    "args": [
+      "issues",
+      "subscribers",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/subscribers",
+    "response": [],
+    "upstream_handler": "ListIssueSubscribers"
+  },
+  {
+    "args": [
+      "issues",
+      "labels",
+      "list",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/labels",
+    "response": {
+      "labels": []
+    },
+    "upstream_handler": "ListLabelsForIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "metadata",
+      "list",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/metadata",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ListIssueMetadata"
+  },
+  {
+    "args": [
+      "issues",
+      "pull-requests",
+      "list",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/pull-requests",
+    "response": {
+      "pull_requests": []
+    },
+    "upstream_handler": "ListPullRequestsForIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "task-runs",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/task-runs",
+    "response": [],
+    "upstream_handler": "ListTasksByIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "subscribe",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/subscribe",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SubscribeToIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "unsubscribe",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/unsubscribe",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UnsubscribeFromIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "unsubscribe-subtree",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/unsubscribe/subtree",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UnsubscribeFromIssueSubtree"
+  },
+  {
+    "args": [
+      "issues",
+      "active-task",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/active-task",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetActiveTaskForIssue"
+  },
+  {
+    "args": [
+      "issues",
+      "usage",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/usage",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetIssueUsage"
+  },
+  {
+    "args": [
+      "issues",
+      "metadata",
+      "set",
+      "--issue-id",
+      "fixture-id",
+      "--key",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/issues/fixture-id/metadata/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SetIssueMetadataKey"
+  },
+  {
+    "args": [
+      "issues",
+      "metadata",
+      "delete",
+      "--issue-id",
+      "fixture-id",
+      "--key",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/issues/fixture-id/metadata/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteIssueMetadataKey"
+  },
+  {
+    "args": [
+      "issues",
+      "properties",
+      "set",
+      "--issue-id",
+      "fixture-id",
+      "--property-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/issues/fixture-id/properties/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SetIssueProperty"
+  },
+  {
+    "args": [
+      "issues",
+      "properties",
+      "delete",
+      "--issue-id",
+      "fixture-id",
+      "--property-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/issues/fixture-id/properties/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteIssueProperty"
+  },
+  {
+    "args": [
+      "issues",
+      "pull-requests",
+      "link",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/pull-requests",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "LinkIssuePullRequest"
+  },
+  {
+    "args": [
+      "issues",
+      "pull-requests",
+      "unlink",
+      "--issue-id",
+      "fixture-id",
+      "--pr-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/issues/fixture-id/pull-requests/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UnlinkIssuePullRequest"
+  },
+  {
+    "args": [
+      "issues",
+      "pr-auto-complete",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/issues/fixture-id/pr-auto-complete",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SetIssuePRAutoComplete"
+  },
+  {
+    "args": [
+      "issues",
+      "labels",
+      "add",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/labels",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "AttachLabel"
+  },
+  {
+    "args": [
+      "issues",
+      "labels",
+      "remove",
+      "--issue-id",
+      "fixture-id",
+      "--label-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/issues/fixture-id/labels/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DetachLabel"
+  },
+  {
+    "args": [
+      "issues",
+      "comments",
+      "list",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/comments",
+    "response": [],
+    "upstream_handler": "ListComments"
+  },
+  {
+    "args": [
+      "issues",
+      "comments",
+      "create",
+      "--issue-id",
+      "fixture-id",
+      "--json",
+      "{\"content\": \"fixture-value\"}"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/comments",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateComment"
+  },
+  {
+    "args": [
+      "issues",
+      "comments",
+      "trigger-preview",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/comments/trigger-preview",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "PreviewCommentTriggers"
+  },
+  {
+    "args": [
+      "comments",
+      "update",
+      "--comment-id",
+      "fixture-id",
+      "--json",
+      "{\"content\": \"fixture-value\"}"
+    ],
+    "method": "PUT",
+    "path": "/api/comments/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateComment"
+  },
+  {
+    "args": [
+      "comments",
+      "delete",
+      "--comment-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/comments/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteComment"
+  },
+  {
+    "args": [
+      "comments",
+      "delete-keep-replies",
+      "--comment-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/comments/fixture-id/keep-replies",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteComment"
+  },
+  {
+    "args": [
+      "comments",
+      "resolve",
+      "--comment-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/comments/fixture-id/resolve",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ResolveComment"
+  },
+  {
+    "args": [
+      "comments",
+      "unresolve",
+      "--comment-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/comments/fixture-id/resolve",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UnresolveComment"
+  },
+  {
+    "args": [
+      "comments",
+      "reactions",
+      "add",
+      "--comment-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/comments/fixture-id/reactions",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "AddReaction"
+  },
+  {
+    "args": [
+      "comments",
+      "reactions",
+      "remove",
+      "--comment-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/comments/fixture-id/reactions",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RemoveReaction"
+  },
+  {
+    "args": [
+      "inbox",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/inbox",
+    "response": [],
+    "upstream_handler": "ListInbox"
+  },
+  {
+    "args": [
+      "inbox",
+      "archived",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/inbox/archived",
+    "response": [],
+    "upstream_handler": "ListArchivedInbox"
+  },
+  {
+    "args": [
+      "inbox",
+      "archived",
+      "page"
+    ],
+    "method": "GET",
+    "path": "/api/inbox/archived/page",
+    "response": {
+      "items": []
+    },
+    "upstream_handler": "ListArchivedInboxPage"
+  },
+  {
+    "args": [
+      "inbox",
+      "archived",
+      "facets"
+    ],
+    "method": "GET",
+    "path": "/api/inbox/archived/facets",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetArchivedInboxFacets"
+  },
+  {
+    "args": [
+      "inbox",
+      "unread-count"
+    ],
+    "method": "GET",
+    "path": "/api/inbox/unread-count",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CountUnreadInbox"
+  },
+  {
+    "args": [
+      "inbox",
+      "unread-summary"
+    ],
+    "method": "GET",
+    "path": "/api/inbox/unread-summary",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UnreadInboxSummary"
+  },
+  {
+    "args": [
+      "inbox",
+      "mark-all-read"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/mark-all-read",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "MarkAllInboxRead"
+  },
+  {
+    "args": [
+      "inbox",
+      "archive-all"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/archive-all",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ArchiveAllInbox"
+  },
+  {
+    "args": [
+      "inbox",
+      "archive-all-read"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/archive-all-read",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ArchiveAllReadInbox"
+  },
+  {
+    "args": [
+      "inbox",
+      "archive-completed"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/archive-completed",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ArchiveCompletedInbox"
+  },
+  {
+    "args": [
+      "inbox",
+      "read",
+      "--inbox-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/fixture-id/read",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "MarkInboxRead"
+  },
+  {
+    "args": [
+      "inbox",
+      "unread",
+      "--inbox-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/fixture-id/unread",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "MarkInboxUnread"
+  },
+  {
+    "args": [
+      "inbox",
+      "archive",
+      "--inbox-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/fixture-id/archive",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ArchiveInboxItem"
+  },
+  {
+    "args": [
+      "inbox",
+      "unarchive",
+      "--inbox-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/inbox/fixture-id/unarchive",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UnarchiveInboxItem"
+  },
+  {
+    "args": [
+      "squads",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/squads",
+    "response": [],
+    "upstream_handler": "ListSquads"
+  },
+  {
+    "args": [
+      "squads",
+      "get",
+      "--squad-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/squads/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetSquad"
+  },
+  {
+    "args": [
+      "squads",
+      "create",
+      "--json",
+      "{\"name\": \"fixture-value\"}"
+    ],
+    "method": "POST",
+    "path": "/api/squads",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateSquad"
+  },
+  {
+    "args": [
+      "squads",
+      "update",
+      "--squad-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/squads/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateSquad"
+  },
+  {
+    "args": [
+      "squads",
+      "delete",
+      "--squad-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/squads/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteSquad"
+  },
+  {
+    "args": [
+      "squads",
+      "members",
+      "list",
+      "--squad-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/squads/fixture-id/members",
+    "response": [],
+    "upstream_handler": "ListSquadMembers"
+  },
+  {
+    "args": [
+      "squads",
+      "members",
+      "status",
+      "--squad-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/squads/fixture-id/members/status",
+    "response": {
+      "members": []
+    },
+    "upstream_handler": "ListSquadMemberStatus"
+  },
+  {
+    "args": [
+      "squads",
+      "members",
+      "add",
+      "--squad-id",
+      "fixture-id",
+      "--json",
+      "{\"member_type\": \"agent\", \"member_id\": \"fixture-value\"}"
+    ],
+    "method": "POST",
+    "path": "/api/squads/fixture-id/members",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "AddSquadMember"
+  },
+  {
+    "args": [
+      "squads",
+      "members",
+      "remove",
+      "--squad-id",
+      "fixture-id",
+      "--json",
+      "{\"member_type\": \"agent\", \"member_id\": \"fixture-value\"}"
+    ],
+    "method": "DELETE",
+    "path": "/api/squads/fixture-id/members",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RemoveSquadMember"
+  },
+  {
+    "args": [
+      "squads",
+      "members",
+      "update-role",
+      "--squad-id",
+      "fixture-id",
+      "--json",
+      "{\"member_type\": \"agent\", \"member_id\": \"fixture-value\"}"
+    ],
+    "method": "PATCH",
+    "path": "/api/squads/fixture-id/members/role",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateSquadMemberRole"
+  },
+  {
+    "args": [
+      "agents",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/agents",
+    "response": [],
+    "upstream_handler": "ListAgents"
+  },
+  {
+    "args": [
+      "agents",
+      "get",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/agents/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetAgent"
+  },
+  {
+    "args": [
+      "agents",
+      "create",
+      "--json",
+      "{\"name\": \"fixture-value\"}"
+    ],
+    "method": "POST",
+    "path": "/api/agents",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateAgent"
+  },
+  {
+    "args": [
+      "agents",
+      "update",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/agents/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateAgent"
+  },
+  {
+    "args": [
+      "agents",
+      "archive",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/agents/fixture-id/archive",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ArchiveAgent"
+  },
+  {
+    "args": [
+      "agents",
+      "restore",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/agents/fixture-id/restore",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RestoreAgent"
+  },
+  {
+    "args": [
+      "agents",
+      "cancel-tasks",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/agents/fixture-id/cancel-tasks",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CancelAgentTasks"
+  },
+  {
+    "args": [
+      "agents",
+      "tasks",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/agents/fixture-id/tasks",
+    "response": [],
+    "upstream_handler": "ListAgentTasks"
+  },
+  {
+    "args": [
+      "agents",
+      "skills",
+      "list",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/agents/fixture-id/skills",
+    "response": [],
+    "upstream_handler": "ListAgentSkills"
+  },
+  {
+    "args": [
+      "agents",
+      "skills",
+      "add",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/agents/fixture-id/skills/add",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "AddAgentSkills"
+  },
+  {
+    "args": [
+      "agents",
+      "skills",
+      "set",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/agents/fixture-id/skills",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SetAgentSkills"
+  },
+  {
+    "args": [
+      "agents",
+      "skills",
+      "remove",
+      "--agent-id",
+      "fixture-id",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/agents/fixture-id/skills/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RemoveAgentSkill"
+  },
+  {
+    "args": [
+      "agents",
+      "skills",
+      "set-enabled",
+      "--agent-id",
+      "fixture-id",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/agents/fixture-id/skills/fixture-id/enabled",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SetAgentSkillEnabled"
+  },
+  {
+    "args": [
+      "agents",
+      "mcp-servers",
+      "list",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/agents/fixture-id/mcp-servers",
+    "response": [],
+    "upstream_handler": "ListAgentMcpServers"
+  },
+  {
+    "args": [
+      "agents",
+      "mcp-servers",
+      "add",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/agents/fixture-id/mcp-servers",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "AddAgentMcpServer"
+  },
+  {
+    "args": [
+      "agents",
+      "mcp-servers",
+      "remove",
+      "--agent-id",
+      "fixture-id",
+      "--server-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/agents/fixture-id/mcp-servers/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RemoveAgentMcpServer"
+  },
+  {
+    "args": [
+      "agents",
+      "mcp-servers",
+      "set-enabled",
+      "--agent-id",
+      "fixture-id",
+      "--server-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/agents/fixture-id/mcp-servers/fixture-id/enabled",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SetAgentMcpServerEnabled"
+  },
+  {
+    "args": [
+      "agents",
+      "runtime-skills",
+      "set-enabled",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/agents/fixture-id/runtime-skills/enabled",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "SetAgentRuntimeSkillEnabled"
+  },
+  {
+    "args": [
+      "agents",
+      "env",
+      "get",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/agents/fixture-id/env",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetAgentEnv"
+  },
+  {
+    "args": [
+      "agents",
+      "env",
+      "set",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/agents/fixture-id/env",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateAgentEnv"
+  },
+  {
+    "args": [
+      "projects",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/projects",
+    "response": {
+      "projects": []
+    },
+    "upstream_handler": "ListProjects"
+  },
+  {
+    "args": [
+      "projects",
+      "get",
+      "--project-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/projects/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetProject"
+  },
+  {
+    "args": [
+      "projects",
+      "create",
+      "--json",
+      "{\"title\": \"fixture-value\"}"
+    ],
+    "method": "POST",
+    "path": "/api/projects",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateProject"
+  },
+  {
+    "args": [
+      "projects",
+      "update",
+      "--project-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/projects/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateProject"
+  },
+  {
+    "args": [
+      "projects",
+      "delete",
+      "--project-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/projects/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteProject"
+  },
+  {
+    "args": [
+      "projects",
+      "search"
+    ],
+    "method": "GET",
+    "path": "/api/projects/search",
+    "response": {
+      "projects": []
+    },
+    "upstream_handler": "SearchProjects"
+  },
+  {
+    "args": [
+      "projects",
+      "resources",
+      "list",
+      "--project-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/projects/fixture-id/resources",
+    "response": {
+      "resources": []
+    },
+    "upstream_handler": "ListProjectResources"
+  },
+  {
+    "args": [
+      "projects",
+      "resources",
+      "create",
+      "--project-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/projects/fixture-id/resources",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateProjectResource"
+  },
+  {
+    "args": [
+      "projects",
+      "resources",
+      "update",
+      "--project-id",
+      "fixture-id",
+      "--resource-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/projects/fixture-id/resources/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateProjectResource"
+  },
+  {
+    "args": [
+      "projects",
+      "resources",
+      "delete",
+      "--project-id",
+      "fixture-id",
+      "--resource-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/projects/fixture-id/resources/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteProjectResource"
+  },
+  {
+    "args": [
+      "workspaces",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/workspaces",
+    "response": [],
+    "upstream_handler": "ListWorkspaces"
+  },
+  {
+    "args": [
+      "workspaces",
+      "get",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/workspaces/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetWorkspace"
+  },
+  {
+    "args": [
+      "workspaces",
+      "create"
+    ],
+    "method": "POST",
+    "path": "/api/workspaces",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateWorkspace"
+  },
+  {
+    "args": [
+      "workspaces",
+      "update",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/workspaces/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateWorkspace"
+  },
+  {
+    "args": [
+      "workspaces",
+      "members",
+      "list",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/workspaces/fixture-id/members",
+    "response": [],
+    "upstream_handler": "ListMembersWithUser"
+  },
+  {
+    "args": [
+      "workspaces",
+      "members",
+      "invite",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/workspaces/fixture-id/members",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateInvitation"
+  },
+  {
+    "args": [
+      "workspaces",
+      "members",
+      "update",
+      "--workspace-id",
+      "fixture-id",
+      "--member-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/workspaces/fixture-id/members/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateMember"
+  },
+  {
+    "args": [
+      "workspaces",
+      "members",
+      "remove",
+      "--workspace-id",
+      "fixture-id",
+      "--member-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/workspaces/fixture-id/members/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteMember"
+  },
+  {
+    "args": [
+      "workspaces",
+      "invitations",
+      "list",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/workspaces/fixture-id/invitations",
+    "response": [],
+    "upstream_handler": "ListWorkspaceInvitations"
+  },
+  {
+    "args": [
+      "workspaces",
+      "invitations",
+      "revoke",
+      "--workspace-id",
+      "fixture-id",
+      "--invitation-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/workspaces/fixture-id/invitations/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RevokeInvitation"
+  },
+  {
+    "args": [
+      "runtime-profiles",
+      "list",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/workspaces/fixture-id/runtime-profiles",
+    "response": {
+      "runtime_profiles": []
+    },
+    "upstream_handler": "ListRuntimeProfiles"
+  },
+  {
+    "args": [
+      "runtime-profiles",
+      "create",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/workspaces/fixture-id/runtime-profiles",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateRuntimeProfile"
+  },
+  {
+    "args": [
+      "runtime-profiles",
+      "update",
+      "--workspace-id",
+      "fixture-id",
+      "--profile-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/workspaces/fixture-id/runtime-profiles/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateRuntimeProfile"
+  },
+  {
+    "args": [
+      "runtime-profiles",
+      "delete",
+      "--workspace-id",
+      "fixture-id",
+      "--profile-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/workspaces/fixture-id/runtime-profiles/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteRuntimeProfile"
+  },
+  {
+    "args": [
+      "runtime-profiles",
+      "get",
+      "--workspace-id",
+      "fixture-id",
+      "--profile-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/workspaces/fixture-id/runtime-profiles/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetRuntimeProfile"
+  },
+  {
+    "args": [
+      "mcp-servers",
+      "list",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/workspaces/fixture-id/mcp-servers",
+    "response": [],
+    "upstream_handler": "ListWorkspaceMcpServers"
+  },
+  {
+    "args": [
+      "mcp-servers",
+      "create",
+      "--workspace-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/workspaces/fixture-id/mcp-servers",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateWorkspaceMcpServer"
+  },
+  {
+    "args": [
+      "mcp-servers",
+      "update",
+      "--workspace-id",
+      "fixture-id",
+      "--server-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/workspaces/fixture-id/mcp-servers/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateWorkspaceMcpServer"
+  },
+  {
+    "args": [
+      "mcp-servers",
+      "delete",
+      "--workspace-id",
+      "fixture-id",
+      "--server-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/workspaces/fixture-id/mcp-servers/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteWorkspaceMcpServer"
+  },
+  {
+    "args": [
+      "labels",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/labels",
+    "response": {
+      "labels": []
+    },
+    "upstream_handler": "ListLabels"
+  },
+  {
+    "args": [
+      "labels",
+      "create"
+    ],
+    "method": "POST",
+    "path": "/api/labels",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateLabel"
+  },
+  {
+    "args": [
+      "labels",
+      "update",
+      "--label-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/labels/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateLabel"
+  },
+  {
+    "args": [
+      "labels",
+      "get",
+      "--label-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/labels/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetLabel"
+  },
+  {
+    "args": [
+      "labels",
+      "delete",
+      "--label-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/labels/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteLabel"
+  },
+  {
+    "args": [
+      "properties",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/properties",
+    "response": {
+      "properties": []
+    },
+    "upstream_handler": "ListProperties"
+  },
+  {
+    "args": [
+      "properties",
+      "create"
+    ],
+    "method": "POST",
+    "path": "/api/properties",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateProperty"
+  },
+  {
+    "args": [
+      "properties",
+      "update",
+      "--property-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/properties/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateProperty"
+  },
+  {
+    "args": [
+      "properties",
+      "get",
+      "--property-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/properties/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetProperty"
+  },
+  {
+    "args": [
+      "issue-statuses",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/issue-statuses",
+    "response": {
+      "statuses": []
+    },
+    "upstream_handler": "ListIssueStatuses"
+  },
+  {
+    "args": [
+      "issue-statuses",
+      "create"
+    ],
+    "method": "POST",
+    "path": "/api/issue-statuses",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateIssueStatus"
+  },
+  {
+    "args": [
+      "issue-statuses",
+      "update",
+      "--status-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/issue-statuses/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateIssueStatus"
+  },
+  {
+    "args": [
+      "issue-statuses",
+      "archive",
+      "--status-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/issue-statuses/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ArchiveIssueStatus"
+  },
+  {
+    "args": [
+      "skills",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/skills",
+    "response": [],
+    "upstream_handler": "ListSkills"
+  },
+  {
+    "args": [
+      "skills",
+      "create"
+    ],
+    "method": "POST",
+    "path": "/api/skills",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateSkill"
+  },
+  {
+    "args": [
+      "skills",
+      "update",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/skills/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateSkill"
+  },
+  {
+    "args": [
+      "skills",
+      "get",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/skills/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetSkill"
+  },
+  {
+    "args": [
+      "skills",
+      "delete",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/skills/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteSkill"
+  },
+  {
+    "args": [
+      "issue-statuses",
+      "reorder"
+    ],
+    "method": "PATCH",
+    "path": "/api/issue-statuses/reorder",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ReorderIssueStatuses"
+  },
+  {
+    "args": [
+      "skills",
+      "search"
+    ],
+    "method": "GET",
+    "path": "/api/skills/search",
+    "response": [],
+    "upstream_handler": "SearchSkills"
+  },
+  {
+    "args": [
+      "skills",
+      "import"
+    ],
+    "method": "POST",
+    "path": "/api/skills/import",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "ImportSkill"
+  },
+  {
+    "args": [
+      "skills",
+      "refresh",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/skills/fixture-id/refresh",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "RefreshSkill"
+  },
+  {
+    "args": [
+      "agents",
+      "labels",
+      "list",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/agents/fixture-id/labels",
+    "response": {
+      "labels": []
+    },
+    "upstream_handler": "ListLabelsForAgent"
+  },
+  {
+    "args": [
+      "agents",
+      "labels",
+      "add",
+      "--agent-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/agents/fixture-id/labels",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "AttachLabelToAgent"
+  },
+  {
+    "args": [
+      "agents",
+      "labels",
+      "remove",
+      "--agent-id",
+      "fixture-id",
+      "--label-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/agents/fixture-id/labels/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DetachLabelFromAgent"
+  },
+  {
+    "args": [
+      "skills",
+      "labels",
+      "list",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/skills/fixture-id/labels",
+    "response": {
+      "labels": []
+    },
+    "upstream_handler": "ListLabelsForSkill"
+  },
+  {
+    "args": [
+      "skills",
+      "labels",
+      "add",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/skills/fixture-id/labels",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "AttachLabelToSkill"
+  },
+  {
+    "args": [
+      "skills",
+      "labels",
+      "remove",
+      "--skill-id",
+      "fixture-id",
+      "--label-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/skills/fixture-id/labels/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DetachLabelFromSkill"
+  },
+  {
+    "args": [
+      "skills",
+      "files",
+      "list",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/skills/fixture-id/files",
+    "response": [],
+    "upstream_handler": "ListSkillFiles"
+  },
+  {
+    "args": [
+      "skills",
+      "files",
+      "set",
+      "--skill-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/skills/fixture-id/files",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpsertSkillFile"
+  },
+  {
+    "args": [
+      "skills",
+      "files",
+      "delete",
+      "--skill-id",
+      "fixture-id",
+      "--file-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/skills/fixture-id/files/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteSkillFile"
+  },
+  {
+    "args": [
+      "tasks",
+      "messages",
+      "--task-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/tasks/fixture-id/messages",
+    "response": [],
+    "upstream_handler": "ListTaskMessagesByUser"
+  },
+  {
+    "args": [
+      "tasks",
+      "cancel",
+      "--task-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/tasks/fixture-id/cancel",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CancelTaskByUser"
+  },
+  {
+    "args": [
+      "runtimes",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/runtimes",
+    "response": [],
+    "upstream_handler": "ListAgentRuntimes"
+  },
+  {
+    "args": [
+      "runtimes",
+      "update",
+      "--runtime-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/runtimes/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateAgentRuntime"
+  },
+  {
+    "args": [
+      "runtimes",
+      "delete",
+      "--runtime-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/runtimes/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteAgentRuntime"
+  },
+  {
+    "args": [
+      "runtimes",
+      "usage",
+      "--runtime-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/runtimes/fixture-id/usage",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetRuntimeUsage"
+  },
+  {
+    "args": [
+      "runtimes",
+      "usage-by-agent",
+      "--runtime-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/runtimes/fixture-id/usage/by-agent",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetRuntimeUsageByAgent"
+  },
+  {
+    "args": [
+      "runtimes",
+      "usage-by-hour",
+      "--runtime-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/runtimes/fixture-id/usage/by-hour",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetRuntimeUsageByHour"
+  },
+  {
+    "args": [
+      "runtimes",
+      "activity",
+      "--runtime-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/runtimes/fixture-id/activity",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetRuntimeTaskActivity"
+  },
+  {
+    "args": [
+      "autopilots",
+      "list"
+    ],
+    "method": "GET",
+    "path": "/api/autopilots",
+    "response": {
+      "autopilots": []
+    },
+    "upstream_handler": "ListAutopilots"
+  },
+  {
+    "args": [
+      "autopilots",
+      "get",
+      "--autopilot-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/autopilots/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetAutopilot"
+  },
+  {
+    "args": [
+      "autopilots",
+      "create"
+    ],
+    "method": "POST",
+    "path": "/api/autopilots",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateAutopilot"
+  },
+  {
+    "args": [
+      "autopilots",
+      "update",
+      "--autopilot-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/autopilots/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateAutopilot"
+  },
+  {
+    "args": [
+      "autopilots",
+      "delete",
+      "--autopilot-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/autopilots/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteAutopilot"
+  },
+  {
+    "args": [
+      "autopilots",
+      "trigger",
+      "--autopilot-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/autopilots/fixture-id/trigger",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "TriggerAutopilot"
+  },
+  {
+    "args": [
+      "autopilots",
+      "cron-preview"
+    ],
+    "method": "GET",
+    "path": "/api/autopilots/cron-preview",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CronPreview"
+  },
+  {
+    "args": [
+      "autopilots",
+      "runs",
+      "list",
+      "--autopilot-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/autopilots/fixture-id/runs",
+    "response": {
+      "runs": []
+    },
+    "upstream_handler": "ListAutopilotRuns"
+  },
+  {
+    "args": [
+      "autopilots",
+      "runs",
+      "get",
+      "--autopilot-id",
+      "fixture-id",
+      "--run-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/autopilots/fixture-id/runs/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "GetAutopilotRun"
+  },
+  {
+    "args": [
+      "autopilots",
+      "triggers",
+      "create",
+      "--autopilot-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/autopilots/fixture-id/triggers",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateAutopilotTrigger"
+  },
+  {
+    "args": [
+      "autopilots",
+      "triggers",
+      "update",
+      "--autopilot-id",
+      "fixture-id",
+      "--trigger-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/autopilots/fixture-id/triggers/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "UpdateAutopilotTrigger"
+  },
+  {
+    "args": [
+      "autopilots",
+      "triggers",
+      "delete",
+      "--autopilot-id",
+      "fixture-id",
+      "--trigger-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/autopilots/fixture-id/triggers/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteAutopilotTrigger"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "list",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/wakeups",
+    "response": [],
+    "upstream_handler": "ListIssueWakeups"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "create",
+      "--issue-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/wakeups",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateIssueWakeup"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "set",
+      "--issue-id",
+      "fixture-id",
+      "--wakeup-id",
+      "fixture-id"
+    ],
+    "method": "PUT",
+    "path": "/api/issues/fixture-id/wakeups/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "CreateIssueWakeup"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "edit-instruction",
+      "--issue-id",
+      "fixture-id",
+      "--wakeup-id",
+      "fixture-id"
+    ],
+    "method": "PATCH",
+    "path": "/api/issues/fixture-id/wakeups/fixture-id/instruction",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "EditIssueWakeupInstruction"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "enable",
+      "--issue-id",
+      "fixture-id",
+      "--wakeup-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/wakeups/fixture-id/enable",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "EnableIssueWakeup"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "disable",
+      "--issue-id",
+      "fixture-id",
+      "--wakeup-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/wakeups/fixture-id/disable",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DisableIssueWakeup"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "delete",
+      "--issue-id",
+      "fixture-id",
+      "--wakeup-id",
+      "fixture-id"
+    ],
+    "method": "DELETE",
+    "path": "/api/issues/fixture-id/wakeups/fixture-id",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "DeleteIssueWakeup"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "trigger",
+      "--issue-id",
+      "fixture-id",
+      "--wakeup-id",
+      "fixture-id"
+    ],
+    "method": "POST",
+    "path": "/api/issues/fixture-id/wakeups/fixture-id/trigger",
+    "response": {
+      "id": "fixture-id"
+    },
+    "upstream_handler": "TriggerIssueWakeup"
+  },
+  {
+    "args": [
+      "issues",
+      "wakeups",
+      "runs",
+      "--issue-id",
+      "fixture-id",
+      "--wakeup-id",
+      "fixture-id"
+    ],
+    "method": "GET",
+    "path": "/api/issues/fixture-id/wakeups/fixture-id/runs",
+    "response": [],
+    "upstream_handler": "ListIssueWakeupRuns"
+  }
+]

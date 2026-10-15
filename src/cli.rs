@@ -23,6 +23,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Manage Multica issues, comments, inbox, squads, agents, and administration.
+    Multica(crate::services::multica::MulticaCommand),
     Jira(JiraCommand),
     Confluence(ConfluenceCommand),
     Bitbucket(BitbucketCommand),

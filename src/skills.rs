@@ -32,6 +32,7 @@ const SKILL_COMMANDS: &[(&str, &[&str])] = &[
     ("aai-microsoft", &["microsoft"]),
     ("aai-pipedrive", &["pipedrive"]),
     ("aai-posthog", &["posthog"]),
+    ("aai-multica", &["multica"]),
     ("aai-slack", &["slack"]),
     ("aai-zoho-mail", &["email"]),
 ];
@@ -53,6 +54,7 @@ const TOP_LEVEL_COMMANDS: &[&str] = &[
     "posthog",
     "merkys",
     "microsoft",
+    "multica",
     "config",
     "secrets",
     "skills",
@@ -528,7 +530,7 @@ mod tests {
         let packages = load_packages().expect("load bundled skills");
         let reports = validate_packages(&packages);
 
-        assert_eq!(reports.len(), 17);
+        assert_eq!(reports.len(), 18);
         assert!(
             reports.iter().all(|report| report.valid),
             "invalid reports: {reports:#?}"

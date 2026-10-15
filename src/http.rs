@@ -94,7 +94,7 @@ impl ApiClient {
         url: String,
         body: Option<Value>,
     ) -> Result<Value, AppError> {
-        let (value, next_url) = Self::request_with(
+        let (value, headers) = Self::request_with(
             &self.no_redirect_client,
             service,
             operation,
@@ -104,7 +104,33 @@ impl ApiClient {
             body,
         )
         .await?;
+        let next_url = headers
+            .get(reqwest::header::LINK)
+            .and_then(|value| value.to_str().ok())
+            .and_then(link_next_url);
         Ok(attach_provider_next_url(value, next_url))
+    }
+
+    /// Preserve headers for provider pagination without adding them to provider JSON.
+    pub async fn request_with_headers(
+        &self,
+        service: &'static str,
+        operation: &'static str,
+        profile: &Profile,
+        method: Method,
+        url: String,
+        body: Option<Value>,
+    ) -> Result<(Value, reqwest::header::HeaderMap), AppError> {
+        Self::request_with(
+            &self.no_redirect_client,
+            service,
+            operation,
+            profile,
+            method,
+            url,
+            body,
+        )
+        .await
     }
 
     async fn request_with(
@@ -115,7 +141,7 @@ impl ApiClient {
         method: Method,
         url: String,
         body: Option<Value>,
-    ) -> Result<(Value, Option<String>), AppError> {
+    ) -> Result<(Value, reqwest::header::HeaderMap), AppError> {
         let token = crate::oauth::resolve_token(profile, client, service, operation).await?;
         let effective = crate::config::Profile {
             token: Some(token),
@@ -132,11 +158,7 @@ impl ApiClient {
             AppError::internal(service, operation, format!("request failed: {err}"))
         })?;
         let status = response.status();
-        let next_url = response
-            .headers()
-            .get(reqwest::header::LINK)
-            .and_then(|value| value.to_str().ok())
-            .and_then(link_next_url);
+        let headers = response.headers().clone();
         let text = response.text().await.map_err(|err| {
             AppError::internal(
                 service,
@@ -151,7 +173,7 @@ impl ApiClient {
         };
 
         if status.is_success() {
-            Ok((parsed, next_url))
+            Ok((parsed, headers))
         } else {
             Err(AppError::api(
                 service,
@@ -470,6 +492,31 @@ fn apply_auth(
     operation: &'static str,
     profile: &Profile,
 ) -> Result<RequestBuilder, AppError> {
+    let request = if service == "multica" {
+        match profile.workspace.as_deref().filter(|w| !w.is_empty()) {
+            Some(workspace) => {
+                let uuid = workspace.len() == 36
+                    && workspace.chars().enumerate().all(|(i, c)| {
+                        if matches!(i, 8 | 13 | 18 | 23) {
+                            c == '-'
+                        } else {
+                            c.is_ascii_hexdigit()
+                        }
+                    });
+                request.header(
+                    if uuid {
+                        "X-Workspace-ID"
+                    } else {
+                        "X-Workspace-Slug"
+                    },
+                    workspace,
+                )
+            }
+            None => request,
+        }
+    } else {
+        request
+    };
     let auth_type = profile.auth_type.as_deref().unwrap_or("bearer_token");
     match auth_type {
         "basic_api_token" | "basic" => {

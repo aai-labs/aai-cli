@@ -8,6 +8,7 @@ The goal is not to replace full SDKs. The goal is to make common agent tasks saf
 
 | Service | CLI coverage | Local docs | Original API docs |
 | --- | --- | --- | --- |
+| Multica | Inbox, threaded comments, issues and assignment, squads, agents, projects, workspace administration, catalogs, runtimes, scheduling | [docs/services/multica.md](docs/services/multica.md) | [Multica application API](https://github.com/multica-ai/multica) |
 | Jira Cloud | Issues, Product Discovery ideas, URL parsing, field discovery and workflow transitions, projects, Agile boards, sprints, comments, attachments | [docs/services/jira.md](docs/services/jira.md) | [Jira REST API v3](https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/), [Jira Software REST API](https://developer.atlassian.com/cloud/jira/software/rest/intro/) |
 | Confluence Cloud | Spaces, pages, comments, attachments, search, page moves | [docs/services/confluence.md](docs/services/confluence.md) | [Confluence REST API v2](https://developer.atlassian.com/cloud/confluence/rest/v2/intro/) |
 | Bitbucket Cloud | Repositories, branches, commits, source files, pull requests, comments, pipelines | [docs/services/bitbucket.md](docs/services/bitbucket.md) | [Bitbucket REST API](https://developer.atlassian.com/cloud/bitbucket/rest/intro/) |

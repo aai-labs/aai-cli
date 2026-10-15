@@ -1,0 +1,35 @@
+use super::endpoint::{Endpoint, Paging};
+
+pub(super) fn endpoints() -> Vec<Endpoint> {
+    vec![
+        Endpoint::new("issues list", "GET", "/issues", "q status statuses status_category status_categories priority priorities assignee_id assignee_ids assignee_types assignee_filters creator_id creator_filters project_id project_ids label_ids sort direction metadata properties scheduled top_level_only include_no_assignee include_no_project involves_user_id ids open_only", "", Paging::Offset, "issues", 100, "", true),
+        Endpoint::new("issues search", "GET", "/issues/search", "q include_closed", "", Paging::Offset, "issues", 50, "", true),
+        Endpoint::new("issues get", "GET", "/issues/{issue_id}", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues create", "POST", "/issues", "", "title description status priority assignee_type assignee_id project_id parent_issue_id start_date due_date", Paging::None, "", 100, "title", true),
+        Endpoint::new("issues update", "PUT", "/issues/{issue_id}", "", "title description status priority assignee_type assignee_id project_id parent_issue_id start_date due_date expected_revision", Paging::None, "", 100, "", true),
+        Endpoint::new("issues delete", "DELETE", "/issues/{issue_id}", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues move", "POST", "/issues/{issue_id}/move", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues rerun", "POST", "/issues/{issue_id}/rerun", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues children", "GET", "/issues/{issue_id}/children", "", "", Paging::Single, "issues", 100, "", true),
+        Endpoint::new("issues timeline", "GET", "/issues/{issue_id}/timeline", "before after around", "", Paging::Single, "", 100, "", true),
+        Endpoint::new("issues subscribers", "GET", "/issues/{issue_id}/subscribers", "", "", Paging::Single, "", 100, "", true),
+        Endpoint::new("issues labels list", "GET", "/issues/{issue_id}/labels", "", "", Paging::Single, "labels", 100, "", true),
+        Endpoint::new("issues metadata list", "GET", "/issues/{issue_id}/metadata", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues pull-requests list", "GET", "/issues/{issue_id}/pull-requests", "", "", Paging::Single, "pull_requests", 100, "", true),
+        Endpoint::new("issues task-runs", "GET", "/issues/{issue_id}/task-runs", "scope active", "", Paging::Single, "", 100, "", true),
+        Endpoint::new("issues subscribe", "POST", "/issues/{issue_id}/subscribe", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues unsubscribe", "POST", "/issues/{issue_id}/unsubscribe", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues unsubscribe-subtree", "POST", "/issues/{issue_id}/unsubscribe/subtree", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues active-task", "GET", "/issues/{issue_id}/active-task", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues usage", "GET", "/issues/{issue_id}/usage", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues metadata set", "PUT", "/issues/{issue_id}/metadata/{key}", "", "value", Paging::None, "", 100, "", true),
+        Endpoint::new("issues metadata delete", "DELETE", "/issues/{issue_id}/metadata/{key}", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues properties set", "PUT", "/issues/{issue_id}/properties/{property_id}", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues properties delete", "DELETE", "/issues/{issue_id}/properties/{property_id}", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues pull-requests link", "POST", "/issues/{issue_id}/pull-requests", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues pull-requests unlink", "DELETE", "/issues/{issue_id}/pull-requests/{pr_id}", "", "", Paging::None, "", 100, "", true),
+        Endpoint::new("issues pr-auto-complete", "PUT", "/issues/{issue_id}/pr-auto-complete", "", "disabled", Paging::None, "", 100, "", true),
+        Endpoint::new("issues labels add", "POST", "/issues/{issue_id}/labels", "", "label_id", Paging::None, "", 100, "", true),
+        Endpoint::new("issues labels remove", "DELETE", "/issues/{issue_id}/labels/{label_id}", "", "", Paging::None, "", 100, "", true),
+    ]
+}

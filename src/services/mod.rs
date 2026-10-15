@@ -11,6 +11,7 @@ pub(crate) mod hubspot;
 pub(crate) mod jira;
 pub(crate) mod merkys;
 pub(crate) mod microsoft;
+pub(crate) mod multica;
 pub(crate) mod openpanel;
 pub(crate) mod pipedrive;
 pub(crate) mod posthog;
@@ -25,6 +26,7 @@ use crate::{cli::*, config::Context, error::AppError, http::ApiClient};
 pub async fn dispatch(ctx: &Context, command: Command) -> Result<Value, AppError> {
     let client = ApiClient::new()?;
     match command {
+        Command::Multica(command) => multica::dispatch(&client, ctx, command).await,
         Command::Jira(command) => jira::dispatch(&client, ctx, command).await,
         Command::Confluence(command) => confluence::dispatch(&client, ctx, command).await,
         Command::Bitbucket(command) => bitbucket::dispatch(&client, ctx, command).await,

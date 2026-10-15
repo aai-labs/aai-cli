@@ -2343,3 +2343,58 @@ fn merkys_ask_research_and_read() {
     assert_eq!(str_at(&run, &["run_id"]), run_id);
     cli_required(MK, &["merkys", "research", "stop", run_id]);
 }
+
+#[test]
+#[ignore = "requires AAI_E2E_CONFIG and AAI_E2E_MULTICA_PROFILE; creates a disposable issue"]
+fn multica_issue_comment_lifecycle() {
+    let profile = "AAI_E2E_MULTICA_PROFILE";
+    let title = unique("aai-multica-e2e");
+    let created = cli_required(profile, &["multica", "issues", "create", "--title", &title]);
+    let id = str_at(&created, &["id"]).to_owned();
+    let outcome = std::panic::catch_unwind(|| {
+        let updated = cli_required(
+            profile,
+            &[
+                "multica",
+                "issues",
+                "update",
+                "--issue-id",
+                &id,
+                "--description",
+                "Disposable CLI verification",
+            ],
+        );
+        assert_eq!(updated["description"], "Disposable CLI verification");
+        let comment = cli_required(
+            profile,
+            &[
+                "multica",
+                "issues",
+                "comments",
+                "create",
+                "--issue-id",
+                &id,
+                "--content",
+                "Offline-independent live verification; no mentions.",
+            ],
+        );
+        let comment_id = str_at(&comment, &["id"]);
+        let listed = cli_required(
+            profile,
+            &["multica", "issues", "comments", "list", "--issue-id", &id],
+        );
+        assert!(listed["results"]
+            .as_array()
+            .expect("comment array")
+            .iter()
+            .any(|item| item["id"] == comment_id));
+    });
+    // Attempt cleanup even if a lifecycle assertion failed.
+    let cleanup = std::panic::catch_unwind(|| {
+        cli_required(profile, &["multica", "issues", "delete", "--issue-id", &id])
+    });
+    if let Err(error) = outcome {
+        std::panic::resume_unwind(error);
+    }
+    cleanup.expect("failed to delete disposable Multica issue");
+}
