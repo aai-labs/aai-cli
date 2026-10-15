@@ -68,6 +68,8 @@ aai-cli --profile agent-barn agent-barn agents web-chat stream --agent-id AGENT_
 
 A stream reaching its duration succeeds. Unexpected disconnects and transfer errors return structured errors with `details.partial_file`; partial files are retained. No reconnection occurs. Header waits and stalled downloads time out after 30 seconds. Redirects are rejected without forwarding credentials.
 
+On the tested cloud deployment, an idle log stream with the default `tail_lines=0` did not return response headers within the 30-second timeout. Adding `--tail-lines 1` delivered an initial log event and allowed bounded capture to complete successfully. Use this option when capturing logs from quiet agents. This observation does not establish whether the delay originates in the API or its proxy.
+
 ## Contract and maintenance
 
 Pinned upstream revision: [`9ffaf06ddff8b80b6dcf30f3b3821cbfa150b00f`](https://github.com/aai-labs/agent-barn/tree/9ffaf06ddff8b80b6dcf30f3b3821cbfa150b00f).
