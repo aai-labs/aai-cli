@@ -32,6 +32,7 @@ Validation enforces these provider/auth/reference combinations:
 - Pipedrive: `pipedrive_personal_token` with `api_token_secret`
 - Apollo: `apollo_api_key` with `api_token_secret`
 - GitHub: `bearer_token` with `token_secret`
+- Agent Barn: `bearer_token` with `token_secret` and `base_url` ending in `/api/v1`
 - HubSpot: `hubspot_service_key` or `hubspot_legacy_private_app` with `token_secret`
 - Slack: `bearer_token` with `token_secret`
 - Merkys: `api_key_header` with `api_token_secret` and `base_url`
@@ -924,3 +925,7 @@ microsoft planner tasks <get|create|update|delete> ...
 Typed user-resource commands use `--user-id` or `profile.user_id`. Create/update bodies use `--json JSON_OR_PATH` (or `--json -` for stdin). List commands aggregate Graph's `@odata.nextLink` pages into the provider's `value` array up to `--limit`.
 
 Microsoft To Do requires a delegated profile in this CLI because Graph's application-permission support varies across operations and the typed surface guarantees one consistent identity for complete list/task CRUD. Planner task update/delete require the last observed `@odata.etag` through `--etag`. Teams commands are read-only in this initial coverage: team/channel metadata, team members, channel messages, and chats. The exact argument shapes and safe CRUD workflow are included in the bundled `aai-microsoft` skill.
+
+## Agent Barn
+
+Use `aai-cli --profile agent-barn agent-barn ...`. Start with `auth context`; select an organization with `--organization-id` or `profile.org`. See the [service guide](services/agent-barn.md) and [complete command reference](../bundled/skills/aai-agent-barn/references/command-reference.md) for all 219 commands. Collections default to `--limit 100`; follow `_aai.pagination.next_command`. Downloads and bounded SSE streams require `--output` and return JSON file metadata. No dedicated login or key-management commands are provided.

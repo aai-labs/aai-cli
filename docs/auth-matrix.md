@@ -82,3 +82,9 @@ This project primarily consumes credentials supplied by users or agents. Microso
 - Microsoft Excel workbook commands require `microsoft_delegated` with `Files.ReadWrite`; Graph does not support application permissions for workbook operations and the CLI rejects app-only profiles before making a request.
 - Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.
 - Word files are transferred through OneDrive/SharePoint file commands only. The CLI does not semantically edit `.docx` content; agents must download, edit externally, and upload the complete replacement.
+
+## Agent Barn
+
+- Existing user-owned personal API key (`abk_…`), sent as `Authorization: Bearer`, with `auth_type = "bearer_token"` and `token_env` or `token_secret`. No OAuth refresh or login flow.
+- READ_ONLY and FULL modes restrict methods, while current organization membership, agent access, and platform authority still apply. A FULL key does not bypass permissions.
+- Key creation/revocation remains in Account settings. Expired, revoked, or password-invalidated keys return 401. See the [service guide](services/agent-barn.md).

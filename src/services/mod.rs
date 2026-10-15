@@ -1,3 +1,4 @@
+pub(crate) mod agent_barn;
 pub(crate) mod apollo;
 pub(crate) mod bitbucket;
 pub(crate) mod calendar;
@@ -25,6 +26,7 @@ use crate::{cli::*, config::Context, error::AppError, http::ApiClient};
 pub async fn dispatch(ctx: &Context, command: Command) -> Result<Value, AppError> {
     let client = ApiClient::new()?;
     match command {
+        Command::AgentBarn(command) => agent_barn::dispatch(&client, ctx, command).await,
         Command::Jira(command) => jira::dispatch(&client, ctx, command).await,
         Command::Confluence(command) => confluence::dispatch(&client, ctx, command).await,
         Command::Bitbucket(command) => bitbucket::dispatch(&client, ctx, command).await,

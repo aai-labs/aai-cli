@@ -17,10 +17,36 @@ pub(crate) async fn dispatch(
     base_url: String,
     args: GenericRequest,
 ) -> Result<Value, AppError> {
+    let prepared = prepare(service, &base_url, args)?;
+    client
+        .request_no_redirect(
+            service,
+            "request",
+            ctx.profile(),
+            prepared.method,
+            prepared.url,
+            prepared.body,
+        )
+        .await
+}
+
+pub(super) struct PreparedRequest {
+    pub method: Method,
+    pub url: String,
+    pub body: Option<Value>,
+}
+
+/// Build the existing generic request independently of response handling.
+/// Providers with header pagination can reuse all path/write/query validation.
+pub(super) fn prepare(
+    service: &'static str,
+    base_url: &str,
+    args: GenericRequest,
+) -> Result<PreparedRequest, AppError> {
     let operation = "request";
     let method = method(args.method);
     validate_options(&method, args.allow_write, args.json.is_some(), service)?;
-    let mut url = relative_url(&base_url, &args.path, service)?;
+    let mut url = relative_url(base_url, &args.path, service)?;
     append_query(&mut url, &args.query, service)?;
     let is_write = !matches!(method, Method::GET | Method::HEAD);
     let body = if is_write {
@@ -32,9 +58,7 @@ pub(crate) async fn dispatch(
         None
     };
 
-    client
-        .request_no_redirect(service, operation, ctx.profile(), method, url, body)
-        .await
+    Ok(PreparedRequest { method, url, body })
 }
 
 fn validate_options(

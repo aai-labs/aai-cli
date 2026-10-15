@@ -23,6 +23,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Manage Agent Barn agents, resources, and platform administration.
+    AgentBarn(crate::services::agent_barn::AgentBarnCommand),
     Jira(JiraCommand),
     Confluence(ConfluenceCommand),
     Bitbucket(BitbucketCommand),

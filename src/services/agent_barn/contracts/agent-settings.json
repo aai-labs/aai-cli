@@ -1,0 +1,65 @@
+[
+  {
+    "command": "agent-settings get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agent-settings",
+    "operation_id": "get_agent_settings_organizations__organization_id__agent_settings_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agent-settings set",
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agent-settings",
+    "operation_id": "update_agent_settings_organizations__organization_id__agent_settings_put",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "default_model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "default_agent_llm_budget_usd",
+        "kind": "number",
+        "required": false,
+        "choices": [],
+        "minimum": 0.0,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]
