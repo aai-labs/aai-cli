@@ -524,6 +524,24 @@ fn apply_auth(
                 })?;
             Ok(request.header("x-api-key", token))
         }
+        "api_key_header" | "api-key-header" => {
+            let token = profile
+                .api_token
+                .as_deref()
+                .or(profile.token.as_deref())
+                .ok_or_else(|| {
+                    AppError::auth(service, operation, "profile is missing api_token or token")
+                })?;
+            let name = profile.api_key_header.as_deref().unwrap_or("X-API-Key");
+            let name = reqwest::header::HeaderName::from_bytes(name.as_bytes()).map_err(|_| {
+                AppError::service_config(
+                    service,
+                    operation,
+                    format!("profile.api_key_header {name:?} is not a valid header name"),
+                )
+            })?;
+            Ok(request.header(name, token))
+        }
         "hubspot_service_key"
         | "hubspot-service-key"
         | "hubspot_legacy_private_app"
@@ -651,6 +669,42 @@ mod tests {
             "openpanel-secret"
         );
         assert!(!request.headers().contains_key("authorization"));
+    }
+
+    fn api_key_header_request(header: Option<&str>) -> Result<reqwest::Request, AppError> {
+        let profile = Profile {
+            auth_type: Some("api_key_header".to_string()),
+            api_token: Some("key-1".to_string()),
+            api_key_header: header.map(str::to_string),
+            ..Profile::default()
+        };
+        apply_auth(
+            Client::new().request(Method::GET, "https://example.test/x"),
+            "merkys",
+            "conversations.list",
+            &profile,
+        )
+        .map(|request| request.build().unwrap())
+    }
+
+    #[test]
+    fn api_key_header_defaults_to_x_api_key() {
+        let request = api_key_header_request(None).unwrap();
+        assert_eq!(request.headers()["x-api-key"], "key-1");
+        assert!(!request.headers().contains_key("authorization"));
+    }
+
+    #[test]
+    fn api_key_header_uses_the_configured_header_name() {
+        let request = api_key_header_request(Some("X-Custom-Key")).unwrap();
+        assert_eq!(request.headers()["x-custom-key"], "key-1");
+        assert!(!request.headers().contains_key("x-api-key"));
+    }
+
+    #[test]
+    fn api_key_header_rejects_an_invalid_header_name() {
+        let error = api_key_header_request(Some("bad header")).unwrap_err();
+        assert_eq!(error.code, "config_error");
     }
 
     #[test]

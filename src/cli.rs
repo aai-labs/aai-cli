@@ -55,6 +55,8 @@ pub enum Command {
     Posthog(PosthogCommand),
     /// Authenticate to and call Microsoft Graph.
     Microsoft(MicrosoftCommand),
+    /// Ask Merkys questions, run deep research, and read its knowledge base.
+    Merkys(MerkysCommand),
 }
 
 #[derive(Debug, Args)]
@@ -6121,4 +6123,168 @@ pub struct PosthogAnnotationGetArgs {
     #[arg(long)]
     pub project_id: Option<String>,
     pub annotation_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysCommand {
+    #[command(subcommand)]
+    pub resource: MerkysResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysResource {
+    /// Ask a question and get one grounded answer with its cited sources.
+    Ask(MerkysAsk),
+    /// Start, poll, and stop deep research runs.
+    Research(MerkysResearchCommand),
+    /// List, search, and read conversations.
+    Conversations(MerkysConversationsCommand),
+    /// List uploaded documents.
+    Documents(MerkysDocumentsCommand),
+    /// List connected data sources.
+    Sources(MerkysSourcesCommand),
+    /// List custom assistants.
+    Assistants(MerkysAssistantsCommand),
+    /// Call an uncommon Merkys endpoint with profile authentication.
+    Request(GenericRequest),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysAsk {
+    /// The question to ask.
+    pub question: String,
+    /// Continue an existing conversation instead of starting a new one.
+    #[arg(long)]
+    pub conversation_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysResearchCommand {
+    #[command(subcommand)]
+    pub action: MerkysResearchAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysResearchAction {
+    /// Start a deep research run. Returns the run id unless --wait is set.
+    Start(MerkysResearchStart),
+    /// Get a run's status, plan, final report, and sources.
+    Get(MerkysRunId),
+    /// Stop a running deep research run.
+    Stop(MerkysRunId),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysResearchStart {
+    /// The research question.
+    pub question: String,
+    /// Run inside an existing conversation instead of a new one.
+    #[arg(long)]
+    pub conversation_id: Option<String>,
+    /// Poll until the run completes or fails, then return the finished run.
+    #[arg(long)]
+    pub wait: bool,
+    /// With --wait: give up after this many seconds. The run keeps going.
+    #[arg(long, default_value_t = 900)]
+    pub timeout_secs: u64,
+    /// With --wait: seconds between polls.
+    #[arg(long, default_value_t = 5)]
+    pub poll_secs: u64,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysRunId {
+    pub run_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysConversationsCommand {
+    #[command(subcommand)]
+    pub action: MerkysConversationsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysConversationsAction {
+    /// List the key owner's conversations, newest first.
+    List(MerkysPagedList),
+    /// Search conversation titles and messages.
+    Search(MerkysConversationSearch),
+    /// List a conversation's messages, including sources on assistant answers.
+    Messages(MerkysConversationMessages),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysPagedList {
+    #[arg(long, default_value_t = 20)]
+    pub limit: u32,
+    /// Continuation token from a previous response's next_page_token.
+    #[arg(long)]
+    pub page_token: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysConversationSearch {
+    pub query: String,
+    #[command(flatten)]
+    pub page: MerkysPagedList,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysConversationMessages {
+    pub conversation_id: String,
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+    /// Continuation token from a previous response's next_page_token.
+    #[arg(long)]
+    pub page_token: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysDocumentsCommand {
+    #[command(subcommand)]
+    pub action: MerkysDocumentsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysDocumentsAction {
+    /// List items.
+    List(MerkysDocumentsList),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysDocumentsList {
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysSourcesCommand {
+    #[command(subcommand)]
+    pub action: MerkysSourcesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysSourcesAction {
+    /// List data sources the key owner can manage or read.
+    List(MerkysSourcesList),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysSourcesList {
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+    #[arg(long, default_value_t = 0)]
+    pub offset: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysAssistantsCommand {
+    #[command(subcommand)]
+    pub action: MerkysAssistantsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysAssistantsAction {
+    /// List custom assistants the key owner can use.
+    List,
 }

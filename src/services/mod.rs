@@ -9,6 +9,7 @@ pub(crate) mod generic_request;
 pub(crate) mod github;
 pub(crate) mod hubspot;
 pub(crate) mod jira;
+pub(crate) mod merkys;
 pub(crate) mod microsoft;
 pub(crate) mod openpanel;
 pub(crate) mod pipedrive;
@@ -39,6 +40,7 @@ pub async fn dispatch(ctx: &Context, command: Command) -> Result<Value, AppError
         Command::Openpanel(command) => openpanel::dispatch(&client, ctx, command).await,
         Command::Posthog(command) => posthog::dispatch(&client, ctx, command).await,
         Command::Microsoft(command) => microsoft::dispatch(&client, ctx, command).await,
+        Command::Merkys(command) => merkys::dispatch(&client, ctx, command).await,
         Command::Excel(_) => unreachable!("excel commands are dispatched before context loading"),
         Command::Config(_) => unreachable!("config commands are dispatched before context loading"),
         Command::Skills(_) => unreachable!("skills commands are dispatched before context loading"),

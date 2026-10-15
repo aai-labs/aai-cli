@@ -57,9 +57,16 @@ This project primarily consumes credentials supplied by users or agents. Microso
 - Optional `project_id` profile field: `insights *` and `profiles *` require a project ID in the URL; set `profile.project_id` to avoid passing `--project-id` on every call.
 - OAuth install flow: not applicable — OpenPanel has no OAuth flow for the REST API, only static client credentials created in the dashboard under Settings → Clients.
 
+## Merkys
+
+- User API key: Primary and only implemented model. Profiles use `auth_type = "api_key_header"` with `api_token_secret` and a required `base_url`, and the key is sent in the `X-API-Key` header (configurable with `api_key_header`). The key is bound to one Merkys user and organization: every call sees exactly what that user's role and access rules allow, and appears in that user's conversation history.
+- Service credentials: Merkys also issues org-level machine credentials sent as `Authorization: Bearer`. They resolve to one fixed service profile, never to a user, and cannot call user routes. This CLI does not use them.
+- User JWTs: Browser sessions. Not used; an API key is the right credential for an agent.
+- Scope: Prefer a dedicated Merkys user with only the access agents need (for example a `viewer` limited to the shared knowledge) over a person's own key. A 401 means the key is invalid or revoked; empty lists can mean the key owner lacks access.
+
 ## CLI Implications
 
-- Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `microsoft_client_credentials`, `microsoft_delegated`, `token_url`, `github_app`, `oauth_user`, or `service_account`.
+- Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `api_key_header`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `microsoft_client_credentials`, `microsoft_delegated`, `token_url`, `github_app`, `oauth_user`, or `service_account`.
 - Never infer service-account semantics from a token string alone.
 - Keep provider profiles isolated; do not reuse an Atlassian token across Jira, Confluence, and Bitbucket unless the provider docs explicitly support it.
 - Prefer env var overrides for secrets and config-file fields for non-secret metadata such as site URL, workspace, region, account email, and default scopes.

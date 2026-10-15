@@ -28,6 +28,7 @@ Service-level CLI docs live under `docs/services/`:
 - [Calendar](services/calendar.md)
 - [Pipedrive](services/pipedrive.md)
 - [Apollo](services/apollo.md)
+- [Merkys](services/merkys.md)
 - [Google Sheets](services/sheets.md)
 - [Google Drive](services/drive.md)
 - [OpenPanel](services/openpanel.md)

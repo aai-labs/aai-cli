@@ -36,6 +36,8 @@ pub struct Profile {
     pub client_secret_env: Option<String>,
     pub client_secret_secret: Option<String>,
     pub api_token: Option<String>,
+    /// Header that carries `api_token` for `auth_type = "api_key_header"`.
+    pub api_key_header: Option<String>,
     pub api_token_env: Option<String>,
     pub api_token_secret: Option<String>,
     pub password: Option<String>,
