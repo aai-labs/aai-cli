@@ -102,3 +102,11 @@ token_env = "GOOGLE_DRIVE_ACCESS_TOKEN"
 # token_secret = "google.drive_access_token"
 # Scopes: drive.readonly covers every read; files upload needs drive.file or drive.
 # drive.metadata.readonly is NOT enough for files download.
+
+# Merkys: a user API key (sent as X-API-Key), not a service credential.
+[profiles.merkys-work]
+provider = "merkys"
+auth_type = "api_key_header"
+base_url = "https://YOUR_MERKYS_HOST"
+api_token_env = "MERKYS_API_KEY"
+# api_token_secret = "merkys.api_key"

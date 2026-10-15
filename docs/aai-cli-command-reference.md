@@ -34,6 +34,7 @@ Validation enforces these provider/auth/reference combinations:
 - GitHub: `bearer_token` with `token_secret`
 - HubSpot: `hubspot_service_key` or `hubspot_legacy_private_app` with `token_secret`
 - Slack: `bearer_token` with `token_secret`
+- Merkys: `api_key_header` with `api_token_secret` and `base_url`
 - Jira, Confluence, and Bitbucket: `basic_api_token` with `api_token_secret`
 - Microsoft: `microsoft_client_credentials` with `tenant_id`, `client_id`, and `client_secret_secret`; `microsoft_delegated` with `tenant_id`, `client_id`, `scope`, and `refresh_token_secret`; or `token_url` with `token_url` and `api_token_secret`
 
@@ -344,6 +345,30 @@ aai-cli slack canvas download <channel-id> --output PATH
 
 `canvas download` resolves the channel's canvas, downloads it via `url_private_download`, and writes it to `--output`. Like the GitHub Actions and Bitbucket Pipelines download commands, it returns JSON metadata (`output`, `bytes`, `canvas_id`, `title`) and never prints content to stdout. Canvas content is written as an HTML fragment (Slack's internal Quip-document format), not markdown. A channel with no canvas returns `not_found`. `files download` and `canvas download` share the same download mechanism internally — the only difference is how each resolves the file ID to download.
 
+## Merkys
+
+Merkys is a read-and-ask integration with a Merkys knowledge-base deployment. It authenticates with a **user API key** sent in the `X-API-Key` header (`auth_type = "api_key_header"`; the header name can be changed with `profile.api_key_header`). `profile.base_url` is required: there is no default host. Calls run as the key's owner, so results are limited by that user's role and access rules.
+
+```bash
+aai-cli merkys ask <question> [--conversation-id ID]
+aai-cli merkys research start <question> [--conversation-id ID] [--wait] [--timeout-secs N] [--poll-secs N]
+aai-cli merkys research get <run-id>
+aai-cli merkys research stop <run-id>
+aai-cli merkys conversations list [--limit N] [--page-token T]
+aai-cli merkys conversations search <query> [--limit N] [--page-token T]
+aai-cli merkys conversations messages <conversation-id> [--limit N] [--page-token T]
+aai-cli merkys documents list [--limit N]
+aai-cli merkys sources list [--limit N] [--offset N]
+aai-cli merkys assistants list
+aai-cli merkys request <get|head|post|put|patch|delete> <relative-path> [--query key=value ...]
+```
+
+`ask` creates a conversation (unless `--conversation-id` is given), posts the question, then reads the stored answer back for its sources, and returns `{conversation_id, message_id, answer, sources, detect_conflicts, faithfulness, total_tokens}`. `sources[].index` matches the `[[n]]` markers in the answer. If the answer was produced but the sources could not be loaded, `sources` is `null` and a `warning` explains why; the answer is still returned.
+
+`research start` returns `{run_id, conversation_id}` immediately. With `--wait` it polls every `--poll-secs` (default 5) until the run is `completed` or `failed` and returns the full run (`final_report`, `sources`, `plan`, `sub_queries`). A `failed` run is returned as output, not an error. If `--timeout-secs` (default 900) passes first, the command fails with `code: "timeout"` and `details.run_id`; the run keeps going and can be read with `research get`.
+
+`conversations` list commands pass Merkys's `next_page_token` through; supply it back with `--page-token`. `documents list` and `sources list` report no next page: if the result count equals the limit, raise it. `request` is read-only unless `--allow-write` is set. See [docs/services/merkys.md](services/merkys.md) for the verification notes.
+
 ## Google Drive
 
 Drive is read-first with exactly one write, `files upload`. Sharing, renames, moves, trashing, deleting, revisions, and comments are deliberately absent — an agent cannot change who can see a file.
@@ -583,7 +608,7 @@ Provider response fields remain at their original locations, except bare provide
 
 When `next_command` is present, run it to retrieve more results. Generic requests preserve existing query filters while replacing or adding continuation parameters. Typed commands that aggregate to `--limit` may suggest rerunning with a larger limit; this retrieves the previous results plus additional results rather than only the next page. If `status` is `unknown`, increase `--limit` or use a generic authenticated request with the provider's documented pagination parameters.
 
-For implemented Jira, Confluence, GitHub, Bitbucket, Pipedrive, Apollo, HubSpot, and Slack list/search commands, `aai-cli` may follow provider pagination and aggregate results until it reaches `--limit` or the provider has no next page.
+For implemented Jira, Confluence, GitHub, Bitbucket, Pipedrive, Apollo, HubSpot, Slack, and Merkys list/search commands, `aai-cli` may follow provider pagination and aggregate results until it reaches `--limit` or the provider has no next page.
 
 Covered operations:
 

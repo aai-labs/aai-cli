@@ -43,6 +43,7 @@ const ALLOWED_PROFILE_FIELDS: &[&str] = &[
     "refresh_token_secret",
     "token_secret",
     "api_token_secret",
+    "api_key_header",
     "password_secret",
     "workspace",
     "owner",
@@ -336,6 +337,17 @@ fn validate_profile_table(
             "bearer_token",
             "token_secret",
         ),
+        "merkys" => {
+            require_auth(
+                profile,
+                operation,
+                auth_type,
+                "api_key_header",
+                "api_token_secret",
+            )?;
+            required_string(profile, "base_url", operation)?;
+            Ok(())
+        }
         "microsoft" => match auth_type {
             "microsoft_client_credentials" => {
                 required_string(profile, "tenant_id", operation)?;
@@ -730,6 +742,31 @@ token_secret = "github.token"
             profile.insert(secret_field.into(), TomlValue::String("reference".into()));
             validate_profile_table(&profile, "profiles.validate").unwrap();
         }
+    }
+
+    #[test]
+    fn merkys_requires_api_key_header_auth_secret_and_base_url() {
+        let mut profile = TomlMap::new();
+        profile.insert("provider".into(), TomlValue::String("merkys".into()));
+        profile.insert(
+            "auth_type".into(),
+            TomlValue::String("api_key_header".into()),
+        );
+        profile.insert(
+            "api_token_secret".into(),
+            TomlValue::String("merkys.api_key".into()),
+        );
+        let error = validate_profile_table(&profile, "profiles.validate").unwrap_err();
+        assert!(error.message.contains("base_url"));
+
+        profile.insert(
+            "base_url".into(),
+            TomlValue::String("https://merkys.example.test".into()),
+        );
+        validate_profile_table(&profile, "profiles.validate").unwrap();
+
+        profile.insert("auth_type".into(), TomlValue::String("bearer_token".into()));
+        assert!(validate_profile_table(&profile, "profiles.validate").is_err());
     }
 
     #[test]

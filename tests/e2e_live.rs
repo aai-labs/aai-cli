@@ -2307,3 +2307,39 @@ fn openpanel_projects_insights_and_profiles_read() {
     );
     assert!(profiles.is_array() || profiles.is_object());
 }
+
+#[test]
+#[ignore = "requires a live Merkys API key and a deployment with at least one indexed document"]
+fn merkys_ask_research_and_read() {
+    const MK: &str = "AAI_E2E_MERKYS_PROFILE";
+    let question = std::env::var("AAI_E2E_MERKYS_QUESTION")
+        .ok()
+        .filter(|question| !question.trim().is_empty())
+        .unwrap_or_else(|| "What documents do you have knowledge about?".to_string());
+
+    let limits = cli_required(MK, &["merkys", "request", "get", "/api/limits"]);
+    assert!(limits["documentMaxFileSizeMb"].is_number());
+
+    let conversations = cli_required(MK, &["merkys", "conversations", "list", "--limit", "2"]);
+    assert!(conversations["items"].as_array().is_some());
+
+    let documents = cli_required(MK, &["merkys", "documents", "list", "--limit", "5"]);
+    assert!(documents["results"].as_array().is_some());
+
+    let asked = cli_required(MK, &["merkys", "ask", &question]);
+    assert!(asked["answer"].as_str().is_some_and(|a| !a.is_empty()));
+    assert!(asked["sources"].as_array().is_some());
+    let conversation_id = str_at(&asked, &["conversation_id"]);
+
+    let messages = cli_required(
+        MK,
+        &["merkys", "conversations", "messages", conversation_id],
+    );
+    assert!(messages["items"].as_array().is_some_and(|m| m.len() >= 2));
+
+    let started = cli_required(MK, &["merkys", "research", "start", &question]);
+    let run_id = str_at(&started, &["run_id"]);
+    let run = cli_required(MK, &["merkys", "research", "get", run_id]);
+    assert_eq!(str_at(&run, &["run_id"]), run_id);
+    cli_required(MK, &["merkys", "research", "stop", run_id]);
+}
