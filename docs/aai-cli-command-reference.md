@@ -576,7 +576,7 @@ For every Apollo command that accepts `--json`, typed flags override matching to
 
 ## Pagination
 
-Every successful service response contains:
+Provider service responses, except the Custom API `{status,body}` envelope, contain:
 
 ```json
 {
@@ -924,3 +924,14 @@ microsoft planner tasks <get|create|update|delete> ...
 Typed user-resource commands use `--user-id` or `profile.user_id`. Create/update bodies use `--json JSON_OR_PATH` (or `--json -` for stdin). List commands aggregate Graph's `@odata.nextLink` pages into the provider's `value` array up to `--limit`.
 
 Microsoft To Do requires a delegated profile in this CLI because Graph's application-permission support varies across operations and the typed surface guarantees one consistent identity for complete list/task CRUD. Planner task update/delete require the last observed `@odata.etag` through `--etag`. Teams commands are read-only in this initial coverage: team/channel metadata, team members, channel messages, and chats. The exact argument shapes and safe CRUD workflow are included in the bundled `aai-microsoft` skill.
+
+## Custom API
+
+See [Custom API configuration and transport contract](services/custom-api.md).
+
+```sh
+aai-cli --profile NAME custom-api request --url ABSOLUTE_HTTPS_URL [--method GET] [--query key=value] [--header Name=value] [--json FILE|-]
+aai-cli --profile NAME custom-api request --request-json FILE|-
+```
+
+Returns `{status,body}` without automatic pagination. Request JSON contains `method`, `url`, `query`, `body`, and `headers`. Configured credentials cannot be overridden.
