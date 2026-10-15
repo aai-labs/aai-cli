@@ -82,3 +82,7 @@ This project primarily consumes credentials supplied by users or agents. Microso
 - Microsoft Excel workbook commands require `microsoft_delegated` with `Files.ReadWrite`; Graph does not support application permissions for workbook operations and the CLI rejects app-only profiles before making a request.
 - Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.
 - Word files are transferred through OneDrive/SharePoint file commands only. The CLI does not semantically edit `.docx` content; agents must download, edit externally, and upload the complete replacement.
+
+## Custom API
+
+Named `custom_api` profiles support none, bearer token, named API-key header (including a complete Authorization scheme), and Basic credentials, plus configured ordinary/secret headers. Isolated profiles hold only a gateway credential. See the [authoritative Custom API profile contract](services/custom-api.md).

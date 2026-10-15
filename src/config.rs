@@ -15,6 +15,12 @@ pub struct Config {
 
 #[derive(Debug, Deserialize, Clone, Default)]
 pub struct Profile {
+    pub gateway_url: Option<String>,
+    pub gateway_token: Option<String>,
+    pub gateway_token_env: Option<String>,
+    pub gateway_token_secret: Option<String>,
+    #[serde(default)]
+    pub headers: Vec<CustomHeader>,
     pub provider: Option<String>,
     pub transport: Option<String>,
     pub auth_type: Option<String>,
@@ -22,6 +28,8 @@ pub struct Profile {
     pub site_url: Option<String>,
     pub email: Option<String>,
     pub username: Option<String>,
+    pub username_env: Option<String>,
+    pub username_secret: Option<String>,
     pub token: Option<String>,
     pub token_env: Option<String>,
     pub token_secret: Option<String>,
@@ -65,6 +73,19 @@ pub struct Profile {
     pub runtime_key_file: Option<PathBuf>,
 }
 
+#[derive(Debug, Deserialize, Clone, Default, serde::Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct CustomHeader {
+    pub name: String,
+    pub value: Option<String>,
+    #[serde(skip_serializing)]
+    pub value_env: Option<String>,
+    #[serde(skip_serializing)]
+    pub value_secret: Option<String>,
+    #[serde(default)]
+    pub secret: bool,
+}
+
 pub struct Context {
     pub profile: Profile,
     pub secrets_file: PathBuf,
@@ -89,8 +110,7 @@ impl Context {
         let config: Config = if text.trim().is_empty() {
             Config::default()
         } else {
-            toml::from_str(&text)
-                .map_err(|err| AppError::config(format!("invalid config TOML: {err}")))?
+            toml::from_str(&text).map_err(|_| AppError::config("invalid config TOML"))?
         };
 
         let secrets_file = secrets_path(secrets_arg, config.secrets_file.as_deref())?;
@@ -151,6 +171,9 @@ fn key_path(key_arg: Option<&str>, config_value: Option<&str>) -> Result<PathBuf
 }
 
 fn apply_env_overrides(profile: &mut Profile, profile_name: &str) {
+    if profile.username.is_none() {
+        profile.username = profile.username_env.as_deref().and_then(env_value);
+    }
     if profile.token.is_none() {
         profile.token = profile.token_env.as_deref().and_then(env_value);
     }
@@ -165,6 +188,18 @@ fn apply_env_overrides(profile: &mut Profile, profile_name: &str) {
     }
     if profile.password.is_none() {
         profile.password = profile.password_env.as_deref().and_then(env_value);
+    }
+
+    if profile.gateway_token.is_none() {
+        profile.gateway_token = profile.gateway_token_env.as_deref().and_then(env_value);
+    }
+    for header in &mut profile.headers {
+        if header.value.is_none() {
+            header.value = header.value_env.as_deref().and_then(env_value);
+        }
+    }
+    if profile.provider.as_deref() == Some("custom_api") {
+        return;
     }
 
     let normalized = profile_name
@@ -208,6 +243,24 @@ fn apply_env_overrides(profile: &mut Profile, profile_name: &str) {
 }
 
 fn apply_secret_overrides(ctx: &mut Context) -> Result<(), AppError> {
+    if ctx.profile.username.is_none() {
+        if let Some(key) = ctx.profile.username_secret.clone() {
+            ctx.profile.username = secrets::get(ctx, &key)?;
+        }
+    }
+    if ctx.profile.gateway_token.is_none() {
+        if let Some(key) = ctx.profile.gateway_token_secret.clone() {
+            ctx.profile.gateway_token = secrets::get(ctx, &key)?;
+        }
+    }
+    for index in 0..ctx.profile.headers.len() {
+        if ctx.profile.headers[index].value.is_none() {
+            if let Some(key) = ctx.profile.headers[index].value_secret.clone() {
+                ctx.profile.headers[index].value = secrets::get(ctx, &key)?;
+            }
+        }
+    }
+
     if ctx.profile.token.is_none() {
         if let Some(key) = ctx.profile.token_secret.clone() {
             ctx.profile.token = secrets::get(ctx, &key)?;

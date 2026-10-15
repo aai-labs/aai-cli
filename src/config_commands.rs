@@ -19,6 +19,8 @@ use crate::{
 };
 
 const DIRECT_SECRET_FIELDS: &[&str] = &[
+    "gateway_token",
+    "gateway_token_env",
     "token",
     "token_env",
     "api_token",
@@ -28,6 +30,9 @@ const DIRECT_SECRET_FIELDS: &[&str] = &[
 ];
 
 const ALLOWED_PROFILE_FIELDS: &[&str] = &[
+    "gateway_url",
+    "gateway_token_secret",
+    "username_secret",
     "provider",
     "transport",
     "auth_type",
@@ -589,6 +594,13 @@ fn sanitize_table(table: &TomlMap<String, TomlValue>) -> JsonValue {
         if DIRECT_SECRET_FIELDS.contains(&key.as_str()) {
             continue;
         }
+        if (table.get("secret").and_then(TomlValue::as_bool) == Some(true) && key == "value")
+            || key == "value_env"
+            || (table.get("provider").and_then(TomlValue::as_str) == Some("custom_api")
+                && key == "username")
+        {
+            continue;
+        }
         result.insert(key.clone(), toml_to_json(value));
     }
     JsonValue::Object(result)
@@ -871,5 +883,18 @@ token_secret = "github.token"
         assert_eq!(result["default_profile_cleared"], true);
         assert!(saved.get("default_profile").is_none());
         assert_eq!(saved["custom_root"].as_str(), Some("keep"));
+    }
+}
+
+#[cfg(test)]
+mod custom_api_tests {
+    use super::*;
+    #[test]
+    fn custom_api_profile_inspection_hides_gateway_and_header_secrets() {
+        let value: TomlValue=toml::from_str("provider='custom_api'\nauth_type='basic'\nusername='fixture-user'\ngateway_token='fixture-gateway'\n[[headers]]\nname='X-Key'\nvalue='fixture-header'\nsecret=true\n").unwrap();
+        let output = sanitize_profile(&value).to_string();
+        for secret in ["fixture-user", "fixture-gateway", "fixture-header"] {
+            assert!(!output.contains(secret));
+        }
     }
 }

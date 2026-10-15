@@ -64,6 +64,15 @@ async fn run() -> Result<serde_json::Value, AppError> {
             services::jira::parse_idea_url(&args.url)?,
             &command_args,
         )),
+        cli::Command::CustomApi(command) => {
+            let ctx = config::Context::load(
+                cli.config.as_deref(),
+                cli.profile.as_deref(),
+                cli.secrets_file.as_deref(),
+                cli.key_file.as_deref(),
+            )?;
+            services::custom_api::dispatch(&ctx.profile, command).await
+        }
         command => {
             let ctx = config::Context::load(
                 cli.config.as_deref(),
