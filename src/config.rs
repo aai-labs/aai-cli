@@ -73,14 +73,12 @@ pub struct Profile {
     pub runtime_key_file: Option<PathBuf>,
 }
 
-#[derive(Debug, Deserialize, Clone, Default, serde::Serialize)]
+#[derive(Debug, Deserialize, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct CustomHeader {
     pub name: String,
     pub value: Option<String>,
-    #[serde(skip_serializing)]
     pub value_env: Option<String>,
-    #[serde(skip_serializing)]
     pub value_secret: Option<String>,
     #[serde(default)]
     pub secret: bool,
@@ -110,7 +108,7 @@ impl Context {
         let config: Config = if text.trim().is_empty() {
             Config::default()
         } else {
-            toml::from_str(&text).map_err(|_| AppError::config("invalid config TOML"))?
+            toml::from_str(&text).map_err(|err| toml_error(&text, &err))?
         };
 
         let secrets_file = secrets_path(secrets_arg, config.secrets_file.as_deref())?;
@@ -161,6 +159,17 @@ fn secrets_path(
         return Ok(PathBuf::from(path));
     }
     secrets::default_secrets_path()
+}
+
+/// Reports only the location: the parser's message can echo config values, including secrets.
+pub(crate) fn toml_error(text: &str, err: &toml::de::Error) -> AppError {
+    match err.span() {
+        Some(span) => AppError::config(format!(
+            "invalid config TOML at line {}",
+            text[..span.start].matches('\n').count() + 1
+        )),
+        None => AppError::config("invalid config TOML"),
+    }
 }
 
 fn key_path(key_arg: Option<&str>, config_value: Option<&str>) -> Result<PathBuf, AppError> {
@@ -296,7 +305,7 @@ fn env_value(name: &str) -> Option<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::path::Path;
+    use std::path::{Path, PathBuf};
 
     #[test]
     fn config_uses_default_profile() {
@@ -359,6 +368,170 @@ token_secret = "github.token"
         let ctx =
             Context::load(Some(display_path(&config_path).as_str()), None, None, None).unwrap();
         assert_eq!(ctx.profile.token.as_deref(), Some("resolved-token"));
+    }
+
+    fn seed_secrets(temp: &Path, entries: &[(&str, &str)]) -> (PathBuf, PathBuf) {
+        let secrets_path = temp.join("secrets.enc.json");
+        let key_path = temp.join("key");
+        let seed_ctx = Context {
+            profile: Profile::default(),
+            secrets_file: secrets_path.clone(),
+            key_file: key_path.clone(),
+        };
+        for (key, value) in entries {
+            crate::secrets::set(&seed_ctx, key, value).unwrap();
+        }
+        (secrets_path, key_path)
+    }
+
+    fn load_profile(temp: &Path, profile: &str, entries: &[(&str, &str)]) -> Profile {
+        let (secrets_path, key_path) = seed_secrets(temp, entries);
+        let config_path = temp.join("config.toml");
+        fs::write(
+            &config_path,
+            format!(
+                "default_profile = \"p\"\nsecrets_file = \"{}\"\nkey_file = \"{}\"\n\n[profiles.p]\n{profile}",
+                display_path(&secrets_path),
+                display_path(&key_path)
+            ),
+        )
+        .unwrap();
+        Context::load(Some(display_path(&config_path).as_str()), None, None, None)
+            .unwrap()
+            .profile
+    }
+
+    #[test]
+    fn custom_api_credentials_resolve_from_secret_references() {
+        let temp = tempfile::tempdir().unwrap();
+        let profile = load_profile(
+            temp.path(),
+            r#"provider = "custom_api"
+username_secret = "api.user"
+gateway_token_secret = "api.gateway"
+
+[[profiles.p.headers]]
+name = "X-Store"
+value_secret = "api.header"
+secret = true
+
+[[profiles.p.headers]]
+name = "X-Plain"
+value = "literal"
+"#,
+            &[
+                ("api.user", "stored-user"),
+                ("api.gateway", "stored-gateway"),
+                ("api.header", "stored-header"),
+            ],
+        );
+        assert_eq!(profile.username.as_deref(), Some("stored-user"));
+        assert_eq!(profile.gateway_token.as_deref(), Some("stored-gateway"));
+        assert_eq!(profile.headers[0].value.as_deref(), Some("stored-header"));
+        assert_eq!(profile.headers[1].value.as_deref(), Some("literal"));
+    }
+
+    #[test]
+    fn custom_api_credentials_prefer_literal_then_env_then_secret() {
+        env::set_var("AAI_CONFIG_TEST_CUSTOM_USER", "env-user");
+        env::set_var("AAI_CONFIG_TEST_CUSTOM_GATEWAY", "env-gateway");
+        env::set_var("AAI_CONFIG_TEST_CUSTOM_HEADER", "env-header");
+        let temp = tempfile::tempdir().unwrap();
+        let profile = load_profile(
+            temp.path(),
+            r#"provider = "custom_api"
+username_env = "AAI_CONFIG_TEST_CUSTOM_USER"
+username_secret = "api.user"
+gateway_token_env = "AAI_CONFIG_TEST_CUSTOM_GATEWAY"
+gateway_token_secret = "api.gateway"
+
+[[profiles.p.headers]]
+name = "X-Env"
+value_env = "AAI_CONFIG_TEST_CUSTOM_HEADER"
+value_secret = "api.header"
+
+[[profiles.p.headers]]
+name = "X-Literal"
+value = "literal"
+value_env = "AAI_CONFIG_TEST_CUSTOM_HEADER"
+value_secret = "api.header"
+
+[[profiles.p.headers]]
+name = "X-Missing-Env"
+value_env = "AAI_CONFIG_TEST_CUSTOM_UNSET"
+value_secret = "api.header"
+"#,
+            &[
+                ("api.user", "stored-user"),
+                ("api.gateway", "stored-gateway"),
+                ("api.header", "stored-header"),
+            ],
+        );
+        assert_eq!(profile.username.as_deref(), Some("env-user"));
+        assert_eq!(profile.gateway_token.as_deref(), Some("env-gateway"));
+        let values = profile
+            .headers
+            .iter()
+            .map(|header| header.value.as_deref())
+            .collect::<Vec<_>>();
+        assert_eq!(
+            values,
+            [Some("env-header"), Some("literal"), Some("stored-header")]
+        );
+    }
+
+    #[test]
+    fn custom_api_profiles_ignore_ambient_token_fallbacks() {
+        env::set_var("AAI_CUSTOMAPIAMBIENT_TOKEN", "ambient-token");
+        env::set_var("AAI_CUSTOMAPIAMBIENT_API_TOKEN", "ambient-api-token");
+        env::set_var("AAI_CUSTOMAPIAMBIENT_PASSWORD", "ambient-password");
+        env::set_var("AAI_CUSTOMAPIAMBIENT_BASE_URL", "https://ambient.example");
+
+        let mut custom = Profile {
+            provider: Some("custom_api".into()),
+            ..Default::default()
+        };
+        apply_env_overrides(&mut custom, "customapiambient");
+        assert_eq!(custom.token, None);
+        assert_eq!(custom.api_token, None);
+        assert_eq!(custom.password, None);
+        assert_eq!(custom.base_url, None);
+
+        let mut other = Profile {
+            provider: Some("github".into()),
+            ..Default::default()
+        };
+        apply_env_overrides(&mut other, "customapiambient");
+        assert_eq!(other.token.as_deref(), Some("ambient-token"));
+        assert_eq!(other.base_url.as_deref(), Some("https://ambient.example"));
+    }
+
+    #[test]
+    fn absent_custom_api_secret_reference_leaves_the_credential_unset() {
+        let temp = tempfile::tempdir().unwrap();
+        let profile = load_profile(
+            temp.path(),
+            "provider = \"custom_api\"\ngateway_token_secret = \"absent\"\n",
+            &[("other", "x")],
+        );
+        assert_eq!(profile.gateway_token, None);
+    }
+
+    #[test]
+    fn toml_errors_report_the_line_without_echoing_config_values() {
+        let text = "a = 1\ntoken = \"fixture-secret\n";
+        let error = toml::from_str::<toml::Value>(text).unwrap_err();
+        let error = toml_error(text, &error);
+        assert_eq!(error.code, "config_error");
+        assert_eq!(error.message, "invalid config TOML at line 2");
+    }
+
+    #[test]
+    fn custom_header_config_rejects_unknown_fields() {
+        let result = toml::from_str::<Config>(
+            "[profiles.p]\nprovider = \"custom_api\"\n[[profiles.p.headers]]\nname = \"X\"\nvalu = \"typo\"\n",
+        );
+        assert!(result.is_err());
     }
 
     fn display_path(path: &Path) -> String {
