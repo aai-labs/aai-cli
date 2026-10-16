@@ -6,7 +6,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 #[command(name = "aai-cli")]
 #[command(about = "Agent-friendly CLI wrappers for common work APIs")]
 #[command(
-    long_about = "Agent-friendly CLI wrappers for common work APIs.\n\nEvery successful service response includes `_aai.pagination` with pagination status, continuation values, and instructions for retrieving more results. Bare provider arrays are wrapped under `results` so this metadata is always visible."
+    long_about = "Agent-friendly CLI wrappers for common work APIs.\n\nProvider service responses (except custom-api) include `_aai.pagination` with pagination status, continuation values, and instructions for retrieving more results. Bare provider arrays are wrapped under `results` so this metadata is always visible."
 )]
 pub struct Cli {
     #[arg(long, global = true, env = "AAI_PROFILE")]
@@ -25,6 +25,8 @@ pub struct Cli {
 pub enum Command {
     /// Manage Agent Barn agents, resources, and platform administration.
     AgentBarn(crate::services::agent_barn::AgentBarnCommand),
+    /// Call an absolute URL within a named Custom API profile.
+    CustomApi(CustomApiCommand),
     Jira(JiraCommand),
     Confluence(ConfluenceCommand),
     Bitbucket(BitbucketCommand),
@@ -6289,4 +6291,34 @@ pub struct MerkysAssistantsCommand {
 pub enum MerkysAssistantsAction {
     /// List custom assistants the key owner can use.
     List,
+}
+
+#[derive(Debug, Args)]
+pub struct CustomApiCommand {
+    #[command(subcommand)]
+    pub action: CustomApiAction,
+}
+#[derive(Debug, Subcommand)]
+pub enum CustomApiAction {
+    Request(CustomApiRequest),
+}
+#[derive(Debug, Args)]
+pub struct CustomApiRequest {
+    #[arg(
+        long,
+        required_unless_present = "request_json",
+        conflicts_with = "request_json"
+    )]
+    pub url: Option<String>,
+    #[arg(long, default_value = "GET", conflicts_with = "request_json")]
+    pub method: String,
+    #[arg(long, conflicts_with = "request_json")]
+    pub query: Vec<String>,
+    #[arg(long, conflicts_with = "request_json")]
+    pub header: Vec<String>,
+    #[arg(long, conflicts_with = "request_json")]
+    pub json: Option<String>,
+    /// Complete request object from a JSON file or standard input (-).
+    #[arg(long)]
+    pub request_json: Option<String>,
 }

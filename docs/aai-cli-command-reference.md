@@ -577,7 +577,7 @@ For every Apollo command that accepts `--json`, typed flags override matching to
 
 ## Pagination
 
-Every successful service response contains:
+Provider service responses, except the Custom API `{status,body}` envelope, contain:
 
 ```json
 {
@@ -929,3 +929,14 @@ Microsoft To Do requires a delegated profile in this CLI because Graph's applica
 ## Agent Barn
 
 Use `aai-cli --profile agent-barn agent-barn ...`. Start with `auth context`; select an organization with `--organization-id` or `profile.org`. See the [service guide](services/agent-barn.md) and [complete command reference](../bundled/skills/aai-agent-barn/references/command-reference.md) for all 219 commands. Collections default to `--limit 100`; follow `_aai.pagination.next_command`. Downloads and bounded SSE streams require `--output` and return JSON file metadata. No dedicated login or key-management commands are provided.
+
+## Custom API
+
+See [Custom API configuration and transport contract](services/custom-api.md).
+
+```sh
+aai-cli --profile NAME custom-api request --url ABSOLUTE_HTTPS_URL [--method GET] [--query key=value] [--header Name=value] [--json FILE|-]
+aai-cli --profile NAME custom-api request --request-json FILE|-
+```
+
+Returns `{status,body}` without automatic pagination. Request JSON contains `method`, `url`, `query`, `body`, and `headers`. Configured credentials cannot be overridden.

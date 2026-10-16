@@ -15,10 +15,13 @@ use crate::{
     },
     config::{self, Profile},
     error::AppError,
+    http::custom_api,
     input,
 };
 
 const DIRECT_SECRET_FIELDS: &[&str] = &[
+    "gateway_token",
+    "gateway_token_env",
     "token",
     "token_env",
     "api_token",
@@ -28,6 +31,9 @@ const DIRECT_SECRET_FIELDS: &[&str] = &[
 ];
 
 const ALLOWED_PROFILE_FIELDS: &[&str] = &[
+    "gateway_url",
+    "gateway_token_secret",
+    "username_secret",
     "provider",
     "transport",
     "auth_type",
@@ -300,6 +306,9 @@ fn validate_profile_table(
         )
     })?;
     let provider = required_string(profile, "provider", operation)?;
+    if provider == "custom_api" {
+        return validate_custom_api(profile, operation);
+    }
     let auth_type = required_string(profile, "auth_type", operation)?;
     match provider {
         "agent-barn" => {
@@ -389,6 +398,85 @@ fn validate_profile_table(
     }
 }
 
+/// Mirrors what `custom-api request` enforces at run time, plus the config-command rule that
+/// credentials (including secret header values) are stored only as `*_secret` references.
+fn validate_custom_api(
+    profile: &TomlMap<String, TomlValue>,
+    operation: &'static str,
+) -> Result<(), AppError> {
+    let invalid = |message: &str| AppError::invalid_input("config", operation, message.to_string());
+    let base_url = required_string(profile, "base_url", operation)?;
+    custom_api::check_base_url(base_url).map_err(|_| {
+        invalid("base_url must be an absolute HTTPS URL without query, fragment or credentials")
+    })?;
+    let headers = profile
+        .get("headers")
+        .and_then(TomlValue::as_array)
+        .map_or(&[][..], Vec::as_slice);
+    for header in headers {
+        if header.get("value_env").is_some() {
+            return Err(invalid(
+                "custom_api header value_env is forbidden; use value_secret",
+            ));
+        }
+        let literal = header.get("value").is_some();
+        if literal && header.get("secret").and_then(TomlValue::as_bool) == Some(true) {
+            return Err(invalid(
+                "secret custom_api header values must use value_secret",
+            ));
+        }
+        if !literal && header.get("value_secret").is_none() {
+            return Err(invalid("custom_api headers require value or value_secret"));
+        }
+    }
+    let auth_type = profile
+        .get("auth_type")
+        .and_then(TomlValue::as_str)
+        .unwrap_or("none");
+    if let Some(gateway) = profile.get("gateway_url").and_then(TomlValue::as_str) {
+        custom_api::parse_gateway_url(gateway).map_err(|_| {
+            invalid("gateway_url must be an HTTP(S) URL without credentials or fragment")
+        })?;
+        if auth_type != "none"
+            || !headers.is_empty()
+            || ["token_secret", "api_token_secret", "password_secret"]
+                .iter()
+                .any(|field| profile.contains_key(*field))
+        {
+            return Err(invalid(
+                "custom_api gateway profiles cannot contain upstream credentials or headers",
+            ));
+        }
+        required_string(profile, "gateway_token_secret", operation)?;
+        return Ok(());
+    }
+    if profile.contains_key("gateway_token_secret") {
+        return Err(invalid("gateway_token_secret requires gateway_url"));
+    }
+    match auth_type {
+        "none" => {}
+        "bearer_token" => {
+            required_string(profile, "token_secret", operation)?;
+        }
+        "api_key_header" => {
+            required_string(profile, "api_key_header", operation)?;
+            required_string(profile, "api_token_secret", operation)?;
+        }
+        "basic" => {
+            if required_string(profile, "username", operation).is_err() {
+                required_string(profile, "username_secret", operation)?;
+            }
+            required_string(profile, "password_secret", operation)?;
+        }
+        _ => {
+            return Err(invalid(
+                "auth_type must be none, bearer_token, api_key_header or basic for custom_api",
+            ))
+        }
+    }
+    Ok(())
+}
+
 fn require_auth(
     profile: &TomlMap<String, TomlValue>,
     operation: &'static str,
@@ -466,7 +554,7 @@ fn load_document(path: &Path) -> Result<TomlValue, AppError> {
     if text.trim().is_empty() {
         Ok(TomlValue::Table(TomlMap::new()))
     } else {
-        toml::from_str(&text).map_err(|_| AppError::config("invalid config TOML"))
+        toml::from_str(&text).map_err(|err| config::toml_error(&text, &err))
     }
 }
 
@@ -592,6 +680,13 @@ fn sanitize_table(table: &TomlMap<String, TomlValue>) -> JsonValue {
     let mut result = JsonMap::new();
     for (key, value) in table {
         if DIRECT_SECRET_FIELDS.contains(&key.as_str()) {
+            continue;
+        }
+        if (table.get("secret").and_then(TomlValue::as_bool) == Some(true) && key == "value")
+            || key == "value_env"
+            || (table.get("provider").and_then(TomlValue::as_str) == Some("custom_api")
+                && key == "username")
+        {
             continue;
         }
         result.insert(key.clone(), toml_to_json(value));
@@ -903,5 +998,144 @@ token_secret = "github.token"
         assert_eq!(result["default_profile_cleared"], true);
         assert!(saved.get("default_profile").is_none());
         assert_eq!(saved["custom_root"].as_str(), Some("keep"));
+    }
+}
+
+#[cfg(test)]
+mod custom_api_tests {
+    use super::*;
+
+    fn sanitized(text: &str) -> JsonValue {
+        sanitize_profile(&toml::from_str::<TomlValue>(text).unwrap())
+    }
+
+    #[test]
+    fn custom_api_profile_inspection_hides_gateway_and_header_secrets() {
+        let output = sanitized(
+            r#"
+provider = "custom_api"
+auth_type = "basic"
+username = "fixture-user"
+gateway_url = "https://gateway.example/request"
+gateway_token = "fixture-gateway"
+gateway_token_env = "FIXTURE_GATEWAY_ENV"
+[[headers]]
+name = "X-Key"
+value = "fixture-header"
+secret = true
+[[headers]]
+name = "X-Env"
+value_env = "FIXTURE_HEADER_ENV"
+[[headers]]
+name = "X-Store"
+value_secret = "store.key"
+[[headers]]
+name = "X-Workspace"
+value = "visible-workspace"
+"#,
+        );
+        let text = output.to_string();
+        for secret in [
+            "fixture-user",
+            "fixture-gateway",
+            "FIXTURE_GATEWAY_ENV",
+            "fixture-header",
+            "FIXTURE_HEADER_ENV",
+        ] {
+            assert!(!text.contains(secret), "{secret} leaked: {text}");
+        }
+        assert_eq!(output["gateway_url"], "https://gateway.example/request");
+        assert_eq!(output["headers"][0], json!({"name":"X-Key","secret":true}));
+        assert_eq!(output["headers"][1], json!({"name":"X-Env"}));
+        assert_eq!(
+            output["headers"][2],
+            json!({"name":"X-Store","value_secret":"store.key"})
+        );
+        assert_eq!(
+            output["headers"][3],
+            json!({"name":"X-Workspace","value":"visible-workspace"})
+        );
+    }
+
+    #[test]
+    fn username_stays_visible_for_other_providers() {
+        let output = sanitized("provider = \"jira\"\nusername = \"visible-user\"\n");
+        assert_eq!(output["username"], "visible-user");
+    }
+
+    #[test]
+    fn custom_api_reference_fields_are_settable_but_direct_gateway_tokens_are_not() {
+        for field in ["gateway_url", "gateway_token_secret", "username_secret"] {
+            assert!(validate_profile_field(field).is_ok(), "{field}");
+        }
+        for field in ["gateway_token", "gateway_token_env"] {
+            let error = validate_profile_field(field).unwrap_err();
+            assert_eq!(error.code, "invalid_input");
+            assert!(
+                error.message.contains("use a *_secret reference"),
+                "{field}"
+            );
+        }
+    }
+
+    fn validate(text: &str) -> Result<(), AppError> {
+        let profile = toml::from_str::<TomlMap<String, TomlValue>>(text).unwrap();
+        validate_profile_table(&profile, "profiles.validate")
+    }
+
+    #[test]
+    fn valid_custom_api_profiles_pass_validation() {
+        for text in [
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com/v1'\n",
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'none'\n",
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'bearer_token'\ntoken_secret = 'k'\n",
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'api_key_header'\napi_key_header = 'X-Key'\napi_token_secret = 'k'\n",
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'basic'\nusername = 'u'\npassword_secret = 'k'\n",
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'basic'\nusername_secret = 'u'\npassword_secret = 'k'\n",
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com'\n[[headers]]\nname = 'X-Plain'\nvalue = 'v'\n[[headers]]\nname = 'X-Secret'\nvalue_secret = 'k'\nsecret = true\n",
+            "provider = 'custom_api'\nbase_url = 'https://api.example.com'\ngateway_url = 'http://gateway:8000/request'\ngateway_token_secret = 'k'\n",
+        ] {
+            validate(text).unwrap_or_else(|error| panic!("{text}: {}", error.message));
+        }
+    }
+
+    #[test]
+    fn invalid_custom_api_profiles_fail_validation() {
+        for (text, message) in [
+            ("provider = 'custom_api'\n", "profile requires non-empty base_url"),
+            ("provider = 'custom_api'\nauth_type = 'bogus'\n", "profile requires non-empty base_url"),
+            ("provider = 'custom_api'\nbase_url = 'http://api.example.com'\n", "base_url must be"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com/v1?key=1'\n", "base_url must be"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'bogus'\n", "auth_type must be none"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'bearer_token'\n", "token_secret"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'api_key_header'\napi_token_secret = 'k'\n", "api_key_header"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'api_key_header'\napi_key_header = 'X'\n", "api_token_secret"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'basic'\npassword_secret = 'k'\n", "username_secret"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\nauth_type = 'basic'\nusername = 'u'\n", "password_secret"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\n[[headers]]\nname = 'X'\nvalue_env = 'HOME'\n", "value_env is forbidden"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\n[[headers]]\nname = 'X'\nvalue = 'v'\nsecret = true\n", "must use value_secret"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\n[[headers]]\nname = 'X'\n", "require value or value_secret"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\ngateway_token_secret = 'k'\n", "requires gateway_url"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\ngateway_url = 'ftp://gateway'\ngateway_token_secret = 'k'\n", "gateway_url must be"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\ngateway_url = 'http://gateway'\n", "gateway_token_secret"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\ngateway_url = 'http://gateway'\ngateway_token_secret = 'k'\nauth_type = 'bearer_token'\ntoken_secret = 't'\n", "cannot contain upstream credentials"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\ngateway_url = 'http://gateway'\ngateway_token_secret = 'k'\npassword_secret = 'p'\n", "cannot contain upstream credentials"),
+            ("provider = 'custom_api'\nbase_url = 'https://api.example.com'\ngateway_url = 'http://gateway'\ngateway_token_secret = 'k'\n[[headers]]\nname = 'X'\nvalue = 'v'\n", "cannot contain upstream credentials"),
+        ] {
+            let error = validate(text).expect_err(text);
+            assert_eq!(error.code, "invalid_input", "{text}");
+            assert!(error.message.contains(message), "{text}: {}", error.message);
+        }
+    }
+
+    #[test]
+    fn imported_profiles_reject_direct_gateway_tokens() {
+        let profile = toml::from_str::<TomlMap<String, TomlValue>>(
+            "provider = \"custom_api\"\ngateway_token = \"fixture-gateway\"\n",
+        )
+        .unwrap();
+        let error = validate_profile_table(&profile, "profiles.import").unwrap_err();
+        assert!(error.message.contains("gateway_token"));
+        assert!(!error.message.contains("fixture-gateway"));
     }
 }

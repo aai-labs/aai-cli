@@ -3,6 +3,7 @@ pub(crate) mod apollo;
 pub(crate) mod bitbucket;
 pub(crate) mod calendar;
 pub(crate) mod confluence;
+pub(crate) mod custom_api;
 pub(crate) mod drive;
 pub(crate) mod email;
 pub(crate) mod excel;
@@ -27,6 +28,7 @@ pub async fn dispatch(ctx: &Context, command: Command) -> Result<Value, AppError
     let client = ApiClient::new()?;
     match command {
         Command::AgentBarn(command) => agent_barn::dispatch(&client, ctx, command).await,
+        Command::CustomApi(command) => custom_api::dispatch(&ctx.profile, command).await,
         Command::Jira(command) => jira::dispatch(&client, ctx, command).await,
         Command::Confluence(command) => confluence::dispatch(&client, ctx, command).await,
         Command::Bitbucket(command) => bitbucket::dispatch(&client, ctx, command).await,

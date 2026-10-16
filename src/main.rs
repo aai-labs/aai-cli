@@ -65,6 +65,8 @@ async fn run() -> Result<serde_json::Value, AppError> {
             &command_args,
         )),
         command => {
+            // Custom API returns the upstream `{status,body}` envelope unannotated.
+            let annotate = !matches!(command, cli::Command::CustomApi(_));
             let ctx = config::Context::load(
                 cli.config.as_deref(),
                 cli.profile.as_deref(),
@@ -72,7 +74,11 @@ async fn run() -> Result<serde_json::Value, AppError> {
                 cli.key_file.as_deref(),
             )?;
             let value = services::dispatch(&ctx, command).await?;
-            Ok(pagination::annotate(value, &command_args))
+            Ok(if annotate {
+                pagination::annotate(value, &command_args)
+            } else {
+                value
+            })
         }
     }
 }

@@ -19,6 +19,7 @@ const SERVICE: &str = "skills";
 
 const SKILL_COMMANDS: &[(&str, &[&str])] = &[
     ("aai-agent-barn", &["agent-barn"]),
+    ("aai-custom-api", &["custom-api"]),
     ("aai-apollo", &["apollo"]),
     ("aai-bitbucket", &["bitbucket"]),
     ("aai-confluence", &["confluence"]),
@@ -39,6 +40,7 @@ const SKILL_COMMANDS: &[(&str, &[&str])] = &[
 
 const TOP_LEVEL_COMMANDS: &[&str] = &[
     "agent-barn",
+    "custom-api",
     "jira",
     "confluence",
     "bitbucket",
@@ -530,7 +532,7 @@ mod tests {
         let packages = load_packages().expect("load bundled skills");
         let reports = validate_packages(&packages);
 
-        assert_eq!(reports.len(), 18);
+        assert_eq!(reports.len(), 19);
         assert!(
             reports.iter().all(|report| report.valid),
             "invalid reports: {reports:#?}"
