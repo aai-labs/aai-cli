@@ -1,0 +1,569 @@
+[
+  {
+    "command": "skills list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills",
+    "operation_id": "list_skills_organizations__organization_id__skills_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "source",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "aai_cli",
+          "custom"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills",
+    "operation_id": "create_skill_organizations__organization_id__skills_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/skills/{skill_id}",
+    "operation_id": "delete_skill_organizations__organization_id__skills__skill_id__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}",
+    "operation_id": "get_skill_organizations__organization_id__skills__skill_id__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/skills/{skill_id}",
+    "operation_id": "update_skill_organizations__organization_id__skills__skill_id__patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills draft delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "discard_skill_draft_organizations__organization_id__skills__skill_id__draft_delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills draft get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "get_skill_draft_organizations__organization_id__skills__skill_id__draft_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills draft update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "update_skill_draft_organizations__organization_id__skills__skill_id__draft_patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills draft create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "start_skill_draft_organizations__organization_id__skills__skill_id__draft_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills draft publish",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft/publish",
+    "operation_id": "publish_skill_draft_organizations__organization_id__skills__skill_id__draft_publish_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills files get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/files",
+    "operation_id": "get_skill_files_organizations__organization_id__skills__skill_id__files_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills fork",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/fork",
+    "operation_id": "fork_skill_organizations__organization_id__skills__skill_id__fork_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills source-update",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/source-update",
+    "operation_id": "apply_source_update_organizations__organization_id__skills__skill_id__source_update_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills versions list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/versions",
+    "operation_id": "list_skill_versions_organizations__organization_id__skills__skill_id__versions_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills versions delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "delete_skill_version_organizations__organization_id__skills__skill_id__versions__version__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "version",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "skills versions get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "get_skill_version_organizations__organization_id__skills__skill_id__versions__version__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "version",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

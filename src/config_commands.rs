@@ -311,6 +311,11 @@ fn validate_profile_table(
     }
     let auth_type = required_string(profile, "auth_type", operation)?;
     match provider {
+        "agent-barn" => {
+            require_auth(profile, operation, auth_type, "bearer_token", "token_secret")?;
+            crate::services::agent_barn::base_url(Some(required_string(profile, "base_url", operation)?))?;
+            Ok(())
+        }
         "pipedrive" => require_auth(
             profile,
             operation,
@@ -837,6 +842,33 @@ token_secret = "github.token"
             profile.insert(secret_field.into(), TomlValue::String("reference".into()));
             validate_profile_table(&profile, "profiles.validate").unwrap();
         }
+    }
+
+    #[test]
+    fn agent_barn_requires_existing_key_reference_and_api_root() {
+        let mut profile: TomlMap<String, TomlValue> = toml::from_str(
+            r#"
+provider = "agent-barn"
+auth_type = "bearer_token"
+token_secret = "agent-barn.token"
+base_url = "https://barn.example/api/v1"
+"#,
+        )
+        .unwrap();
+        validate_profile_table(&profile, "profiles.validate").unwrap();
+        for base in [
+            "https://barn.example",
+            "https://user:pass@barn.example/api/v1",
+        ] {
+            profile.insert("base_url".into(), TomlValue::String(base.into()));
+            assert!(validate_profile_table(&profile, "profiles.validate").is_err());
+        }
+        profile.insert(
+            "base_url".into(),
+            TomlValue::String("https://barn.example/api/v1".into()),
+        );
+        profile.remove("token_secret");
+        assert!(validate_profile_table(&profile, "profiles.validate").is_err());
     }
 
     #[test]

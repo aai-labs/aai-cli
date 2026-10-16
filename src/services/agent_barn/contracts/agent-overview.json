@@ -1,0 +1,67 @@
+[
+  {
+    "command": "agent-overview list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agent-overview",
+    "operation_id": "get_agent_overview_organizations__organization_id__agent_overview_get",
+    "query": [
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  }
+]

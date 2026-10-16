@@ -1,0 +1,569 @@
+[
+  {
+    "command": "templates list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates",
+    "operation_id": "list_templates_organizations__organization_id__templates_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "source",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "pre-defined",
+          "custom"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates",
+    "operation_id": "create_template_organizations__organization_id__templates_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "template_name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "soul_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "identity_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "user_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "tools_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agents_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "boot_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "bootstrap_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "heartbeat_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates lineages list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/lineages",
+    "operation_id": "list_org_template_lineages_organizations__organization_id__templates_lineages_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/templates/{template_key}",
+    "operation_id": "delete_template_organizations__organization_id__templates__template_key__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/{template_key}",
+    "operation_id": "get_template_organizations__organization_id__templates__template_key__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates draft delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "discard_org_draft_organizations__organization_id__templates__template_key__draft_delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates draft get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "get_org_draft_organizations__organization_id__templates__template_key__draft_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates draft update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "update_org_draft_organizations__organization_id__templates__template_key__draft_patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "soul_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "identity_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "user_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "tools_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agents_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "boot_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "bootstrap_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "heartbeat_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates draft create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "start_org_draft_organizations__organization_id__templates__template_key__draft_post",
+    "query": [
+      {
+        "name": "source_version",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "source_scope",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "organization",
+          "platform"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates draft publish",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft/publish",
+    "operation_id": "publish_org_draft_organizations__organization_id__templates__template_key__draft_publish_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates platform-update",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates/{template_key}/platform-update",
+    "operation_id": "update_from_platform_organizations__organization_id__templates__template_key__platform_update_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "templates versions list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/{template_key}/versions",
+    "operation_id": "list_template_versions_organizations__organization_id__templates__template_key__versions_get",
+    "query": [
+      {
+        "name": "include_platform",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

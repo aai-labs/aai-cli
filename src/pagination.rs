@@ -33,6 +33,7 @@ pub(crate) fn annotate(value: Value, command_args: &[String]) -> Value {
         Value::Object(mut object) => {
             object.remove("_aai_provider_next_url");
             object.remove(COMPLETE_MARKER);
+            object.remove("_aai_collection");
             object.insert("_aai".to_string(), metadata);
             Value::Object(object)
         }
@@ -48,6 +49,35 @@ pub(crate) fn annotate(value: Value, command_args: &[String]) -> Value {
 }
 
 fn analyze(value: &Value, command_args: &[String]) -> Value {
+    if let Some(metadata) = value.get("_aai_collection") {
+        let parameters = metadata
+            .get("parameters")
+            .and_then(Value::as_object)
+            .map(|p| {
+                p.iter()
+                    .filter_map(|(k, v)| v.as_str().map(|v| (k.clone(), v.to_owned())))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let incomplete = metadata
+            .get("incomplete")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let continuation = (!parameters.is_empty()).then_some(Continuation {
+            source: "agent-barn",
+            parameters,
+            next_url: None,
+        });
+        let more = continuation.is_some();
+        return json!({
+            "status": if more { "more_available" } else if incomplete { "unknown" } else { "complete" },
+            "has_more": if more { Some(true) } else if incomplete { None } else { Some(false) },
+            "returned_count": metadata.get("returned_count").cloned().unwrap_or_else(|| json!(returned_count(value))),
+            "next_command": if more { next_command(command_args, continuation.as_ref(), true) } else { None },
+            "continuation": continuation.map(|c| c.to_json()),
+            "instruction": if more { "Run next_command with the same filters to continue. Results can change between requests." } else if incomplete { "The provider capped this collection or no records were requested; do not assume the history is complete." } else { "All records in the requested provider view have been returned." }
+        });
+    }
     let returned_count = returned_count(value);
     let continuation = continuation(value);
     let truncated = value
@@ -320,6 +350,39 @@ fn next_command(
                 return Some(generic_next_command(args, &continuation.parameters));
             }
         }
+    }
+    if let Some(continuation) = continuation.filter(|c| c.source == "agent-barn") {
+        let keys = [
+            "--page",
+            "--page-size",
+            "--before-occurred-at",
+            "--before-id",
+            "--snapshot-id",
+            "--after-id",
+            "--page-skip",
+        ];
+        let mut output = Vec::new();
+        let mut index = 0;
+        while index < args.len() {
+            if keys.contains(&args[index].as_str()) {
+                index += 2;
+                continue;
+            }
+            if keys
+                .iter()
+                .any(|key| args[index].starts_with(&format!("{key}=")))
+            {
+                index += 1;
+                continue;
+            }
+            output.push(args[index].clone());
+            index += 1;
+        }
+        for (key, value) in &continuation.parameters {
+            output.push(format!("--{}", key.replace('_', "-")));
+            output.push(value.clone());
+        }
+        return Some(shell_command(&output));
     }
     if collection {
         return larger_limit_command(args);

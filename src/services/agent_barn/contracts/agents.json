@@ -1,0 +1,4453 @@
+[
+  {
+    "command": "agents list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents",
+    "operation_id": "list_agents_organizations__organization_id__agents_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "status",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "STOPPED",
+          "RUNNING",
+          "ERROR"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents",
+    "operation_id": "create_agent_organizations__organization_id__agents_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_type",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "openclaw",
+          "hermes"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "template_version",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "approval_mode",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "manual",
+          "auto",
+          "off"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "verbose_mode",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents llm-budgets list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/llm-budgets",
+    "operation_id": "list_agent_llm_budgets_organizations__organization_id__agents_llm_budgets_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents models get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/models",
+    "operation_id": "list_models_organizations__organization_id__agents_models_get",
+    "query": [
+      {
+        "name": "catalog",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents name-suggestion get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/name-suggestion",
+    "operation_id": "suggest_agent_name_organizations__organization_id__agents_name_suggestion_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents share-roles list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/share-roles",
+    "operation_id": "list_agent_share_roles_organizations__organization_id__agents_share_roles_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}",
+    "operation_id": "delete_agent_organizations__organization_id__agents__agent_id__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}",
+    "operation_id": "get_agent_organizations__organization_id__agents__agent_id__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}",
+    "operation_id": "update_agent_organizations__organization_id__agents__agent_id__patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "template_version",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "approval_mode",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "manual",
+          "auto",
+          "off"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "verbose_mode",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents activity get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/activity",
+    "operation_id": "get_agent_activity_organizations__organization_id__agents__agent_id__activity_get",
+    "query": [
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents activity calls list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/activity/calls",
+    "operation_id": "list_agent_activity_calls_organizations__organization_id__agents__agent_id__activity_calls_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 100
+      },
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "trigger",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "user",
+          "background"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents activity wakes list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/activity/wakes",
+    "operation_id": "list_agent_wakes_organizations__organization_id__agents__agent_id__activity_wakes_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 100
+      },
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "trigger",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "user",
+          "background"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents configuration get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration",
+    "operation_id": "get_agent_configuration_organizations__organization_id__agents__agent_id__configuration_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents configuration draft update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/draft",
+    "operation_id": "update_agent_override_draft_organizations__organization_id__agents__agent_id__configuration_draft_patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "expected_updated_at",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "template_name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "soul_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "identity_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "user_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "tools_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agents_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "boot_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "bootstrap_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "heartbeat_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents configuration draft create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/draft",
+    "operation_id": "start_agent_override_draft_organizations__organization_id__agents__agent_id__configuration_draft_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents configuration draft publish",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/draft/publish",
+    "operation_id": "publish_agent_override_organizations__organization_id__agents__agent_id__configuration_draft_publish_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "expected_updated_at",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents configuration select",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/select",
+    "operation_id": "select_agent_template_organizations__organization_id__agents__agent_id__configuration_select_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "selection_type",
+        "kind": "string",
+        "required": true,
+        "choices": [
+          "platform",
+          "organization",
+          "override"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "template_version",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1.0,
+        "maximum": null
+      },
+      {
+        "name": "override_version",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1.0,
+        "maximum": null
+      },
+      {
+        "name": "expected_agent_updated_at",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "approval_mode",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "manual",
+          "auto",
+          "off"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "verbose_mode",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connection-directory-preview create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connection-directory-preview",
+    "operation_id": "preview_communication_connection_directory_organizations__organization_id__agents__agent_id__connection_directory_preview_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "platform_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "kind",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "guild_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections",
+    "operation_id": "list_communication_connections_organizations__organization_id__agents__agent_id__connections_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections",
+    "operation_id": "create_communication_connection_organizations__organization_id__agents__agent_id__connections_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "platform_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "display_name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "enabled",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}",
+    "operation_id": "retire_communication_connection_organizations__organization_id__agents__agent_id__connections__connection_id__delete",
+    "query": [
+      {
+        "name": "revision",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}",
+    "operation_id": "update_communication_connection_organizations__organization_id__agents__agent_id__connections__connection_id__patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "revision",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": 1.0,
+        "maximum": null
+      },
+      {
+        "name": "display_name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "enabled",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections app-package",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/app-package",
+    "operation_id": "download_communication_app_package_organizations__organization_id__agents__agent_id__connections__connection_id__app_package_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "download",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections deliveries retry",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/deliveries/{delivery_id}/retry",
+    "operation_id": "retry_communication_delivery_organizations__organization_id__agents__agent_id__connections__connection_id__deliveries__delivery_id__retry_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "delivery_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections directory list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/directory/{kind}",
+    "operation_id": "list_communication_connection_directory_organizations__organization_id__agents__agent_id__connections__connection_id__directory__kind__get",
+    "query": [
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "guild_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "kind",
+        "kind": "string",
+        "required": true,
+        "choices": [
+          "guilds",
+          "channels",
+          "users",
+          "roles"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections install-link get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/install-link",
+    "operation_id": "get_communication_install_link_organizations__organization_id__agents__agent_id__connections__connection_id__install_link_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections journal list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/journal",
+    "operation_id": "list_communication_connection_journal_organizations__organization_id__agents__agent_id__connections__connection_id__journal_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 100
+      },
+      {
+        "name": "kind",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "delivery",
+          "connection"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "since",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "until",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "stage",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "provider_observed",
+          "policy_admitted",
+          "policy_rejected",
+          "queued",
+          "agent_claimed",
+          "model_completed",
+          "reply_queued",
+          "initiated_queued",
+          "provider_delivery_attempted",
+          "provider_delivered",
+          "connection_connecting",
+          "connection_connected",
+          "connection_degraded",
+          "connection_error",
+          "reconnect_requested",
+          "retry_requested",
+          "dead_lettered",
+          "recovered"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "failed_only",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "retryable_only",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "direction",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "INBOUND",
+          "OUTBOUND"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "delivery_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "order",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "asc",
+          "desc"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents connections reconnect",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/reconnect",
+    "operation_id": "reconnect_communication_connection_organizations__organization_id__agents__agent_id__connections__connection_id__reconnect_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": true
+  },
+  {
+    "command": "agents connections summary get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/summary",
+    "operation_id": "get_communication_connection_summary_organizations__organization_id__agents__agent_id__connections__connection_id__summary_get",
+    "query": [
+      {
+        "name": "since",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "until",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "window_minutes",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 129600
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents conversations channels list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/conversations/channels",
+    "operation_id": "list_channels_organizations__organization_id__agents__agent_id__conversations_channels_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents conversations connections channels messages list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/conversations/connections/{connection_id}/channels/{channel_id}/messages",
+    "operation_id": "list_channel_messages_organizations__organization_id__agents__agent_id__conversations_connections__connection_id__channels__channel_id__messages_get",
+    "query": [
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 100
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "before_occurred_at",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "before_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "channel_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "cursor",
+    "key": "threads",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents diagnostics get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/diagnostics",
+    "operation_id": "get_runtime_diagnostics_organizations__organization_id__agents__agent_id__diagnostics_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents healthz get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/healthz",
+    "operation_id": "get_agent_healthz_organizations__organization_id__agents__agent_id__healthz_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents integrations sharepoint get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint",
+    "operation_id": "sharepoint_current_organizations__organization_id__agents__agent_id__integrations_sharepoint_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents integrations sharepoint authorize-url get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint/authorize-url",
+    "operation_id": "sharepoint_authorize_url_organizations__organization_id__agents__agent_id__integrations_sharepoint_authorize_url_get",
+    "query": [
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "read_only",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "mode",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "delegated",
+          "selected_sites"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sites",
+        "kind": "array",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "remove_all",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents integrations sharepoint setup get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint/setup",
+    "operation_id": "sharepoint_setup_organizations__organization_id__agents__agent_id__integrations_sharepoint_setup_get",
+    "query": [
+      {
+        "name": "connection_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents integrations sharepoint sign-in",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint/sign-in",
+    "operation_id": "complete_sharepoint_sign_in_organizations__organization_id__agents__agent_id__integrations_sharepoint_sign_in_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "code",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "state",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents integrations isolation set",
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/{provider}/isolation",
+    "operation_id": "apply_integration_isolation_organizations__organization_id__agents__agent_id__integrations__provider__isolation_put",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "provider",
+        "kind": "string",
+        "required": true,
+        "choices": [
+          "github",
+          "jira",
+          "confluence",
+          "bitbucket",
+          "firecrawl",
+          "pipedrive",
+          "google_workspace",
+          "sharepoint",
+          "apollo"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "isolated",
+        "kind": "boolean",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "restart",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents integrations validate",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/{provider}/validate",
+    "operation_id": "validate_integration_organizations__organization_id__agents__agent_id__integrations__provider__validate_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "provider",
+        "kind": "string",
+        "required": true,
+        "choices": [
+          "github",
+          "jira",
+          "confluence",
+          "bitbucket",
+          "firecrawl",
+          "pipedrive",
+          "google_workspace",
+          "sharepoint",
+          "apollo"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents llm-budget get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/llm-budget",
+    "operation_id": "get_agent_llm_budget_organizations__organization_id__agents__agent_id__llm_budget_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents llm-budget set",
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/llm-budget",
+    "operation_id": "set_agent_llm_budget_organizations__organization_id__agents__agent_id__llm_budget_put",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "budget_usd",
+        "kind": "number",
+        "required": true,
+        "choices": [],
+        "minimum": 0.0,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents logs get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/logs",
+    "operation_id": "get_agent_logs_organizations__organization_id__agents__agent_id__logs_get",
+    "query": [
+      {
+        "name": "tail_lines",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 10000
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents logs history list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/logs/history",
+    "operation_id": "get_agent_log_history_organizations__organization_id__agents__agent_id__logs_history_get",
+    "query": [
+      {
+        "name": "snapshot_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "snapshot",
+    "key": "lines",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents logs stream",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/logs/stream",
+    "operation_id": "stream_agent_logs_organizations__organization_id__agents__agent_id__logs_stream_get",
+    "query": [
+      {
+        "name": "tail_lines",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 0,
+        "maximum": 1000
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "stream",
+    "deprecated": false
+  },
+  {
+    "command": "agents managed-update",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/managed-update",
+    "operation_id": "managed_update_organizations__organization_id__agents__agent_id__managed_update_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents memory set",
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/memory",
+    "operation_id": "set_agent_memory_organizations__organization_id__agents__agent_id__memory_put",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "enabled",
+        "kind": "boolean",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents memory items list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/memory/items",
+    "operation_id": "list_agent_memories_organizations__organization_id__agents__agent_id__memory_items_get",
+    "query": [
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 2000
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 50
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents resource-usage get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/resource-usage",
+    "operation_id": "get_agent_resource_usage_organizations__organization_id__agents__agent_id__resource_usage_get",
+    "query": [
+      {
+        "name": "range",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "1h",
+          "6h",
+          "24h",
+          "7d",
+          "14d"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents restore-points list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points",
+    "operation_id": "list_restore_points_organizations__organization_id__agents__agent_id__restore_points_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents restore-points create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points",
+    "operation_id": "create_restore_point_organizations__organization_id__agents__agent_id__restore_points_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "label",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents restore-points delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}",
+    "operation_id": "delete_restore_point_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "restore_point_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents restore-points get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}",
+    "operation_id": "get_restore_point_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "restore_point_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents restore-points configuration create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}/configuration",
+    "operation_id": "apply_recorded_configuration_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__configuration_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "restore_point_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents restore-points restore",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}/restore",
+    "operation_id": "restore_restore_point_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__restore_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "restore_point_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "reapply_configuration",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents share get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/share",
+    "operation_id": "get_agent_share_settings_organizations__organization_id__agents__agent_id__share_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents share set",
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/share",
+    "operation_id": "replace_agent_share_settings_organizations__organization_id__agents__agent_id__share_put",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "general_access_role_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills",
+    "operation_id": "list_agent_skills_organizations__organization_id__agents__agent_id__skills_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "source",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "aai_cli",
+          "custom"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills",
+    "operation_id": "create_agent_skill_organizations__organization_id__agents__agent_id__skills_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}",
+    "operation_id": "delete_agent_skill_organizations__organization_id__agents__agent_id__skills__skill_id__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}",
+    "operation_id": "update_agent_skill_organizations__organization_id__agents__agent_id__skills__skill_id__patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills draft delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "discard_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills draft get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "get_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills draft update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "update_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills draft create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "start_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills draft publish",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft/publish",
+    "operation_id": "publish_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_publish_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills files get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/files",
+    "operation_id": "get_agent_skill_files_organizations__organization_id__agents__agent_id__skills__skill_id__files_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills fork",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/fork",
+    "operation_id": "fork_agent_skill_organizations__organization_id__agents__agent_id__skills__skill_id__fork_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills source-update",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/source-update",
+    "operation_id": "apply_agent_skill_source_update_organizations__organization_id__agents__agent_id__skills__skill_id__source_update_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills versions list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/versions",
+    "operation_id": "list_agent_skill_versions_organizations__organization_id__agents__agent_id__skills__skill_id__versions_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills versions delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "delete_agent_skill_version_organizations__organization_id__agents__agent_id__skills__skill_id__versions__version__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "version",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents skills versions get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "get_agent_skill_version_organizations__organization_id__agents__agent_id__skills__skill_id__versions__version__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "version",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents start",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/start",
+    "operation_id": "start_agent_organizations__organization_id__agents__agent_id__start_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents stop",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/stop",
+    "operation_id": "stop_agent_organizations__organization_id__agents__agent_id__stop_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents template get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/template/{version}",
+    "operation_id": "get_agent_template_organizations__organization_id__agents__agent_id__template__version__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "version",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents tool-calls list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/tool-calls",
+    "operation_id": "list_tool_calls_organizations__organization_id__agents__agent_id__tool_calls_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "tool_name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "status",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "PENDING",
+          "SUCCESS",
+          "ERROR"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents web-chat messages list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/messages",
+    "operation_id": "list_web_chat_messages_organizations__organization_id__agents__agent_id__web_chat_messages_get",
+    "query": [
+      {
+        "name": "thread_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "after_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "chat",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents web-chat messages create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/messages",
+    "operation_id": "send_web_chat_message_organizations__organization_id__agents__agent_id__web_chat_messages_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "text",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "thread_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "approval_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents web-chat stream",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/stream",
+    "operation_id": "stream_web_chat_messages_organizations__organization_id__agents__agent_id__web_chat_stream_get",
+    "query": [
+      {
+        "name": "thread_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "stream",
+    "deprecated": false
+  },
+  {
+    "command": "agents web-chat threads list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads",
+    "operation_id": "list_web_chat_threads_organizations__organization_id__agents__agent_id__web_chat_threads_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "capped",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents web-chat threads delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads/{thread_id}",
+    "operation_id": "delete_web_chat_thread_organizations__organization_id__agents__agent_id__web_chat_threads__thread_id__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "thread_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents web-chat threads update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads/{thread_id}",
+    "operation_id": "rename_web_chat_thread_organizations__organization_id__agents__agent_id__web_chat_threads__thread_id__patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "thread_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "display_name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents web-chat threads stop",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads/{thread_id}/stop",
+    "operation_id": "stop_web_chat_generation_organizations__organization_id__agents__agent_id__web_chat_threads__thread_id__stop_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "thread_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks",
+    "operation_id": "list_agent_webhooks_organizations__organization_id__agents__agent_id__webhooks_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks",
+    "operation_id": "create_agent_webhook_organizations__organization_id__agents__agent_id__webhooks_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "display_name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "delivery_platform",
+        "kind": "string",
+        "required": true,
+        "choices": [
+          "slack",
+          "discord",
+          "telegram",
+          "teams"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "enabled",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks delivery-platforms list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/delivery-platforms",
+    "operation_id": "list_webhook_delivery_platforms_organizations__organization_id__agents__agent_id__webhooks_delivery_platforms_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}",
+    "operation_id": "retire_agent_webhook_organizations__organization_id__agents__agent_id__webhooks__webhook_id__delete",
+    "query": [
+      {
+        "name": "revision",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "webhook_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks get",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}",
+    "operation_id": "get_agent_webhook_organizations__organization_id__agents__agent_id__webhooks__webhook_id__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "webhook_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks update",
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}",
+    "operation_id": "update_agent_webhook_organizations__organization_id__agents__agent_id__webhooks__webhook_id__patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "webhook_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "revision",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": 1.0,
+        "maximum": null
+      },
+      {
+        "name": "display_name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "delivery_platform",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "slack",
+          "discord",
+          "telegram",
+          "teams"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "enabled",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks invocations list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}/invocations",
+    "operation_id": "list_webhook_invocations_organizations__organization_id__agents__agent_id__webhooks__webhook_id__invocations_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 100
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "webhook_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks invocations retry",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}/invocations/{invocation_id}/retry",
+    "operation_id": "retry_webhook_invocation_organizations__organization_id__agents__agent_id__webhooks__webhook_id__invocations__invocation_id__retry_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "webhook_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "invocation_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "agents webhooks rotate-secret",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}/rotate-secret",
+    "operation_id": "rotate_agent_webhook_secret_organizations__organization_id__agents__agent_id__webhooks__webhook_id__rotate_secret_post",
+    "query": [
+      {
+        "name": "revision",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "webhook_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

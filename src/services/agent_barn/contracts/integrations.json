@@ -1,0 +1,88 @@
+[
+  {
+    "command": "integrations google authorize-url get",
+    "method": "GET",
+    "path": "/integrations/google/authorize-url",
+    "operation_id": "google_authorize_url_integrations_google_authorize_url_get",
+    "query": [
+      {
+        "name": "client_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "provider",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "services",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "read_only",
+        "kind": "boolean",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "integrations google token create",
+    "method": "POST",
+    "path": "/integrations/google/token",
+    "operation_id": "google_token_exchange_integrations_google_token_post",
+    "query": [],
+    "path_fields": [],
+    "fields": [
+      {
+        "name": "code",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "client_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "client_secret",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

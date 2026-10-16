@@ -1,0 +1,16 @@
+[
+  {
+    "command": "openapi",
+    "method": "GET",
+    "path": "/openapi.json",
+    "operation_id": "openapi",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

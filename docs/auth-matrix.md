@@ -83,6 +83,12 @@ This project primarily consumes credentials supplied by users or agents. Microso
 - Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.
 - Word files are transferred through OneDrive/SharePoint file commands only. The CLI does not semantically edit `.docx` content; agents must download, edit externally, and upload the complete replacement.
 
+## Agent Barn
+
+- Existing user-owned personal API key (`abk_…`), sent as `Authorization: Bearer`, with `auth_type = "bearer_token"` and `token_env` or `token_secret`. No OAuth refresh or login flow.
+- READ_ONLY and FULL modes restrict methods, while current organization membership, agent access, and platform authority still apply. A FULL key does not bypass permissions.
+- Key creation/revocation remains in Account settings. Expired, revoked, or password-invalidated keys return 401. See the [service guide](services/agent-barn.md).
+
 ## Custom API
 
 Named `custom_api` profiles support none, bearer token, named API-key header (including a complete Authorization scheme), and Basic credentials, plus configured ordinary/secret headers. Isolated profiles hold only a gateway credential. See the [authoritative Custom API profile contract](services/custom-api.md).
