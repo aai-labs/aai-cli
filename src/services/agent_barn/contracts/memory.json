@@ -1,0 +1,50 @@
+[
+  {
+    "command": "memory items list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/memory/items",
+    "operation_id": "list_organization_memories_organizations__organization_id__memory_items_get",
+    "query": [
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 2000
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 50
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  }
+]

@@ -2343,3 +2343,61 @@ fn merkys_ask_research_and_read() {
     assert_eq!(str_at(&run, &["run_id"]), run_id);
     cli_required(MK, &["merkys", "research", "stop", run_id]);
 }
+
+#[test]
+#[ignore = "requires AAI_E2E_CONFIG, AAI_E2E_AGENT_BARN_PROFILE, and AAI_E2E_AGENT_BARN_ORGANIZATION; read-only"]
+fn agent_barn_read_only_smoke() {
+    let profile = "AAI_E2E_AGENT_BARN_PROFILE";
+    let organization = env::var("AAI_E2E_AGENT_BARN_ORGANIZATION")
+        .expect("set AAI_E2E_AGENT_BARN_ORGANIZATION explicitly");
+    let context = cli_required(profile, &["agent-barn", "auth", "context"]);
+    assert!(context["user_id"].is_string());
+    assert_eq!(context["credential_class"], "API_KEY");
+    assert!(
+        context["organizations"]
+            .as_array()
+            .expect("organization memberships")
+            .iter()
+            .any(|item| item["organization_id"] == organization),
+        "the configured key must belong to the selected organization"
+    );
+    let discovery = cli_required(profile, &["agent-barn", "discovery"]);
+    assert_eq!(discovery["api_version"], "v1");
+    assert!(discovery["operations"].is_array());
+    let schema = cli_required(profile, &["agent-barn", "openapi"]);
+    assert!(schema["paths"]["/auth/context"].is_object());
+    let agents = cli_required(
+        profile,
+        &[
+            "agent-barn",
+            "--organization-id",
+            &organization,
+            "agents",
+            "list",
+            "--limit",
+            "2",
+        ],
+    );
+    assert!(agents["items"].is_array());
+    assert!(agents["_aai"]["pagination"].is_object());
+    if let Some(id) = agents["items"]
+        .as_array()
+        .unwrap()
+        .first()
+        .and_then(|a| a["id"].as_str())
+    {
+        let agent = cli_required(
+            profile,
+            &[
+                "agent-barn",
+                "--organization-id",
+                &organization,
+                "agents",
+                "get",
+                "--agent-id",
+                id,
+            ],
+        );
+        assert_eq!(agent["id"], id);
+    }
+}

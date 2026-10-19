@@ -23,6 +23,8 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Manage Agent Barn agents, resources, and platform administration.
+    AgentBarn(crate::services::agent_barn::AgentBarnCommand),
     /// Call an absolute URL within a named Custom API profile.
     CustomApi(CustomApiCommand),
     Jira(JiraCommand),

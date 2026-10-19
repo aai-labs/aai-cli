@@ -1,0 +1,2113 @@
+[
+  {
+    "command": "platform costs list",
+    "method": "GET",
+    "path": "/platform/costs",
+    "operation_id": "list_platform_costs_platform_costs_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 100
+      },
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sort",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "newest_first",
+          "oldest_first",
+          "most_expensive"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform costs filters agents list",
+    "method": "GET",
+    "path": "/platform/costs/filters/agents",
+    "operation_id": "list_platform_agent_filter_options_platform_costs_filters_agents_get",
+    "query": [
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sort",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "newest_first",
+          "oldest_first",
+          "most_expensive"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform costs filters models list",
+    "method": "GET",
+    "path": "/platform/costs/filters/models",
+    "operation_id": "list_platform_model_filter_options_platform_costs_filters_models_get",
+    "query": [
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sort",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "newest_first",
+          "oldest_first",
+          "most_expensive"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform costs monthly list",
+    "method": "GET",
+    "path": "/platform/costs/monthly",
+    "operation_id": "get_platform_monthly_costs_platform_costs_monthly_get",
+    "query": [
+      {
+        "name": "months",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 24
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sort",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "newest_first",
+          "oldest_first",
+          "most_expensive"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform costs organizations list",
+    "method": "GET",
+    "path": "/platform/costs/organizations",
+    "operation_id": "list_organizations_by_spend_platform_costs_organizations_get",
+    "query": [
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sort",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "newest_first",
+          "oldest_first",
+          "most_expensive"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform costs summary get",
+    "method": "GET",
+    "path": "/platform/costs/summary",
+    "operation_id": "get_platform_cost_summary_platform_costs_summary_get",
+    "query": [
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "model",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sort",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "newest_first",
+          "oldest_first",
+          "most_expensive"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform event-deliveries list",
+    "method": "GET",
+    "path": "/platform/event-deliveries",
+    "operation_id": "get_event_deliveries_platform_event_deliveries_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 100
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "status",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "PENDING",
+          "ENQUEUED",
+          "PROCESSING",
+          "SUCCEEDED",
+          "DEAD_LETTERED"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "event_name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "created_from",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "created_to",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "sort",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "NEWEST_FIRST",
+          "OLDEST_FIRST"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform event-deliveries event-types list",
+    "method": "GET",
+    "path": "/platform/event-deliveries/event-types",
+    "operation_id": "get_event_delivery_event_types_platform_event_deliveries_event_types_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform event-deliveries summary get",
+    "method": "GET",
+    "path": "/platform/event-deliveries/summary",
+    "operation_id": "get_event_delivery_summary_platform_event_deliveries_summary_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform organizations list",
+    "method": "GET",
+    "path": "/platform/organizations",
+    "operation_id": "get_organizations_platform_organizations_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform organizations get",
+    "method": "GET",
+    "path": "/platform/organizations/{organization_id}",
+    "operation_id": "get_platform_organization_platform_organizations__organization_id__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform organizations llm-budget set",
+    "method": "PUT",
+    "path": "/platform/organizations/{organization_id}/llm-budget",
+    "operation_id": "set_organization_llm_budget_platform_organizations__organization_id__llm_budget_put",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "budget_usd",
+        "kind": "number",
+        "required": true,
+        "choices": [],
+        "minimum": 0.0,
+        "maximum": null
+      },
+      {
+        "name": "budget_duration",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "1d",
+          "7d",
+          "30d"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform organizations llm-budget coverage get",
+    "method": "GET",
+    "path": "/platform/organizations/{organization_id}/llm-budget/coverage",
+    "operation_id": "get_organization_llm_coverage_platform_organizations__organization_id__llm_budget_coverage_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform organizations llm-budget enroll create",
+    "method": "POST",
+    "path": "/platform/organizations/{organization_id}/llm-budget/enroll",
+    "operation_id": "enroll_organization_llm_keys_platform_organizations__organization_id__llm_budget_enroll_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform organizations members list",
+    "method": "GET",
+    "path": "/platform/organizations/{organization_id}/members",
+    "operation_id": "list_platform_members_platform_organizations__organization_id__members_get",
+    "query": [
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": 200
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform resource-limits set",
+    "method": "PUT",
+    "path": "/platform/resource-limits",
+    "operation_id": "update_platform_resource_limits_platform_resource_limits_put",
+    "query": [],
+    "path_fields": [],
+    "fields": [
+      {
+        "name": "limits_memory_bytes",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": 1125899906842624.0
+      },
+      {
+        "name": "limits_cpu_cores",
+        "kind": "number",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": 100000.0
+      },
+      {
+        "name": "requests_memory_bytes",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": 1125899906842624.0
+      },
+      {
+        "name": "requests_cpu_cores",
+        "kind": "number",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": 100000.0
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform resource-usage get",
+    "method": "GET",
+    "path": "/platform/resource-usage",
+    "operation_id": "get_platform_resource_usage_platform_resource_usage_get",
+    "query": [
+      {
+        "name": "range",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "1h",
+          "6h",
+          "24h",
+          "7d",
+          "14d"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform resource-usage agents get",
+    "method": "GET",
+    "path": "/platform/resource-usage/agents/{agent_id}",
+    "operation_id": "get_platform_agent_details_platform_resource_usage_agents__agent_id__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform settings agent-memory get",
+    "method": "GET",
+    "path": "/platform/settings/agent-memory",
+    "operation_id": "read_settings_platform_settings_agent_memory_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform settings agent-memory set",
+    "method": "PUT",
+    "path": "/platform/settings/agent-memory",
+    "operation_id": "update_settings_platform_settings_agent_memory_put",
+    "query": [],
+    "path_fields": [],
+    "fields": [
+      {
+        "name": "model",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform settings agent-memory models get",
+    "method": "GET",
+    "path": "/platform/settings/agent-memory/models",
+    "operation_id": "list_models_platform_settings_agent_memory_models_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills list",
+    "method": "GET",
+    "path": "/platform/skills",
+    "operation_id": "list_global_skills_for_platform_admin_platform_skills_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills create",
+    "method": "POST",
+    "path": "/platform/skills",
+    "operation_id": "create_platform_skill_platform_skills_post",
+    "query": [],
+    "path_fields": [],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills delete",
+    "method": "DELETE",
+    "path": "/platform/skills/{skill_id}",
+    "operation_id": "delete_platform_skill_platform_skills__skill_id__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills update",
+    "method": "PATCH",
+    "path": "/platform/skills/{skill_id}",
+    "operation_id": "update_platform_skill_platform_skills__skill_id__patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills draft delete",
+    "method": "DELETE",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "discard_platform_skill_draft_platform_skills__skill_id__draft_delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills draft get",
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "get_platform_skill_draft_platform_skills__skill_id__draft_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills draft update",
+    "method": "PATCH",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "update_platform_skill_draft_platform_skills__skill_id__draft_patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills draft create",
+    "method": "POST",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "start_platform_skill_draft_platform_skills__skill_id__draft_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills draft publish",
+    "method": "POST",
+    "path": "/platform/skills/{skill_id}/draft/publish",
+    "operation_id": "publish_platform_skill_draft_platform_skills__skill_id__draft_publish_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills files get",
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/files",
+    "operation_id": "get_platform_skill_files_platform_skills__skill_id__files_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills versions list",
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/versions",
+    "operation_id": "list_platform_skill_versions_platform_skills__skill_id__versions_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills versions delete",
+    "method": "DELETE",
+    "path": "/platform/skills/{skill_id}/versions/{version}",
+    "operation_id": "delete_platform_skill_version_platform_skills__skill_id__versions__version__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "version",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform skills versions get",
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/versions/{version}",
+    "operation_id": "get_platform_skill_version_platform_skills__skill_id__versions__version__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "skill_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "version",
+        "kind": "integer",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform stats agents get",
+    "method": "GET",
+    "path": "/platform/stats/agents",
+    "operation_id": "get_platform_agent_stats_platform_stats_agents_get",
+    "query": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "created_by_user_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "platform",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "slack",
+          "teams",
+          "telegram",
+          "discord",
+          "web",
+          "email"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform stats messages get",
+    "method": "GET",
+    "path": "/platform/stats/messages",
+    "operation_id": "get_platform_message_stats_platform_stats_messages_get",
+    "query": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "created_by_user_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "platform",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "slack",
+          "teams",
+          "telegram",
+          "discord",
+          "web",
+          "email"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "period",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "SEVEN_DAYS",
+          "THIRTY_DAYS",
+          "NINETY_DAYS"
+        ],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "from_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "to_date",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "granularity",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "minute",
+          "hour",
+          "day",
+          "week"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates list",
+    "method": "GET",
+    "path": "/platform/templates",
+    "operation_id": "list_platform_lineages_platform_templates_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates create",
+    "method": "POST",
+    "path": "/platform/templates",
+    "operation_id": "create_new_template_draft_platform_templates_post",
+    "query": [],
+    "path_fields": [],
+    "fields": [
+      {
+        "name": "template_name",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "soul_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "identity_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "user_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "tools_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agents_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "boot_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "bootstrap_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "heartbeat_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates get",
+    "method": "GET",
+    "path": "/platform/templates/{template_key}",
+    "operation_id": "get_published_platform_template_platform_templates__template_key__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates draft delete",
+    "method": "DELETE",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "discard_draft_platform_templates__template_key__draft_delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates draft get",
+    "method": "GET",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "get_draft_platform_templates__template_key__draft_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates draft update",
+    "method": "PATCH",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "update_draft_platform_templates__template_key__draft_patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "description",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "soul_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "identity_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "user_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "tools_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "agents_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "boot_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "bootstrap_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "heartbeat_md",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates draft create",
+    "method": "POST",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "start_draft_platform_templates__template_key__draft_post",
+    "query": [
+      {
+        "name": "source_version",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": 1,
+        "maximum": null
+      }
+    ],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates draft publish",
+    "method": "POST",
+    "path": "/platform/templates/{template_key}/draft/publish",
+    "operation_id": "publish_draft_platform_templates__template_key__draft_publish_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform templates versions list",
+    "method": "GET",
+    "path": "/platform/templates/{template_key}/versions",
+    "operation_id": "list_published_platform_template_versions_platform_templates__template_key__versions_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "template_key",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform users list",
+    "method": "GET",
+    "path": "/platform/users",
+    "operation_id": "list_users_platform_users_get",
+    "query": [
+      {
+        "name": "page",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "page_size",
+        "kind": "integer",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "search",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_roles",
+        "kind": "array",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "page",
+    "key": "items",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform users create",
+    "method": "POST",
+    "path": "/platform/users",
+    "operation_id": "create_user_platform_users_post",
+    "query": [],
+    "path_fields": [],
+    "fields": [
+      {
+        "name": "email",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "full_name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "organization_name",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform users get",
+    "method": "GET",
+    "path": "/platform/users/{user_id}",
+    "operation_id": "get_user_platform_users__user_id__get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "user_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform users platform-privilege update",
+    "method": "PATCH",
+    "path": "/platform/users/{user_id}/platform-privilege",
+    "operation_id": "change_platform_privilege_platform_users__user_id__platform_privilege_patch",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "user_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "is_platform_admin",
+        "kind": "boolean",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "reason",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "platform users resend-invite",
+    "method": "POST",
+    "path": "/platform/users/{user_id}/resend-invite",
+    "operation_id": "resend_user_invite_platform_users__user_id__resend_invite_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "user_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

@@ -62,6 +62,130 @@ impl ApiClient {
         })
     }
 
+    /// Capture downloads or bounded SSE without buffering the complete response.
+    /// Uses the shared authentication boundary and refuses all redirects.
+    pub async fn capture_to_file(
+        &self,
+        service: &'static str,
+        profile: &Profile,
+        url: String,
+        output: &str,
+        duration_seconds: Option<u64>,
+    ) -> Result<Value, AppError> {
+        use std::{fs::OpenOptions, io::Write, path::Path};
+        use tokio::time::{timeout, timeout_at, Duration, Instant};
+        let operation = "capture";
+        let path = std::path::absolute(Path::new(output))
+            .map_err(|e| AppError::invalid_input(service, operation, e.to_string()))?;
+        let token = self.bearer(service, operation, profile).await?;
+        let effective = Profile {
+            token: Some(token),
+            ..profile.clone()
+        };
+        let request = apply_auth(
+            self.no_redirect_client.get(url),
+            service,
+            operation,
+            &effective,
+        )?
+        .header(
+            "Accept",
+            if duration_seconds.is_some() {
+                "text/event-stream"
+            } else {
+                "application/octet-stream"
+            },
+        );
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|e| {
+                AppError::invalid_input(
+                    service,
+                    operation,
+                    format!("cannot create output file: {e}"),
+                )
+            })?;
+        let partial = |message: String| {
+            let mut error = AppError::internal(service, operation, message);
+            error.details = Some(serde_json::json!({"partial_file": path}));
+            error
+        };
+        let mut response = timeout(Duration::from_secs(30), request.send())
+            .await
+            .map_err(|_| partial("timed out waiting for response headers".into()))?
+            .map_err(|e| partial(format!("capture request failed: {e}")))?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = timeout(Duration::from_secs(30), response.text())
+                .await
+                .map_err(|_| partial("timed out reading provider error".into()))?
+                .map_err(|e| partial(format!("failed reading provider error: {e}")))?;
+            let details = serde_json::from_str::<Value>(&body)
+                .unwrap_or_else(|_| Value::String(body.chars().take(4096).collect()));
+            let error = AppError::api(
+                service,
+                operation,
+                status,
+                format!("provider returned HTTP {}", status.as_u16()),
+                Some(details),
+            );
+            // No response bytes were saved; do not leave an empty artifact after an HTTP error.
+            drop(file);
+            let _ = std::fs::remove_file(&path);
+            return Err(error);
+        }
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream")
+            .to_owned();
+        if duration_seconds.is_some()
+            && content_type
+                .split(';')
+                .next()
+                .is_none_or(|s| s.trim() != "text/event-stream")
+        {
+            return Err(partial("expected text/event-stream response".into()));
+        }
+        let deadline =
+            duration_seconds.map(|seconds| Instant::now() + Duration::from_secs(seconds));
+        let mut bytes = 0_u64;
+        let reason = loop {
+            let next = if let Some(deadline) = deadline {
+                match timeout_at(deadline, response.chunk()).await {
+                    Ok(chunk) => chunk,
+                    Err(_) => break "duration_elapsed",
+                }
+            } else {
+                timeout(Duration::from_secs(30), response.chunk())
+                    .await
+                    .map_err(|_| partial("download stalled; partial file retained".into()))?
+            };
+            match next.map_err(|e| partial(format!("transfer interrupted: {e}")))? {
+                Some(chunk) => {
+                    file.write_all(&chunk)
+                        .map_err(|e| partial(format!("failed writing output: {e}")))?;
+                    bytes += chunk.len() as u64;
+                }
+                None if duration_seconds.is_some() => {
+                    return Err(partial(
+                        "stream disconnected before requested duration; partial file retained"
+                            .into(),
+                    ))
+                }
+                None => break "complete",
+            }
+        };
+        file.flush()
+            .map_err(|e| partial(format!("failed flushing output: {e}")))?;
+        Ok(
+            serde_json::json!({"path":path,"content_type":content_type,"bytes":bytes,"termination_reason":reason}),
+        )
+    }
+
     /// Resolve the profile's bearer token without making a provider request.
     pub async fn bearer(
         &self,

@@ -1,0 +1,16 @@
+[
+  {
+    "command": "discovery",
+    "method": "GET",
+    "path": "/discovery",
+    "operation_id": "discover_discovery_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

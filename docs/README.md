@@ -62,3 +62,7 @@ Apollo docs include an implementation summary for auth, base URLs, rate limits, 
 - `docs/adr/0002-office-file-boundaries.md` records the typed Graph Excel boundary and the download/edit/upload workflow for Word files.
 - `docs/drive-command-test-results.md` is the live-run report for the `aai-cli drive` command surface. Regenerate it with `scripts/drive-command-report.sh`.
 - `docs/atlassian/adf.md` summarizes the Atlassian Document Format files needed for Jira/Confluence implementation.
+
+## Agent Barn
+
+The [Agent Barn service guide](services/agent-barn.md) covers personal-key setup, the full product API command map, organization scoping, pagination, downloads, and bounded streaming. The pinned OpenAPI and coverage manifest are in `tests/fixtures/agent_barn/`.
