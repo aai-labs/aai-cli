@@ -107,16 +107,16 @@ fn database_entries_send_filter_and_sort_and_preserve_values() {
             "entries",
             "12",
             "--filter",
-            "field-1[eq]=Ready",
+            "field-1=eq:Ready",
             "--sort",
-            "field-1:asc",
+            "-field-1",
             "--limit",
             "2",
         ],
     ));
     assert_eq!(result["results"][0]["values"]["field-1"], "Ready");
     let request = handle.join().unwrap().remove(0);
-    assert!(request.starts_with("GET /wiki/api/v2/databases/12/entries?limit=2&sort=field-1%3Aasc&filter[field-1][eq]=Ready "), "{request}");
+    assert!(request.starts_with("GET /wiki/api/v2/databases/12/entries?limit=2&sort=-field-1&filter%5Bfield-1%5D=eq%3AReady "), "{request}");
 }
 
 #[test]
@@ -238,8 +238,8 @@ fn comment_create_get_and_delete_route_to_correct_kinds() {
                 "12",
                 "--body",
                 "<p>new</p>",
-                "--inline-marker-ref",
-                "mark-1",
+                "--text-selection",
+                "Selected text",
             ],
             "POST /wiki/api/v2/inline-comments ",
         ),
@@ -257,10 +257,8 @@ fn comment_create_get_and_delete_route_to_correct_kinds() {
         success(run(&site, &args));
         let request = handle.join().unwrap().remove(0);
         assert!(request.starts_with(expected), "{request}");
-        if args.contains(&"--inline-marker-ref") {
-            assert!(
-                request.contains("\"inlineCommentProperties\":{\"inlineMarkerRef\":\"mark-1\"}")
-            );
+        if args.contains(&"--text-selection") {
+            assert!(request.contains("\"textSelection\":\"Selected text\""));
         }
     }
 }

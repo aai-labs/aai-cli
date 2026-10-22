@@ -659,6 +659,7 @@ aai-cli confluence pages attachments upload 3964929 --file /tmp/skill_doc_test.t
 ```bash
 aai-cli confluence search --query 'release notes' --limit 20
 aai-cli confluence search --cql 'type = page AND space = ENG'
+aai-cli confluence pages comments create 42 --body '<p>Review this</p>' --text-selection 'selected page text'
 aai-cli confluence pages comments get 123 --kind inline
 aai-cli confluence pages comments update 123 --kind inline --json update.json
 aai-cli confluence pages comments delete 123 --kind footer
@@ -672,7 +673,9 @@ aai-cli confluence pages permissions set-restriction-state 42 --json state.json
 aai-cli confluence pages permissions add 42 --json permission.json
 aai-cli confluence pages permissions delete 42 --principal-type user --principal-id account-id
 aai-cli confluence databases fields 42
-aai-cli confluence databases entries 42 --filter 'field-id[eq]=Ready'
+aai-cli confluence databases entries 42 --filter 'field-id=eq:Ready'
 ```
 
 For other database reads use `databases get`, `databases views`, and `databases entry`. Field, view, and entry reads are experimental and may change. Entries are not scoped to a database view. Database row writes are not documented by Atlassian. Permission writes use provider-shaped JSON bodies. Comment updates fetch the current version unless `--version` is supplied.
+
+Database sorting uses `--sort FIELD_ID` or `--sort -FIELD_ID`. Equality filters use `--filter FIELD_ID=eq:value`; only number/date range filters use `[gt|gte|lt|lte]` on the field ID. A new top-level inline comment needs `--text-selection` (or `inlineCommentProperties.textSelection` in `--json`).

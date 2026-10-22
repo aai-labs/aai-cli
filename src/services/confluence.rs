@@ -282,18 +282,22 @@ fn append_database_filter(url: &mut String, filter: &str) -> Result<(), AppError
         AppError::invalid_input(
             "confluence",
             "databases.entries",
-            "--filter must use fieldId[operator]=value",
+            "--filter must use fieldId=value or fieldId[gte|lte|gt|lt]=value",
         )
     };
     let (name, value) = filter.split_once('=').ok_or_else(invalid)?;
-    let (field, operator) = name
-        .split_once('[')
-        .and_then(|(field, op)| op.strip_suffix(']').map(|op| (field, op)))
-        .filter(|(field, op)| {
-            !field.is_empty() && !op.is_empty() && !field.contains(']') && !op.contains('[')
-        })
-        .ok_or_else(invalid)?;
-    append_query(url, &format!("filter[{field}][{operator}]"), value);
+    let key = if let Some((field, operator)) = name.split_once('[') {
+        let operator = operator.strip_suffix(']').ok_or_else(invalid)?;
+        if field.is_empty() || !matches!(operator, "gte" | "lte" | "gt" | "lt") {
+            return Err(invalid());
+        }
+        format!("filter[{field}][{operator}]")
+    } else if !name.is_empty() && !name.contains(']') {
+        format!("filter[{name}]")
+    } else {
+        return Err(invalid());
+    };
+    append_query(url, &key, value);
     Ok(())
 }
 
@@ -634,7 +638,8 @@ async fn fetch_cursor_pages(
 fn append_query(url: &mut String, key: &str, value: &str) {
     let separator = if url.contains('?') { '&' } else { '?' };
     url.push(separator);
-    url.push_str(key);
+    // Atlassian's gateway rejects literal brackets in database filter keys.
+    url.push_str(&enc(key).replace('[', "%5B").replace(']', "%5D"));
     url.push('=');
     url.push_str(&enc(value));
 }
@@ -874,7 +879,7 @@ async fn create_page_comment(
         input::read_json_arg("confluence", "pages.comments.create", args.json.as_deref())?;
     let kind = match args.reply_to.as_deref() {
         Some(parent_id) => detect_comment_kind(client, ctx, parent_id).await?,
-        None if args.inline_marker_ref.is_some()
+        None if args.text_selection.is_some()
             || payload.get("inlineCommentProperties").is_some() =>
         {
             CommentKind::Inline
@@ -888,12 +893,36 @@ async fn create_page_comment(
             json!({ "representation": "storage", "value": text }),
         );
     }
-    if let Some(marker) = args.inline_marker_ref {
-        input::ensure_object(
+    if kind.segment() == "inline-comments" && args.reply_to.is_none() {
+        let properties = input::ensure_object(
             map.entry("inlineCommentProperties")
                 .or_insert_with(|| json!({})),
-        )
-        .insert("inlineMarkerRef".to_string(), Value::String(marker));
+        );
+        if let Some(selection) = args.text_selection {
+            properties.insert("textSelection".to_string(), Value::String(selection));
+        }
+        if properties
+            .get("textSelection")
+            .and_then(Value::as_str)
+            .is_none()
+        {
+            return Err(AppError::invalid_input("confluence", "pages.comments.create", "top-level inline comments require --text-selection or inlineCommentProperties.textSelection in --json"));
+        }
+        let count = args.selection_match_count.unwrap_or(1);
+        let index = args.selection_match_index.unwrap_or(0);
+        if count == 0 || index >= count {
+            return Err(AppError::invalid_input(
+                "confluence",
+                "pages.comments.create",
+                "selection match count must be greater than the zero-based index",
+            ));
+        }
+        properties
+            .entry("textSelectionMatchCount".to_string())
+            .or_insert_with(|| json!(count));
+        properties
+            .entry("textSelectionMatchIndex".to_string())
+            .or_insert_with(|| json!(index));
     }
     match args.reply_to {
         Some(pid) => {
@@ -1250,9 +1279,9 @@ mod tests {
     #[test]
     fn database_filter_encodes_provider_bracket_query() {
         let mut url = "https://example.atlassian.net/wiki/api/v2/databases/1/entries".to_string();
-        append_database_filter(&mut url, "field-1[eq]=Ready & waiting").unwrap();
-        assert_eq!(url, "https://example.atlassian.net/wiki/api/v2/databases/1/entries?filter[field-1][eq]=Ready%20%26%20waiting");
-        assert!(append_database_filter(&mut url, "field-1=Ready").is_err());
+        append_database_filter(&mut url, "field-1=eq:Ready & waiting").unwrap();
+        assert_eq!(url, "https://example.atlassian.net/wiki/api/v2/databases/1/entries?filter%5Bfield-1%5D=eq%3AReady%20%26%20waiting");
+        assert!(append_database_filter(&mut url, "field-1[eq]=Ready").is_err());
     }
 
     fn spaces_args(

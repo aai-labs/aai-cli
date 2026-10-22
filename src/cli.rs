@@ -1432,9 +1432,15 @@ pub struct ConfluencePageCommentsCreate {
     pub json: Option<String>,
     #[arg(long = "reply-to")]
     pub reply_to: Option<String>,
-    /// Inline marker reference; requires --json with selection fields when creating a new inline comment.
+    /// Text to highlight when creating a top-level inline comment.
     #[arg(long)]
-    pub inline_marker_ref: Option<String>,
+    pub text_selection: Option<String>,
+    /// Number of matches for the selected text; defaults to 1.
+    #[arg(long)]
+    pub selection_match_count: Option<u32>,
+    /// Zero-based match to highlight; defaults to 0.
+    #[arg(long)]
+    pub selection_match_index: Option<u32>,
 }
 
 #[derive(Debug, Args)]
@@ -1582,9 +1588,9 @@ pub struct ConfluenceDatabaseList {
 #[derive(Debug, Args)]
 pub struct ConfluenceDatabaseEntries {
     pub id: String,
-    #[arg(long)]
+    #[arg(long, allow_hyphen_values = true)]
     pub sort: Option<String>,
-    /// Filter as fieldId[operator]=value; repeat for AND conditions.
+    /// Filter as fieldId=value or fieldId[gte|lte|gt|lt]=value; repeat for AND conditions.
     #[arg(long = "filter")]
     pub filters: Vec<String>,
     #[arg(long, default_value_t = 50)]
@@ -4423,7 +4429,7 @@ mod tests {
                 "entries",
                 "42",
                 "--filter",
-                "field[eq]=value",
+                "field=eq:value",
             ],
             vec![
                 "aai-cli",
