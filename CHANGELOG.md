@@ -4,6 +4,8 @@ All notable user-visible changes to `aai-cli` are recorded here.
 
 ## Unreleased
 
+## 0.1.1 - 2026-10-22
+
 ### Added
 
 - Added crates.io packaging and automatic patch releases from `main`, with validated uploads, version commits, and release tags.
