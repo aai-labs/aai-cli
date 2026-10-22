@@ -203,6 +203,38 @@ aai-cli confluence pages move <page-id> --target-id <target-page-id> [--position
 aai-cli confluence pages delete <page-id>
 ```
 
+Additional page workflows:
+
+```bash
+aai-cli confluence pages comments get <comment-id> --kind footer|inline
+aai-cli confluence pages comments update <comment-id> --kind footer|inline [--body STORAGE_HTML] [--json <path|->] [--version N]
+aai-cli confluence pages comments delete <comment-id> --kind footer|inline
+aai-cli confluence pages comments create <page-id> --body STORAGE_HTML --inline-marker-ref REF --json <path|->
+aai-cli confluence pages attachments replace <page-id> <attachment-id> --file PATH [--comment TEXT]
+aai-cli confluence pages attachments delete <attachment-id>
+aai-cli confluence pages versions list <page-id> [--limit N]
+aai-cli confluence pages versions get <page-id> <version-number>
+aai-cli confluence pages permissions list <page-id> [--limit N]
+aai-cli confluence pages permissions restriction-state <page-id>
+aai-cli confluence pages permissions set-restriction-state <page-id> --json <path|->
+aai-cli confluence pages permissions add|set <page-id> --json <path|->
+aai-cli confluence pages permissions delete <page-id> (--principal-type TYPE --principal-id ID [--operation read|update] | --all)
+```
+
+Comment updates fetch the current version unless `--version` is supplied. `permissions set` replaces every direct permission on the page; use `permissions add` to preserve other principals. Use `--json` for inline selection properties on new inline comments and for permission request bodies. Deleting a comment is permanent. Attachment replacement creates a new version of the existing attachment.
+
+Database reads (fields, views, and entries) use Atlassian's experimental API. Entries are database-wide, not limited to a view. The filter key uses the provider's field ID and operator syntax, for example `--filter 'field-123[eq]=Ready'`. Results paginate up to `--limit`; changes during pagination can duplicate or omit entries.
+
+```bash
+aai-cli confluence databases get <database-id>
+aai-cli confluence databases fields <database-id> [--limit N]
+aai-cli confluence databases views <database-id> [--limit N]
+aai-cli confluence databases entries <database-id> [--sort SORT] [--filter 'field-id[operator]=value'] [--limit N]
+aai-cli confluence databases entry <database-id> <entry-id>
+```
+
+Confluence currently does not document REST operations to create or update database entries, fields, or views. The generic `confluence request` command remains available for less common JSON endpoints.
+
 Page create accepts either a numeric space ID or a space key. Page bodies use Confluence storage-format HTML.
 
 Move positions:

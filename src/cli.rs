@@ -1351,6 +1351,8 @@ pub struct ConfluenceCommand {
 pub enum ConfluenceResource {
     Spaces(ConfluenceSpacesCommand),
     Pages(ConfluencePagesCommand),
+    Search(ConfluenceSearch),
+    Databases(ConfluenceDatabasesCommand),
     /// Call an uncommon Confluence REST endpoint with profile authentication.
     Request(GenericRequest),
 }
@@ -1395,6 +1397,8 @@ pub enum ConfluencePagesAction {
     Delete(IdArg),
     Comments(ConfluencePageCommentsCommand),
     Attachments(ConfluencePageAttachmentsCommand),
+    Versions(ConfluencePageVersionsCommand),
+    Permissions(ConfluencePagePermissionsCommand),
 }
 
 #[derive(Debug, Args)]
@@ -1407,6 +1411,9 @@ pub struct ConfluencePageCommentsCommand {
 pub enum ConfluencePageCommentsAction {
     List(ConfluencePageCommentsList),
     Create(ConfluencePageCommentsCreate),
+    Get(ConfluenceCommentGet),
+    Update(ConfluenceCommentUpdate),
+    Delete(ConfluenceCommentGet),
 }
 
 #[derive(Debug, Args)]
@@ -1425,6 +1432,9 @@ pub struct ConfluencePageCommentsCreate {
     pub json: Option<String>,
     #[arg(long = "reply-to")]
     pub reply_to: Option<String>,
+    /// Inline marker reference; requires --json with selection fields when creating a new inline comment.
+    #[arg(long)]
+    pub inline_marker_ref: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -1438,6 +1448,8 @@ pub enum ConfluencePageAttachmentsAction {
     List(ConfluencePageAttachmentsList),
     Download(ConfluencePageAttachmentsDownload),
     Upload(ConfluencePageAttachmentsUpload),
+    Replace(ConfluencePageAttachmentsReplace),
+    Delete(IdArg),
 }
 
 #[derive(Debug, Args)]
@@ -1531,6 +1543,153 @@ impl ConfluenceMovePosition {
             Self::Append => "append",
         }
     }
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluenceSearch {
+    /// Confluence Query Language expression.
+    #[arg(long, conflicts_with = "query", required_unless_present = "query")]
+    pub cql: Option<String>,
+    /// Full-text search term.
+    #[arg(long, conflicts_with = "cql")]
+    pub query: Option<String>,
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluenceDatabasesCommand {
+    #[command(subcommand)]
+    pub action: ConfluenceDatabasesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum ConfluenceDatabasesAction {
+    Get(IdArg),
+    Fields(ConfluenceDatabaseList),
+    Views(ConfluenceDatabaseList),
+    Entries(ConfluenceDatabaseEntries),
+    Entry(ConfluenceDatabaseEntry),
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluenceDatabaseList {
+    pub id: String,
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluenceDatabaseEntries {
+    pub id: String,
+    #[arg(long)]
+    pub sort: Option<String>,
+    /// Filter as fieldId[operator]=value; repeat for AND conditions.
+    #[arg(long = "filter")]
+    pub filters: Vec<String>,
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluenceDatabaseEntry {
+    pub id: String,
+    pub entry_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluenceCommentGet {
+    pub id: String,
+    #[arg(long, value_enum)]
+    pub kind: ConfluenceCommentKind,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluenceCommentUpdate {
+    pub id: String,
+    #[arg(long, value_enum)]
+    pub kind: ConfluenceCommentKind,
+    #[arg(long)]
+    pub body: Option<String>,
+    #[arg(long)]
+    pub json: Option<String>,
+    #[arg(long)]
+    pub version: Option<u64>,
+}
+
+#[derive(Debug, Clone, Copy, ValueEnum)]
+pub enum ConfluenceCommentKind {
+    Footer,
+    Inline,
+}
+impl ConfluenceCommentKind {
+    pub fn segment(self) -> &'static str {
+        match self {
+            Self::Footer => "footer-comments",
+            Self::Inline => "inline-comments",
+        }
+    }
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluencePageAttachmentsReplace {
+    pub page_id: String,
+    pub attachment_id: String,
+    #[arg(long)]
+    pub file: String,
+    #[arg(long)]
+    pub comment: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluencePageVersionsCommand {
+    #[command(subcommand)]
+    pub action: ConfluencePageVersionsAction,
+}
+#[derive(Debug, Subcommand)]
+pub enum ConfluencePageVersionsAction {
+    List(ConfluenceDatabaseList),
+    Get(ConfluencePageVersionGet),
+}
+#[derive(Debug, Args)]
+pub struct ConfluencePageVersionGet {
+    pub id: String,
+    pub version: u64,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluencePagePermissionsCommand {
+    #[command(subcommand)]
+    pub action: ConfluencePagePermissionsAction,
+}
+#[derive(Debug, Subcommand)]
+pub enum ConfluencePagePermissionsAction {
+    List(ConfluenceDatabaseList),
+    RestrictionState(IdArg),
+    SetRestrictionState(ConfluenceJsonWrite),
+    Add(ConfluenceJsonWrite),
+    Set(ConfluenceJsonWrite),
+    Delete(ConfluencePermissionDelete),
+}
+#[derive(Debug, Args)]
+pub struct ConfluenceJsonWrite {
+    pub id: String,
+    #[arg(long)]
+    pub json: String,
+}
+
+#[derive(Debug, Args)]
+pub struct ConfluencePermissionDelete {
+    pub id: String,
+    #[arg(long)]
+    pub principal_type: Option<String>,
+    #[arg(long)]
+    pub principal_id: Option<String>,
+    #[arg(long)]
+    pub operation: Option<String>,
+    /// Explicitly remove every direct permission on the page.
+    #[arg(long)]
+    pub all: bool,
 }
 
 #[derive(Debug, Args)]
@@ -4226,6 +4385,92 @@ mod tests {
     use super::*;
     use clap::CommandFactory;
     use clap::Parser;
+
+    #[test]
+    fn confluence_search_requires_one_search_mode() {
+        assert!(Cli::try_parse_from([
+            "aai-cli",
+            "confluence",
+            "search",
+            "--query",
+            "release notes"
+        ])
+        .is_ok());
+        assert!(
+            Cli::try_parse_from(["aai-cli", "confluence", "search", "--cql", "type = page"])
+                .is_ok()
+        );
+        assert!(Cli::try_parse_from(["aai-cli", "confluence", "search"]).is_err());
+        assert!(Cli::try_parse_from([
+            "aai-cli",
+            "confluence",
+            "search",
+            "--query",
+            "x",
+            "--cql",
+            "y"
+        ])
+        .is_err());
+    }
+
+    #[test]
+    fn confluence_new_workflows_parse() {
+        for args in [
+            vec![
+                "aai-cli",
+                "confluence",
+                "databases",
+                "entries",
+                "42",
+                "--filter",
+                "field[eq]=value",
+            ],
+            vec![
+                "aai-cli",
+                "confluence",
+                "pages",
+                "comments",
+                "update",
+                "7",
+                "--kind",
+                "inline",
+                "--json",
+                "-",
+            ],
+            vec![
+                "aai-cli",
+                "confluence",
+                "pages",
+                "attachments",
+                "replace",
+                "42",
+                "7",
+                "--file",
+                "data.txt",
+            ],
+            vec![
+                "aai-cli",
+                "confluence",
+                "pages",
+                "permissions",
+                "set-restriction-state",
+                "42",
+                "--json",
+                "-",
+            ],
+            vec![
+                "aai-cli",
+                "confluence",
+                "pages",
+                "versions",
+                "get",
+                "42",
+                "3",
+            ],
+        ] {
+            Cli::try_parse_from(args).expect("new Confluence workflow should parse");
+        }
+    }
 
     #[test]
     fn github_prs_list_parses_state_flag() {

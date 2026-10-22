@@ -47,9 +47,11 @@ Exit code is non-zero on any error.
 ## Resources
 
 - [Spaces](#spaces) — `spaces list`, `get`
-- [Pages](#pages) — `pages list`, `get`, `create`, `update`
-- [Page comments](#page-comments) — `pages comments list`, `create`
-- [Page attachments](#page-attachments) — `pages attachments list`, `download`, `upload`
+- [Pages](#pages) — `pages list`, `get`, `create`, `update`, `move`, `delete`, versions and permissions
+- [Page comments](#page-comments) — `pages comments list`, `create`, `get`, `update`, `delete`
+- [Page attachments](#page-attachments) — `pages attachments list`, `download`, `upload`, `replace`, `delete`
+- Search — `search --cql` or `search --query`
+- Databases — `databases get`, `fields`, `views`, `entries`, `entry`
 
 ## Spaces
 
@@ -651,3 +653,26 @@ aai-cli confluence pages attachments upload 3964929 --file /tmp/skill_doc_test.t
   }
 }
 ```
+
+## Extended Confluence workflows
+
+```bash
+aai-cli confluence search --query 'release notes' --limit 20
+aai-cli confluence search --cql 'type = page AND space = ENG'
+aai-cli confluence pages comments get 123 --kind inline
+aai-cli confluence pages comments update 123 --kind inline --json update.json
+aai-cli confluence pages comments delete 123 --kind footer
+aai-cli confluence pages attachments replace 42 123 --file report.pdf
+aai-cli confluence pages attachments delete 123
+aai-cli confluence pages versions list 42
+aai-cli confluence pages versions get 42 3
+aai-cli confluence pages permissions list 42
+aai-cli confluence pages permissions restriction-state 42
+aai-cli confluence pages permissions set-restriction-state 42 --json state.json
+aai-cli confluence pages permissions add 42 --json permission.json
+aai-cli confluence pages permissions delete 42 --principal-type user --principal-id account-id
+aai-cli confluence databases fields 42
+aai-cli confluence databases entries 42 --filter 'field-id[eq]=Ready'
+```
+
+For other database reads use `databases get`, `databases views`, and `databases entry`. Field, view, and entry reads are experimental and may change. Entries are not scoped to a database view. Database row writes are not documented by Atlassian. Permission writes use provider-shaped JSON bodies. Comment updates fetch the current version unless `--version` is supplied.
