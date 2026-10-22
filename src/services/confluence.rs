@@ -23,6 +23,24 @@ pub(crate) async fn dispatch(
             let base = site_url(ctx.profile(), "confluence", "request")?;
             generic_request::dispatch(client, ctx, "confluence", base, args).await
         }
+        ConfluenceResource::Search(args) => {
+            let site = site_url(ctx.profile(), "confluence", "search")?;
+            let mut url = format!("{site}/wiki/rest/api/content/search");
+            let cql = match args.cql {
+                Some(cql) => cql,
+                None => {
+                    let query = args.query.unwrap_or_default();
+                    format!(
+                        "text ~ \"{}\"",
+                        query.replace('\\', "\\\\").replace('"', "\\\"")
+                    )
+                }
+            };
+            append_query(&mut url, "cql", &cql);
+            append_query(&mut url, "limit", &page_size(args.limit, 100).to_string());
+            collect_cursor_results(client, ctx, "search", url, args.limit, None).await
+        }
+        ConfluenceResource::Databases(command) => database_dispatch(client, ctx, command).await,
         ConfluenceResource::Spaces(command) => match command.action {
             ConfluenceSpacesAction::List(args) => {
                 let url = spaces_list_url(
@@ -151,6 +169,15 @@ pub(crate) async fn dispatch(
                 ConfluencePageCommentsAction::Create(args) => {
                     create_page_comment(client, ctx, args).await
                 }
+                ConfluencePageCommentsAction::Get(args) => {
+                    comment_request(client, ctx, args, Method::GET).await
+                }
+                ConfluencePageCommentsAction::Update(args) => {
+                    update_comment(client, ctx, args).await
+                }
+                ConfluencePageCommentsAction::Delete(args) => {
+                    comment_request(client, ctx, args, Method::DELETE).await
+                }
             },
             ConfluencePagesAction::Attachments(command) => match command.action {
                 ConfluencePageAttachmentsAction::List(args) => {
@@ -162,9 +189,361 @@ pub(crate) async fn dispatch(
                 ConfluencePageAttachmentsAction::Upload(args) => {
                     upload_page_attachment(client, ctx, args).await
                 }
+                ConfluencePageAttachmentsAction::Replace(args) => {
+                    replace_page_attachment(client, ctx, args).await
+                }
+                ConfluencePageAttachmentsAction::Delete(args) => {
+                    let url = format!(
+                        "{}/wiki/api/v2/attachments/{}",
+                        site_url(ctx.profile(), "confluence", "pages.attachments.delete")?,
+                        enc(&args.id)
+                    );
+                    client
+                        .request(
+                            "confluence",
+                            "pages.attachments.delete",
+                            ctx.profile(),
+                            Method::DELETE,
+                            url,
+                            None,
+                        )
+                        .await
+                }
             },
+            ConfluencePagesAction::Versions(command) => {
+                page_versions_dispatch(client, ctx, command).await
+            }
+            ConfluencePagesAction::Permissions(command) => {
+                page_permissions_dispatch(client, ctx, command).await
+            }
         },
     }
+}
+
+async fn database_dispatch(
+    client: &ApiClient,
+    ctx: &Context,
+    command: ConfluenceDatabasesCommand,
+) -> Result<Value, AppError> {
+    let site = site_url(ctx.profile(), "confluence", "databases")?;
+    match command.action {
+        ConfluenceDatabasesAction::Get(args) => {
+            let url = format!("{site}/wiki/api/v2/databases/{}", enc(&args.id));
+            client
+                .request(
+                    "confluence",
+                    "databases.get",
+                    ctx.profile(),
+                    Method::GET,
+                    url,
+                    None,
+                )
+                .await
+        }
+        ConfluenceDatabasesAction::Entry(args) => {
+            let url = format!(
+                "{site}/wiki/api/v2/databases/{}/entries/{}",
+                enc(&args.id),
+                enc(&args.entry_id)
+            );
+            client
+                .request(
+                    "confluence",
+                    "databases.entry",
+                    ctx.profile(),
+                    Method::GET,
+                    url,
+                    None,
+                )
+                .await
+        }
+        ConfluenceDatabasesAction::Fields(args) => {
+            database_list(client, ctx, &site, &args.id, "fields", args.limit).await
+        }
+        ConfluenceDatabasesAction::Views(args) => {
+            database_list(client, ctx, &site, &args.id, "views", args.limit).await
+        }
+        ConfluenceDatabasesAction::Entries(args) => {
+            let mut url = format!("{site}/wiki/api/v2/databases/{}/entries", enc(&args.id));
+            append_query(&mut url, "limit", &page_size(args.limit, 100).to_string());
+            if let Some(sort) = args.sort {
+                append_query(&mut url, "sort", &sort);
+            }
+            for filter in args.filters {
+                append_database_filter(&mut url, &filter)?;
+            }
+            collect_cursor_results(client, ctx, "databases.entries", url, args.limit, None).await
+        }
+    }
+}
+
+fn append_database_filter(url: &mut String, filter: &str) -> Result<(), AppError> {
+    let invalid = || {
+        AppError::invalid_input(
+            "confluence",
+            "databases.entries",
+            "--filter must use fieldId=value or fieldId[gte|lte|gt|lt]=value",
+        )
+    };
+    let (name, value) = filter.split_once('=').ok_or_else(invalid)?;
+    let key = if let Some((field, operator)) = name.split_once('[') {
+        let operator = operator.strip_suffix(']').ok_or_else(invalid)?;
+        if field.is_empty() || !matches!(operator, "gte" | "lte" | "gt" | "lt") {
+            return Err(invalid());
+        }
+        format!("filter[{field}][{operator}]")
+    } else if !name.is_empty() && !name.contains(']') {
+        format!("filter[{name}]")
+    } else {
+        return Err(invalid());
+    };
+    append_query(url, &key, value);
+    Ok(())
+}
+
+async fn database_list(
+    client: &ApiClient,
+    ctx: &Context,
+    site: &str,
+    id: &str,
+    segment: &'static str,
+    limit: u32,
+) -> Result<Value, AppError> {
+    let mut url = format!("{site}/wiki/api/v2/databases/{}/{segment}", enc(id));
+    append_query(&mut url, "limit", &page_size(limit, 100).to_string());
+    collect_cursor_results(client, ctx, "databases.list", url, limit, None).await
+}
+
+async fn comment_request(
+    client: &ApiClient,
+    ctx: &Context,
+    args: ConfluenceCommentGet,
+    method: Method,
+) -> Result<Value, AppError> {
+    let url = format!(
+        "{}/wiki/api/v2/{}/{}",
+        site_url(ctx.profile(), "confluence", "comments")?,
+        args.kind.segment(),
+        enc(&args.id)
+    );
+    client
+        .request("confluence", "comments", ctx.profile(), method, url, None)
+        .await
+}
+
+async fn update_comment(
+    client: &ApiClient,
+    ctx: &Context,
+    args: ConfluenceCommentUpdate,
+) -> Result<Value, AppError> {
+    let url = format!(
+        "{}/wiki/api/v2/{}/{}",
+        site_url(ctx.profile(), "confluence", "comments.update")?,
+        args.kind.segment(),
+        enc(&args.id)
+    );
+    let mut body = input::read_json_arg("confluence", "comments.update", args.json.as_deref())?;
+    if let Some(text) = args.body {
+        input::ensure_object(&mut body).insert(
+            "body".into(),
+            json!({"representation":"storage","value":text}),
+        );
+    }
+    if body.get("body").is_none() && body.get("resolved").is_none() {
+        return Err(AppError::invalid_input(
+            "confluence",
+            "comments.update",
+            "--body or --json with body/resolved is required",
+        ));
+    }
+    let version = match args.version {
+        Some(v) => v,
+        None => {
+            let current = client
+                .request(
+                    "confluence",
+                    "comments.update",
+                    ctx.profile(),
+                    Method::GET,
+                    url.clone(),
+                    None,
+                )
+                .await?;
+            current
+                .pointer("/version/number")
+                .and_then(Value::as_u64)
+                .ok_or_else(|| {
+                    AppError::internal(
+                        "confluence",
+                        "comments.update",
+                        "comment response missing version.number",
+                    )
+                })?
+                + 1
+        }
+    };
+    input::ensure_object(&mut body).insert("version".into(), json!({"number":version}));
+    client
+        .request(
+            "confluence",
+            "comments.update",
+            ctx.profile(),
+            Method::PUT,
+            url,
+            Some(body),
+        )
+        .await
+}
+
+async fn page_versions_dispatch(
+    client: &ApiClient,
+    ctx: &Context,
+    command: ConfluencePageVersionsCommand,
+) -> Result<Value, AppError> {
+    let site = site_url(ctx.profile(), "confluence", "pages.versions")?;
+    match command.action {
+        ConfluencePageVersionsAction::List(args) => {
+            let mut url = format!("{site}/wiki/api/v2/pages/{}/versions", enc(&args.id));
+            append_query(&mut url, "limit", &page_size(args.limit, 100).to_string());
+            collect_cursor_results(client, ctx, "pages.versions", url, args.limit, None).await
+        }
+        ConfluencePageVersionsAction::Get(args) => {
+            let url = format!(
+                "{site}/wiki/api/v2/pages/{}/versions/{}",
+                enc(&args.id),
+                args.version
+            );
+            client
+                .request(
+                    "confluence",
+                    "pages.versions",
+                    ctx.profile(),
+                    Method::GET,
+                    url,
+                    None,
+                )
+                .await
+        }
+    }
+}
+
+async fn page_permissions_dispatch(
+    client: &ApiClient,
+    ctx: &Context,
+    command: ConfluencePagePermissionsCommand,
+) -> Result<Value, AppError> {
+    let site = site_url(ctx.profile(), "confluence", "pages.permissions")?;
+    match command.action {
+        ConfluencePagePermissionsAction::List(args) => {
+            let mut url = format!("{site}/wiki/api/v2/pages/{}/permissions", enc(&args.id));
+            append_query(&mut url, "limit", &page_size(args.limit, 250).to_string());
+            collect_cursor_results(client, ctx, "pages.permissions.list", url, args.limit, None)
+                .await
+        }
+        ConfluencePagePermissionsAction::RestrictionState(args) => {
+            let url = format!(
+                "{site}/wiki/api/v2/pages/{}/restriction-state",
+                enc(&args.id)
+            );
+            client
+                .request(
+                    "confluence",
+                    "pages.permissions.restriction-state",
+                    ctx.profile(),
+                    Method::GET,
+                    url,
+                    None,
+                )
+                .await
+        }
+        ConfluencePagePermissionsAction::SetRestrictionState(args) => {
+            permission_write(client, ctx, &site, args, "restriction-state", Method::PUT).await
+        }
+        ConfluencePagePermissionsAction::Add(args) => {
+            permission_write(client, ctx, &site, args, "permissions", Method::POST).await
+        }
+        ConfluencePagePermissionsAction::Set(args) => {
+            permission_write(client, ctx, &site, args, "permissions", Method::PUT).await
+        }
+        ConfluencePagePermissionsAction::Delete(args) => {
+            let mut url = format!("{site}/wiki/api/v2/pages/{}/permissions", enc(&args.id));
+            let has_pair = args.principal_type.is_some() && args.principal_id.is_some();
+            if (args.all && (has_pair || args.operation.is_some()))
+                || (!args.all && !has_pair)
+                || (args.principal_type.is_some() != args.principal_id.is_some())
+            {
+                return Err(AppError::invalid_input(
+                    "confluence",
+                    "pages.permissions.delete",
+                    "provide --principal-type and --principal-id, optionally --operation; or --all",
+                ));
+            }
+            if let Some(kind) = args.principal_type {
+                append_query(&mut url, "principal-type", &kind);
+            }
+            if let Some(id) = args.principal_id {
+                append_query(&mut url, "principal-id", &id);
+            }
+            if let Some(op) = args.operation {
+                append_query(&mut url, "operation", &op);
+            }
+            client
+                .request(
+                    "confluence",
+                    "pages.permissions.delete",
+                    ctx.profile(),
+                    Method::DELETE,
+                    url,
+                    None,
+                )
+                .await
+        }
+    }
+}
+
+async fn permission_write(
+    client: &ApiClient,
+    ctx: &Context,
+    site: &str,
+    args: ConfluenceJsonWrite,
+    segment: &str,
+    method: Method,
+) -> Result<Value, AppError> {
+    let url = format!("{site}/wiki/api/v2/pages/{}/{segment}", enc(&args.id));
+    let body = input::read_json_arg("confluence", "pages.permissions", Some(&args.json))?;
+    client
+        .request(
+            "confluence",
+            "pages.permissions",
+            ctx.profile(),
+            method,
+            url,
+            Some(body),
+        )
+        .await
+}
+
+async fn replace_page_attachment(
+    client: &ApiClient,
+    ctx: &Context,
+    args: ConfluencePageAttachmentsReplace,
+) -> Result<Value, AppError> {
+    let base = site_url(ctx.profile(), "confluence", "pages.attachments.replace")?;
+    let url = format!(
+        "{base}/wiki/rest/api/content/{}/child/attachment/{}/data",
+        enc(&args.page_id),
+        enc(&args.attachment_id)
+    );
+    client
+        .upload(
+            "confluence",
+            "pages.attachments.replace",
+            ctx.profile(),
+            url,
+            &args.file,
+            args.comment.as_deref(),
+        )
+        .await
 }
 
 async fn collect_cursor_results(
@@ -259,7 +638,8 @@ async fn fetch_cursor_pages(
 fn append_query(url: &mut String, key: &str, value: &str) {
     let separator = if url.contains('?') { '&' } else { '?' };
     url.push(separator);
-    url.push_str(key);
+    // Atlassian's gateway rejects literal brackets in database filter keys.
+    url.push_str(&enc(key).replace('[', "%5B").replace(']', "%5D"));
     url.push('=');
     url.push_str(&enc(value));
 }
@@ -495,19 +875,54 @@ async fn create_page_comment(
         ));
     }
 
-    let kind = match args.reply_to.as_deref() {
-        Some(parent_id) => detect_comment_kind(client, ctx, parent_id).await?,
-        None => CommentKind::Footer,
-    };
-
     let mut payload =
         input::read_json_arg("confluence", "pages.comments.create", args.json.as_deref())?;
+    let kind = match args.reply_to.as_deref() {
+        Some(parent_id) => detect_comment_kind(client, ctx, parent_id).await?,
+        None if args.text_selection.is_some()
+            || payload.get("inlineCommentProperties").is_some() =>
+        {
+            CommentKind::Inline
+        }
+        None => CommentKind::Footer,
+    };
     let map = input::ensure_object(&mut payload);
     if let Some(text) = args.body {
         map.insert(
             "body".to_string(),
             json!({ "representation": "storage", "value": text }),
         );
+    }
+    if kind.segment() == "inline-comments" && args.reply_to.is_none() {
+        let properties = input::ensure_object(
+            map.entry("inlineCommentProperties")
+                .or_insert_with(|| json!({})),
+        );
+        if let Some(selection) = args.text_selection {
+            properties.insert("textSelection".to_string(), Value::String(selection));
+        }
+        if properties
+            .get("textSelection")
+            .and_then(Value::as_str)
+            .is_none()
+        {
+            return Err(AppError::invalid_input("confluence", "pages.comments.create", "top-level inline comments require --text-selection or inlineCommentProperties.textSelection in --json"));
+        }
+        let count = args.selection_match_count.unwrap_or(1);
+        let index = args.selection_match_index.unwrap_or(0);
+        if count == 0 || index >= count {
+            return Err(AppError::invalid_input(
+                "confluence",
+                "pages.comments.create",
+                "selection match count must be greater than the zero-based index",
+            ));
+        }
+        properties
+            .entry("textSelectionMatchCount".to_string())
+            .or_insert_with(|| json!(count));
+        properties
+            .entry("textSelectionMatchIndex".to_string())
+            .or_insert_with(|| json!(index));
     }
     match args.reply_to {
         Some(pid) => {
@@ -860,6 +1275,14 @@ fn trim_attachment(src: &Value) -> Value {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn database_filter_encodes_provider_bracket_query() {
+        let mut url = "https://example.atlassian.net/wiki/api/v2/databases/1/entries".to_string();
+        append_database_filter(&mut url, "field-1=eq:Ready & waiting").unwrap();
+        assert_eq!(url, "https://example.atlassian.net/wiki/api/v2/databases/1/entries?filter%5Bfield-1%5D=eq%3AReady%20%26%20waiting");
+        assert!(append_database_filter(&mut url, "field-1[eq]=Ready").is_err());
+    }
 
     fn spaces_args(
         space_type: Option<&str>,
