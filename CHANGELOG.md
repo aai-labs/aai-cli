@@ -4,6 +4,8 @@ All notable user-visible changes to `aai-cli` are recorded here.
 
 ## Unreleased
 
+## 0.1.2 - 2026-10-22
+
 ## 0.1.1 - 2026-10-22
 
 ### Added
