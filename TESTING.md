@@ -5,6 +5,7 @@ All testing conventions for this Rust CLI live here.
 ## Canonical commands
 
 - Full safe suite: `scripts/run-tests.sh safe`
+- Release automation tests (Python 3.11+): `python3 -B -m unittest discover -s scripts -p 'test_*.py'`
 - Format: `cargo fmt --check`
 - Tests: `cargo test`
 - Focused test: `cargo test <test-name>`

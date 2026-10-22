@@ -6,6 +6,8 @@ All notable user-visible changes to `aai-cli` are recorded here.
 
 ### Added
 
+- Added crates.io packaging and automatic patch releases from `main`, with validated uploads, version commits, and release tags.
+
 - Added generic `custom-api request` with scoped public HTTPS targets, configurable authentication and headers, isolated credential gateway transport, and a bundled generic skill.
 
 - Added the `merkys` command group for a Merkys knowledge base: `ask` (creates a conversation, asks, and returns the answer with its cited sources in one call), `research start|get|stop` (deep research, polled with `--wait`, never streamed), `conversations list|search|messages`, `documents list`, `sources list`, `assistants list`, and a read-only `request`. Profiles use a user API key and a required `base_url`.
