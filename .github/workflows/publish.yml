@@ -1,0 +1,76 @@
+name: Publish crate
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: crates-io-release
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      # Use the latest main after waiting for an earlier release to finish.
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy,rustfmt
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Check publishing credential
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: test -n "$CARGO_REGISTRY_TOKEN"
+
+      - name: Prepare patch version and changelog
+        id: release
+        run: python3 scripts/prepare-release.py
+
+      - name: Update lockfile and validate release
+        run: |
+          cargo check --all-targets --all-features
+          scripts/run-tests.sh safe
+          cargo publish --dry-run --locked --allow-dirty --registry crates-io
+
+      - name: Save release commit
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add Cargo.toml Cargo.lock CHANGELOG.md
+          if ! git diff --cached --quiet; then
+            git commit -m "chore(release): v$RELEASE_VERSION"
+          fi
+          # A concurrent merge makes this fail safely before uploading.
+          git push origin HEAD:main
+
+      - name: Publish to crates.io
+        if: steps.release.outputs.published != 'true'
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo publish --locked --registry crates-io
+
+      - name: Tag published version
+        env:
+          RELEASE_VERSION: ${{ steps.release.outputs.version }}
+        run: |
+          tag="v$RELEASE_VERSION"
+          if git show-ref --verify --quiet "refs/tags/$tag"; then
+            test "$(git rev-parse "$tag^{commit}")" = "$(git rev-parse HEAD)"
+          else
+            git tag -a "$tag" -m "aai-cli $RELEASE_VERSION"
+          fi
+          git push origin "refs/tags/$tag"

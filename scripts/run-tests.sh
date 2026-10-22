@@ -24,6 +24,7 @@ mode="${1:-safe}"
 filter="${2:-}"
 
 run_safe() {
+  python3 -B -m unittest discover -s scripts -p 'test_*.py'
   cargo fmt --check
   cargo test
   cargo clippy --all-targets -- -D warnings

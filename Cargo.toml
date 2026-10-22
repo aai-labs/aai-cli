@@ -2,8 +2,23 @@
 name = "aai-cli"
 version = "0.1.0"
 edition = "2021"
-description = "Agent-friendly CLI wrappers for Atlassian, GitHub, Google, and Zoho APIs"
+description = "Agent-friendly CLI for work APIs with consistent JSON output and bundled skills"
 license = "MIT"
+repository = "https://github.com/aai-labs/aai-cli"
+readme = "README.md"
+keywords = ["cli", "agents", "automation", "api"]
+categories = ["command-line-utilities"]
+include = [
+    "/src/**",
+    "/build.rs",
+    "/bundled/skills/**",
+    "/tests/**",
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/LICENSE",
+    "/CHANGELOG.md",
+]
 
 [[bin]]
 name = "aai-cli"
