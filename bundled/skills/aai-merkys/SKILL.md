@@ -5,6 +5,8 @@ description: Use aai-cli to ask Merkys questions and get grounded answers with c
 
 # aai-cli Merkys
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when the answer should come from the organization's Merkys knowledge base (uploaded documents, connected Jira/Confluence/Drive/email sources, and the legal or medical corpora) instead of from your own memory or the web.
 
 Before running commands, confirm the active profile or pass `--profile`. A Merkys profile uses a **user API key** sent in the `X-API-Key` header (`auth_type = "api_key_header"`) and needs a `base_url`. Everything you do is done as the key's owner: you only see what that user's role and access rules allow, and your questions appear in that user's conversation history.

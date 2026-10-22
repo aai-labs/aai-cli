@@ -133,6 +133,41 @@ printf '%s' "$GITHUB_TOKEN" | aai-cli --config local/e2e.config.toml secrets set
 
 Keep credentials and generated local configs under ignored `local/`; never commit them.
 
+## Managed credential gateway
+
+For deployments where users must not receive provider credentials, run the companion
+`aai-gateway` binary on trusted infrastructure. The gateway stores provider profiles in
+an encrypted state file and issues scoped proxy tokens. The CLI receives only the proxy
+token and sends typed HTTP operations through the gateway; direct profiles continue to
+work unchanged.
+
+Gateway client profiles contain no provider secret references:
+
+```toml
+[profiles.github-gateway]
+credential_source = "gateway"
+gateway_url = "https://gateway.example.com"
+gateway_profile_id = "github-work"
+gateway_token_secret = "gateway.github-agent"
+provider = "github"
+auth_type = "bearer_token"
+owner = "acme"
+repo = "app"
+```
+
+Start a local gateway with `AAI_GATEWAY_ADMIN_TOKEN` and private state/key paths:
+
+```bash
+AAI_GATEWAY_ADMIN_TOKEN='use-a-protected-value' \
+  aai-gateway serve --state-file local/gateway-state.enc.json \
+  --key-file local/gateway-state.key
+```
+
+Use `aai-cli gateway profiles` and `aai-cli gateway tokens` with `AAI_GATEWAY_URL`
+and `AAI_GATEWAY_ADMIN_TOKEN` to manage profiles and grants. Gateway mode supports
+typed shared HTTP integrations; generic requests, SMTP/IMAP, CalDAV, and local Excel
+operations remain local-only in this version.
+
 ## Bundled Agent Skills
 
 `aai-cli` embeds Agent Skills for supported provider workflows. They are inert package assets until installed:

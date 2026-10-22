@@ -5,6 +5,8 @@ description: Use aai-cli to inspect and manage GitHub repositories, issues, pull
 
 # aai-cli GitHub
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with GitHub through `aai-cli github`.
 
 Before running commands, confirm the active profile or pass `--profile`. GitHub profiles normally provide `owner` and `repo`; most commands also accept `--owner` and `--repo` overrides.

@@ -1,0 +1,1018 @@
+use std::{
+    collections::HashMap,
+    fs, io,
+    net::SocketAddr,
+    path::{Path, PathBuf},
+    sync::Arc,
+    time::{SystemTime, UNIX_EPOCH},
+};
+
+use axum::{
+    extract::{Multipart, Path as AxumPath, State},
+    http::{header, HeaderMap, HeaderValue, StatusCode},
+    response::{IntoResponse, Response},
+    routing::{get, patch, post},
+    Json, Router,
+};
+use base64::{engine::general_purpose::STANDARD as B64, Engine as _};
+use chacha20poly1305::{
+    aead::{Aead, KeyInit},
+    XChaCha20Poly1305, XNonce,
+};
+use rand::RngCore;
+use reqwest::{Client, Method};
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
+use subtle::ConstantTimeEq;
+use tokio::sync::RwLock;
+use url::Url;
+
+use crate::{
+    config::Profile,
+    error::AppError,
+    gateway_catalog,
+    gateway_protocol::{
+        ExecuteMetadata, GatewayErrorBody, PROTOCOL_VERSION, RESPONSE_SOURCE_HEADER,
+    },
+    http::apply_auth,
+    oauth,
+};
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct Grant {
+    #[serde(default)]
+    pub allow_all_operations: bool,
+    #[serde(default)]
+    pub allow_operations: Vec<String>,
+    #[serde(default)]
+    pub deny_operations: Vec<String>,
+    #[serde(default)]
+    pub allow_methods: Vec<String>,
+    #[serde(default)]
+    pub deny_methods: Vec<String>,
+}
+
+impl Grant {
+    fn permits(&self, operation: &str, method: &Method) -> bool {
+        let method = method.as_str().to_ascii_uppercase();
+        if self.deny_operations.iter().any(|item| item == operation)
+            || self
+                .deny_methods
+                .iter()
+                .any(|item| item.eq_ignore_ascii_case(&method))
+        {
+            return false;
+        }
+        let operation_allowed =
+            self.allow_all_operations || self.allow_operations.iter().any(|item| item == operation);
+        operation_allowed
+            && self
+                .allow_methods
+                .iter()
+                .any(|item| item.eq_ignore_ascii_case(&method))
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StoredToken {
+    pub label: Option<String>,
+    pub digest: String,
+    #[serde(default = "default_true")]
+    pub enabled: bool,
+    pub expires_at: Option<u64>,
+    #[serde(default)]
+    pub grants: HashMap<String, Grant>,
+}
+
+fn default_true() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct GatewayDocument {
+    pub version: u32,
+    #[serde(default)]
+    pub profiles: HashMap<String, Profile>,
+    #[serde(default)]
+    pub tokens: HashMap<String, StoredToken>,
+}
+
+#[derive(Clone)]
+pub struct GatewayApp {
+    pub store: Arc<RwLock<GatewayStore>>,
+    pub admin_token: String,
+    pub client: Client,
+}
+
+pub struct GatewayStore {
+    document: GatewayDocument,
+    state_path: PathBuf,
+    key_path: PathBuf,
+    key: [u8; 32],
+}
+
+impl GatewayStore {
+    pub fn open(state_path: PathBuf, key_path: PathBuf) -> Result<Self, AppError> {
+        let key = load_or_create_key(&key_path, state_path.exists())?;
+        let document = if state_path.exists() {
+            decrypt_document(&state_path, &key)?
+        } else {
+            GatewayDocument {
+                version: 1,
+                ..GatewayDocument::default()
+            }
+        };
+        Ok(Self {
+            document,
+            state_path,
+            key_path,
+            key,
+        })
+    }
+
+    fn save(&self) -> Result<(), AppError> {
+        let plaintext = serde_json::to_vec(&self.document)
+            .map_err(|err| AppError::internal("gateway", "state.save", err.to_string()))?;
+        let cipher = XChaCha20Poly1305::new((&self.key).into());
+        let mut nonce = [0_u8; 24];
+        rand::rng().fill_bytes(&mut nonce);
+        let ciphertext = cipher
+            .encrypt(XNonce::from_slice(&nonce), plaintext.as_ref())
+            .map_err(|_| AppError::internal("gateway", "state.save", "state encryption failed"))?;
+        let envelope = serde_json::json!({
+            "version": 1,
+            "nonce": B64.encode(nonce),
+            "ciphertext": B64.encode(ciphertext),
+        });
+        let rendered = serde_json::to_vec_pretty(&envelope)
+            .map_err(|err| AppError::internal("gateway", "state.save", err.to_string()))?;
+        if let Some(parent) = self.state_path.parent() {
+            fs::create_dir_all(parent).map_err(|err| io_error("state.save", err))?;
+        }
+        let temporary = self.state_path.with_extension("tmp");
+        fs::write(&temporary, rendered).map_err(|err| io_error("state.save", err))?;
+        set_private(&temporary)?;
+        fs::rename(&temporary, &self.state_path).map_err(|err| io_error("state.save", err))?;
+        let _ = &self.key_path;
+        Ok(())
+    }
+}
+
+fn io_error(operation: &'static str, err: io::Error) -> AppError {
+    AppError::internal("gateway", operation, err.to_string())
+}
+
+fn load_or_create_key(path: &Path, state_exists: bool) -> Result<[u8; 32], AppError> {
+    if path.exists() {
+        let bytes = fs::read(path).map_err(|err| io_error("state.key", err))?;
+        return bytes
+            .try_into()
+            .map_err(|_| AppError::config("gateway key file must contain exactly 32 bytes"));
+    }
+    if state_exists {
+        return Err(AppError::config(
+            "gateway encrypted state exists but its key file is missing",
+        ));
+    }
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|err| io_error("state.key", err))?;
+    }
+    let mut key = [0_u8; 32];
+    rand::rng().fill_bytes(&mut key);
+    fs::write(path, key).map_err(|err| io_error("state.key", err))?;
+    set_private(path)?;
+    Ok(key)
+}
+
+fn decrypt_document(path: &Path, key: &[u8; 32]) -> Result<GatewayDocument, AppError> {
+    let value: serde_json::Value =
+        serde_json::from_slice(&fs::read(path).map_err(|err| io_error("state.load", err))?)
+            .map_err(|err| AppError::config(format!("invalid gateway state: {err}")))?;
+    let nonce = B64
+        .decode(
+            value
+                .get("nonce")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default(),
+        )
+        .map_err(|_| AppError::config("invalid gateway state nonce"))?;
+    let ciphertext = B64
+        .decode(
+            value
+                .get("ciphertext")
+                .and_then(|v| v.as_str())
+                .unwrap_or_default(),
+        )
+        .map_err(|_| AppError::config("invalid gateway state ciphertext"))?;
+    if nonce.len() != 24 {
+        return Err(AppError::config("invalid gateway state nonce length"));
+    }
+    let cipher = XChaCha20Poly1305::new(key.into());
+    let plaintext = cipher
+        .decrypt(XNonce::from_slice(&nonce), ciphertext.as_ref())
+        .map_err(|_| AppError::auth("gateway", "state.load", "failed to decrypt gateway state"))?;
+    serde_json::from_slice(&plaintext)
+        .map_err(|err| AppError::config(format!("invalid gateway state payload: {err}")))
+}
+
+#[cfg(unix)]
+fn set_private(path: &Path) -> Result<(), AppError> {
+    use std::os::unix::fs::PermissionsExt;
+    fs::set_permissions(path, fs::Permissions::from_mode(0o600))
+        .map_err(|err| io_error("state.permissions", err))
+}
+
+#[cfg(not(unix))]
+fn set_private(_path: &Path) -> Result<(), AppError> {
+    Ok(())
+}
+
+pub fn router(app: GatewayApp) -> Router {
+    Router::new()
+        .route("/health/live", get(health))
+        .route("/health/ready", get(health))
+        .route("/api/v1/execute", post(execute))
+        .route(
+            "/api/v1/admin/profiles",
+            get(list_profiles).post(create_profile),
+        )
+        .route(
+            "/api/v1/admin/profiles/{id}",
+            get(get_profile).put(replace_profile).delete(delete_profile),
+        )
+        .route("/api/v1/admin/tokens", get(list_tokens).post(create_token))
+        .route(
+            "/api/v1/admin/tokens/{id}",
+            patch(update_token).delete(delete_token),
+        )
+        .with_state(app)
+}
+
+async fn health() -> &'static str {
+    "ok"
+}
+
+async fn execute(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    mut multipart: Multipart,
+) -> Response {
+    let Some(token) = bearer(&headers) else {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "missing proxy token",
+            None,
+        );
+    };
+    let mut metadata = None;
+    let mut body = Vec::new();
+    while let Ok(Some(field)) = multipart.next_field().await {
+        match field.name() {
+            Some("metadata") => metadata = field.text().await.ok(),
+            Some("body") => {
+                if let Ok(bytes) = field.bytes().await {
+                    body = bytes.to_vec();
+                }
+            }
+            _ => {}
+        }
+    }
+    let Some(metadata) =
+        metadata.and_then(|text| serde_json::from_str::<ExecuteMetadata>(&text).ok())
+    else {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "missing or invalid metadata",
+            None,
+        );
+    };
+    if metadata.protocol_version != PROTOCOL_VERSION || metadata.operation == "request" {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "unsupported gateway operation or protocol version",
+            None,
+        );
+    }
+    let Ok(method) = metadata.method() else {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "invalid HTTP method",
+            None,
+        );
+    };
+    if !gateway_catalog::allows(&metadata.service, &metadata.operation, &method) {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "operation and HTTP method are not a valid typed operation",
+            None,
+        );
+    }
+    let (profile, grant) = {
+        let store = app.store.read().await;
+        let Some(stored) = find_token(&store.document, &token) else {
+            return gateway_error(
+                StatusCode::UNAUTHORIZED,
+                "gateway_auth_error",
+                "invalid proxy token",
+                None,
+            );
+        };
+        if !stored.enabled || stored.expires_at.is_some_and(|expiry| expiry <= now()) {
+            return gateway_error(
+                StatusCode::UNAUTHORIZED,
+                "gateway_auth_error",
+                "proxy token is disabled or expired",
+                None,
+            );
+        }
+        let Some(grant) = stored.grants.get(&metadata.profile_id) else {
+            return gateway_error(
+                StatusCode::FORBIDDEN,
+                "gateway_denied",
+                "token is not granted this profile",
+                None,
+            );
+        };
+        let Some(profile) = store.document.profiles.get(&metadata.profile_id) else {
+            return gateway_error(
+                StatusCode::NOT_FOUND,
+                "gateway_denied",
+                "gateway profile was not found",
+                None,
+            );
+        };
+        (profile.clone(), grant.clone())
+    };
+    if !grant.permits(&metadata.operation, &method) {
+        return gateway_error(
+            StatusCode::FORBIDDEN,
+            "gateway_denied",
+            "operation or HTTP method is not permitted",
+            None,
+        );
+    }
+    if !target_allowed(&metadata.service, &metadata.url, &profile) {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "request target is not allowed for this profile",
+            None,
+        );
+    }
+    forward(&app, &metadata, method, body, profile).await
+}
+
+fn bearer(headers: &HeaderMap) -> Option<String> {
+    headers
+        .get(header::AUTHORIZATION)
+        .and_then(|value| value.to_str().ok())
+        .and_then(|value| {
+            let (scheme, credentials) = value.split_once(' ')?;
+            scheme.eq_ignore_ascii_case("Bearer").then_some(credentials)
+        })
+        .filter(|value| !value.is_empty())
+        .map(str::to_string)
+}
+
+fn find_token<'a>(document: &'a GatewayDocument, token: &str) -> Option<&'a StoredToken> {
+    let digest = Sha256::digest(token.as_bytes());
+    document.tokens.values().find(|candidate| {
+        hex_digest(&digest)
+            .as_bytes()
+            .ct_eq(candidate.digest.as_bytes())
+            .into()
+    })
+}
+
+fn hex_digest(bytes: &[u8]) -> String {
+    bytes.iter().map(|byte| format!("{byte:02x}")).collect()
+}
+
+fn target_allowed(service: &str, raw_url: &str, profile: &Profile) -> bool {
+    let Ok(url) = Url::parse(raw_url) else {
+        return false;
+    };
+    if url.username() != "" || url.password().is_some() || url.fragment().is_some() {
+        return false;
+    }
+    if url.scheme() != "https"
+        && !(url.scheme() == "http" && url.host_str().is_some_and(is_loopback))
+    {
+        return false;
+    }
+    let expected = profile
+        .site_url
+        .as_deref()
+        .or(profile.base_url.as_deref())
+        .and_then(|base| Url::parse(base).ok())
+        .and_then(|base| base.host_str().map(str::to_string));
+    match (expected, url.host_str()) {
+        (Some(expected), Some(actual)) => expected.eq_ignore_ascii_case(actual),
+        (None, Some(actual)) => default_hosts(service)
+            .iter()
+            .any(|host| host.eq_ignore_ascii_case(actual)),
+        _ => false,
+    }
+}
+
+fn is_loopback(host: &str) -> bool {
+    host == "localhost" || host == "127.0.0.1" || host == "[::1]"
+}
+
+fn default_hosts(service: &str) -> &'static [&'static str] {
+    match service {
+        "github" => &["api.github.com"],
+        "bitbucket" => &["api.bitbucket.org"],
+        "jira" | "confluence" => &[],
+        "apollo" => &["api.apollo.io"],
+        "hubspot" => &["api.hubapi.com"],
+        "slack" => &["slack.com"],
+        "openpanel" => &["api.openpanel.dev"],
+        "posthog" => &["us.i.posthog.com", "eu.i.posthog.com"],
+        "microsoft" => &["graph.microsoft.com"],
+        "drive" | "sheets" | "email" | "calendar" => &[
+            "www.googleapis.com",
+            "sheets.googleapis.com",
+            "gmail.googleapis.com",
+            "calendar.googleapis.com",
+        ],
+        _ => &[],
+    }
+}
+
+async fn forward(
+    app: &GatewayApp,
+    metadata: &ExecuteMetadata,
+    method: Method,
+    body: Vec<u8>,
+    profile: Profile,
+) -> Response {
+    let token = match oauth::resolve_token(&profile, &app.client, "gateway", "execute").await {
+        Ok(token) => token,
+        Err(err) => return app_error_response(StatusCode::UNAUTHORIZED, err),
+    };
+    let effective = Profile {
+        token: Some(token),
+        ..profile.clone()
+    };
+    let mut request = app.client.request(method, &metadata.url);
+    request = match apply_auth(request, "gateway", "execute", &effective) {
+        Ok(request) => request,
+        Err(err) => return app_error_response(StatusCode::UNAUTHORIZED, err),
+    };
+    if let Some(content_type) = &metadata.content_type {
+        request = request.header(header::CONTENT_TYPE, content_type);
+    }
+    if let Some(accept) = &metadata.accept {
+        request = request.header(header::ACCEPT, accept);
+    }
+    for (name, value) in &metadata.headers {
+        if !matches!(
+            name.to_ascii_lowercase().as_str(),
+            "content-range"
+                | "x-upload-content-type"
+                | "x-upload-content-length"
+                | "x-atlassian-token"
+                | "if-match"
+        ) {
+            return gateway_error(
+                StatusCode::BAD_REQUEST,
+                "gateway_protocol_error",
+                "request contains an unsafe header",
+                None,
+            );
+        }
+        request = request.header(name, value);
+    }
+    if !body.is_empty() {
+        request = request.body(body);
+    }
+    let result = request.send().await;
+    let response = match result {
+        Ok(response) => response,
+        Err(err) => {
+            return app_error_response(
+                StatusCode::BAD_GATEWAY,
+                AppError::internal("gateway", "execute", err.to_string()),
+            )
+        }
+    };
+    let status = response.status();
+    let content_type = response.headers().get(header::CONTENT_TYPE).cloned();
+    let bytes = match response.bytes().await {
+        Ok(bytes) => redact(&bytes, &effective, content_type.as_ref()),
+        Err(err) => {
+            return app_error_response(
+                StatusCode::BAD_GATEWAY,
+                AppError::internal("gateway", "execute", err.to_string()),
+            )
+        }
+    };
+    let mut output = Response::new(axum::body::Body::from(bytes));
+    *output.status_mut() = status;
+    output
+        .headers_mut()
+        .insert(RESPONSE_SOURCE_HEADER, HeaderValue::from_static("provider"));
+    if let Some(content_type) = content_type {
+        output
+            .headers_mut()
+            .insert(header::CONTENT_TYPE, content_type);
+    }
+    output
+}
+
+fn redact(bytes: &[u8], profile: &Profile, content_type: Option<&HeaderValue>) -> Vec<u8> {
+    let textual = content_type
+        .and_then(|value| value.to_str().ok())
+        .map(|value| {
+            value.starts_with("text/")
+                || value.contains("json")
+                || value.contains("xml")
+                || value.contains("javascript")
+        })
+        .unwrap_or(false);
+    if !textual {
+        return bytes.to_vec();
+    }
+    let mut text = String::from_utf8_lossy(bytes).into_owned();
+    for secret in [
+        profile.token.as_deref(),
+        profile.refresh_token.as_deref(),
+        profile.api_token.as_deref(),
+        profile.client_secret.as_deref(),
+        profile.password.as_deref(),
+    ]
+    .into_iter()
+    .flatten()
+    {
+        if !secret.is_empty() {
+            text = text.replace(secret, "[REDACTED]");
+        }
+    }
+    text.into_bytes()
+}
+
+fn gateway_error(
+    status: StatusCode,
+    code: &str,
+    message: &str,
+    details: Option<serde_json::Value>,
+) -> Response {
+    let body = GatewayErrorBody {
+        code: code.to_string(),
+        message: message.to_string(),
+        service: "gateway".to_string(),
+        operation: "execute".to_string(),
+        status: Some(status.as_u16()),
+        details,
+    };
+    let mut response = (status, Json(body)).into_response();
+    response
+        .headers_mut()
+        .insert(RESPONSE_SOURCE_HEADER, HeaderValue::from_static("gateway"));
+    response
+}
+
+fn app_error_response(status: StatusCode, error: AppError) -> Response {
+    gateway_error(status, error.code, &error.message, error.details)
+}
+
+fn admin_ok(headers: &HeaderMap, expected: &str) -> bool {
+    bearer(headers).is_some_and(|token| token.as_bytes().ct_eq(expected.as_bytes()).into())
+}
+
+async fn list_profiles(State(app): State<GatewayApp>, headers: HeaderMap) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let store = app.store.read().await;
+    let values: Vec<_> = store.document.profiles.iter().map(|(id, profile)| serde_json::json!({"id": id, "provider": profile.provider, "auth_type": profile.auth_type, "has_credential": profile.token.is_some() || profile.api_token.is_some() || profile.password.is_some()})).collect();
+    Json(values).into_response()
+}
+
+async fn get_profile(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    AxumPath(id): AxumPath<String>,
+) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let store = app.store.read().await;
+    match store.document.profiles.get(&id) {
+        Some(profile) => {
+            Json(serde_json::json!({"id": id, "profile": redact_profile(profile)})).into_response()
+        }
+        None => gateway_error(
+            StatusCode::NOT_FOUND,
+            "not_found",
+            "profile not found",
+            None,
+        ),
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct ProfileRequest {
+    id: Option<String>,
+    profile: Profile,
+}
+
+async fn create_profile(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    Json(request): Json<ProfileRequest>,
+) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let id = request
+        .id
+        .or_else(|| request.profile.gateway_profile_id.clone())
+        .or_else(|| request.profile.provider.clone())
+        .unwrap_or_else(|| "default".to_string());
+    let mut store = app.store.write().await;
+    if store.document.profiles.contains_key(&id) {
+        return gateway_error(
+            StatusCode::CONFLICT,
+            "conflict",
+            "profile already exists",
+            None,
+        );
+    }
+    store.document.profiles.insert(id.clone(), request.profile);
+    if let Err(err) = store.save() {
+        return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+    }
+    Json(serde_json::json!({"id": id})).into_response()
+}
+
+async fn replace_profile(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    AxumPath(id): AxumPath<String>,
+    Json(request): Json<ProfileRequest>,
+) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let mut store = app.store.write().await;
+    store.document.profiles.insert(id.clone(), request.profile);
+    if let Err(err) = store.save() {
+        return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+    }
+    Json(serde_json::json!({"id": id})).into_response()
+}
+
+async fn delete_profile(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    AxumPath(id): AxumPath<String>,
+) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let mut store = app.store.write().await;
+    if store
+        .document
+        .tokens
+        .values()
+        .any(|token| token.enabled && token.grants.contains_key(&id))
+    {
+        return gateway_error(
+            StatusCode::CONFLICT,
+            "conflict",
+            "profile is referenced by an enabled token",
+            None,
+        );
+    }
+    store.document.profiles.remove(&id);
+    if let Err(err) = store.save() {
+        return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+    }
+    StatusCode::NO_CONTENT.into_response()
+}
+
+#[derive(Debug, Serialize)]
+struct TokenView {
+    id: String,
+    label: Option<String>,
+    enabled: bool,
+    expires_at: Option<u64>,
+    profiles: Vec<String>,
+}
+
+async fn list_tokens(State(app): State<GatewayApp>, headers: HeaderMap) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let store = app.store.read().await;
+    let values: Vec<_> = store
+        .document
+        .tokens
+        .iter()
+        .map(|(id, token)| TokenView {
+            id: id.clone(),
+            label: token.label.clone(),
+            enabled: token.enabled,
+            expires_at: token.expires_at,
+            profiles: token.grants.keys().cloned().collect(),
+        })
+        .collect();
+    Json(values).into_response()
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenRequest {
+    label: Option<String>,
+    expires_at: Option<u64>,
+    grants: HashMap<String, Grant>,
+}
+
+async fn create_token(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    Json(request): Json<TokenRequest>,
+) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let mut secret = [0_u8; 32];
+    rand::rng().fill_bytes(&mut secret);
+    let id = format!("gw_{}", &hex_digest(&Sha256::digest(secret))[..16]);
+    let token = format!("{id}.{}", B64.encode(secret));
+    let digest = hex_digest(&Sha256::digest(token.as_bytes()));
+    let stored = StoredToken {
+        label: request.label,
+        digest,
+        enabled: true,
+        expires_at: request.expires_at,
+        grants: request.grants,
+    };
+    let mut store = app.store.write().await;
+    if stored
+        .grants
+        .keys()
+        .any(|id| !store.document.profiles.contains_key(id))
+    {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "invalid_input",
+            "token grant references an unknown profile",
+            None,
+        );
+    }
+    store.document.tokens.insert(id.clone(), stored);
+    if let Err(err) = store.save() {
+        return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+    }
+    Json(serde_json::json!({"id": id, "token": token})).into_response()
+}
+
+async fn delete_token(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    AxumPath(id): AxumPath<String>,
+) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let mut store = app.store.write().await;
+    store.document.tokens.remove(&id);
+    if let Err(err) = store.save() {
+        return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+    }
+    StatusCode::NO_CONTENT.into_response()
+}
+
+#[derive(Debug, Deserialize)]
+struct TokenUpdate {
+    enabled: Option<bool>,
+    expires_at: Option<u64>,
+    grants: Option<HashMap<String, Grant>>,
+}
+
+async fn update_token(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    AxumPath(id): AxumPath<String>,
+    Json(update): Json<TokenUpdate>,
+) -> Response {
+    if !admin_ok(&headers, &app.admin_token) {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "invalid admin token",
+            None,
+        );
+    }
+    let mut store = app.store.write().await;
+    if let Some(grants) = update.grants.as_ref() {
+        if grants
+            .keys()
+            .any(|profile_id| !store.document.profiles.contains_key(profile_id))
+        {
+            return gateway_error(
+                StatusCode::BAD_REQUEST,
+                "invalid_input",
+                "token grant references an unknown profile",
+                None,
+            );
+        }
+    }
+    let Some(token) = store.document.tokens.get_mut(&id) else {
+        return gateway_error(StatusCode::NOT_FOUND, "not_found", "token not found", None);
+    };
+    if let Some(enabled) = update.enabled {
+        token.enabled = enabled;
+    }
+    if update.expires_at.is_some() {
+        token.expires_at = update.expires_at;
+    }
+    if let Some(grants) = update.grants {
+        token.grants = grants;
+    }
+    if let Err(err) = store.save() {
+        return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
+    }
+    StatusCode::NO_CONTENT.into_response()
+}
+
+fn redact_profile(profile: &Profile) -> serde_json::Value {
+    serde_json::json!({ "provider": profile.provider, "auth_type": profile.auth_type, "base_url": profile.base_url, "site_url": profile.site_url, "has_token": profile.token.is_some(), "has_api_token": profile.api_token.is_some(), "has_password": profile.password.is_some(), "has_client_secret": profile.client_secret.is_some() })
+}
+
+fn now() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .map(|duration| duration.as_secs())
+        .unwrap_or(0)
+}
+
+pub async fn serve(
+    bind: SocketAddr,
+    state_path: PathBuf,
+    key_path: PathBuf,
+    admin_token: String,
+) -> Result<(), AppError> {
+    let client = Client::builder()
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+        .map_err(|err| AppError::internal("gateway", "serve", err.to_string()))?;
+    let store = GatewayStore::open(state_path, key_path)?;
+    let app = router(GatewayApp {
+        store: Arc::new(RwLock::new(store)),
+        admin_token,
+        client,
+    });
+    let listener = tokio::net::TcpListener::bind(bind)
+        .await
+        .map_err(|err| io_error("serve.bind", err))?;
+    axum::serve(listener, app)
+        .await
+        .map_err(|err| AppError::internal("gateway", "serve", err.to_string()))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn grant_requires_both_operation_and_method() {
+        let grant = Grant {
+            allow_operations: vec!["items.list".into()],
+            allow_methods: vec!["GET".into()],
+            ..Grant::default()
+        };
+        assert!(grant.permits("items.list", &Method::GET));
+        assert!(!grant.permits("items.list", &Method::POST));
+        assert!(!grant.permits("items.get", &Method::GET));
+    }
+
+    #[test]
+    fn explicit_deny_wins() {
+        let grant = Grant {
+            allow_all_operations: true,
+            allow_methods: vec!["GET".into()],
+            deny_operations: vec!["items.get".into()],
+            ..Grant::default()
+        };
+        assert!(!grant.permits("items.get", &Method::GET));
+    }
+
+    #[test]
+    fn encrypted_state_round_trip_does_not_store_plaintext_credentials() {
+        let temp = tempfile::tempdir().unwrap();
+        let state_path = temp.path().join("gateway.enc.json");
+        let key_path = temp.path().join("gateway.key");
+        let mut store = GatewayStore::open(state_path.clone(), key_path.clone()).unwrap();
+        store.document.profiles.insert(
+            "github".into(),
+            Profile {
+                provider: Some("github".into()),
+                token: Some("provider-secret".into()),
+                ..Profile::default()
+            },
+        );
+        store.save().unwrap();
+        let ciphertext = std::fs::read_to_string(&state_path).unwrap();
+        assert!(!ciphertext.contains("provider-secret"));
+        let reopened = GatewayStore::open(state_path, key_path).unwrap();
+        assert_eq!(
+            reopened.document.profiles["github"].token.as_deref(),
+            Some("provider-secret")
+        );
+    }
+
+    #[test]
+    fn token_digest_lookup_supports_revocation() {
+        let mut document = GatewayDocument::default();
+        let token = "gw_test.secret";
+        document.tokens.insert(
+            "test".into(),
+            StoredToken {
+                label: None,
+                digest: hex_digest(&Sha256::digest(token.as_bytes())),
+                enabled: true,
+                expires_at: None,
+                grants: HashMap::new(),
+            },
+        );
+        assert!(find_token(&document, token).is_some());
+        document.tokens.get_mut("test").unwrap().enabled = false;
+        assert!(find_token(&document, "wrong").is_none());
+        assert!(!find_token(&document, token).unwrap().enabled);
+    }
+
+    #[test]
+    fn bearer_scheme_is_case_insensitive() {
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_static("bEaReR secret"),
+        );
+        assert_eq!(bearer(&headers).as_deref(), Some("secret"));
+    }
+
+    #[test]
+    fn redaction_covers_refresh_tokens() {
+        let profile = Profile {
+            refresh_token: Some("refresh-secret".into()),
+            ..Profile::default()
+        };
+        let content_type = HeaderValue::from_static("application/json");
+        assert_eq!(
+            redact(
+                br#"{"refresh_token":"refresh-secret"}"#,
+                &profile,
+                Some(&content_type),
+            ),
+            br#"{"refresh_token":"[REDACTED]"}"#
+        );
+    }
+}

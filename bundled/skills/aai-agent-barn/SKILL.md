@@ -5,6 +5,8 @@ description: Use aai-cli to manage Agent Barn agents, configuration, templates, 
 
 # Agent Barn through aai-cli
 
+Profiles may use the managed credential gateway for typed Agent Barn commands. The generic `request` command and streaming captures are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use `aai-cli --profile agent-barn agent-barn ...`. Configure an explicit API `base_url` ending in `/api/v1`, `auth_type = "bearer_token"`, and an existing personal API key through `token_env` or `token_secret`. Changing the account password invalidates existing keys; the CLI never persists the session tokens returned by that account operation. Supply password changes through JSON on stdin or a local file. Key creation and revocation remain in Agent Barn Account settings; no CLI login or refresh flow is needed.
 
 Start with `auth context` to discover the caller, memberships, key access mode, and platform authority. Set `--organization-id` or `profile.org` explicitly before accessing organization resources. Platform access does not imply organization membership. READ_ONLY keys cannot mutate; FULL keys still require the user's organization and agent permissions. Missing or inaccessible resources can return 404; denied actions return 403.

@@ -5,6 +5,8 @@ description: Use aai-cli to inspect HubSpot CRM records, files, events, conversa
 
 # aai-cli HubSpot
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with HubSpot through `aai-cli hubspot`.
 
 Before running commands, confirm the active profile or pass `--profile`. HubSpot profiles use `auth_type = "hubspot_service_key"` or `auth_type = "hubspot_legacy_private_app"` with `token_secret`.

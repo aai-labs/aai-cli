@@ -5,6 +5,8 @@ description: Use aai-cli to find Google Drive files and folders, read their meta
 
 # aai-cli Google Drive
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Google Drive through `aai-cli drive`.
 
 Before running commands, confirm the active profile or pass `--profile`. Drive profiles are ordinary Google REST profiles (`provider = "google"`, `auth_type = "bearer_token"`), the same shape as Gmail, Calendar, and Sheets.

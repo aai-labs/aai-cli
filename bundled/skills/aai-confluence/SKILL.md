@@ -5,6 +5,8 @@ description: Use aai-cli to inspect and manage Confluence spaces, pages, comment
 
 # aai-cli Confluence
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Confluence Cloud through `aai-cli confluence`.
 
 Before running commands, confirm the active profile or pass `--profile`. Prefer typed commands for spaces, pages, comments, attachments, and page moves; use `confluence request` only for uncommon Confluence REST endpoints.

@@ -49,5 +49,8 @@ pub async fn dispatch(ctx: &Context, command: Command) -> Result<Value, AppError
         Command::Config(_) => unreachable!("config commands are dispatched before context loading"),
         Command::Skills(_) => unreachable!("skills commands are dispatched before context loading"),
         Command::Secrets(command) => crate::secrets::dispatch(ctx, command),
+        Command::Gateway(_) => {
+            unreachable!("gateway administration is dispatched before profile loading")
+        }
     }
 }

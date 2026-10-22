@@ -5,6 +5,8 @@ description: Use aai-cli email commands with Zoho Mail profiles to list, read, s
 
 # aai-cli Zoho Mail
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Zoho Mail through `aai-cli email` and a Zoho Mail profile.
 
 Always pass the intended Zoho Mail profile with `--profile` unless the active default profile is already known. `messages list` returns rich message objects that usually contain enough metadata to choose the next `messages get <MESSAGE_ID>` call.

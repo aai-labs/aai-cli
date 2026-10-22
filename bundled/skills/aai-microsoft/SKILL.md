@@ -5,6 +5,8 @@ description: Work with Microsoft 365 through aai-cli by choosing the right Micro
 
 # aai-cli Microsoft Graph
 
+Profiles may use the managed credential gateway for typed Microsoft Graph operations. Generic requests and interactive device login are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill for Microsoft 365 work through `aai-cli microsoft`. Start from the user's intent and Microsoft 365 ownership model, not from the command list. Read the concepts reference before a cross-service or file-editing workflow.
 
 ## Choose the service first

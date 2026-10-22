@@ -5,6 +5,8 @@ description: Use aai-cli to manage Pipedrive leads, persons, organizations, deal
 
 # aai-cli Pipedrive
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with the Pipedrive CRM through `aai-cli pipedrive`.
 
 Before running commands, confirm the active profile or pass `--profile`. Pipedrive profiles use a personal API token (`auth_type = "pipedrive_personal_token"`); no `owner`/`repo`-style scoping is needed since a profile maps to one Pipedrive account.

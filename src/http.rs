@@ -1,3 +1,4 @@
+#[path = "http/custom_api.rs"]
 pub(crate) mod custom_api;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -6,6 +7,10 @@ use base64::{engine::general_purpose, Engine as _};
 use reqwest::{Client, Method, RequestBuilder};
 use serde_json::Value;
 
+use crate::gateway_catalog;
+use crate::gateway_protocol::{
+    ExecuteMetadata, GatewayErrorBody, EXECUTE_PATH, PROTOCOL_VERSION, RESPONSE_SOURCE_HEADER,
+};
 use crate::{config::Profile, error::AppError};
 
 pub(crate) fn multipart_boundary() -> String {
@@ -67,6 +72,7 @@ impl ApiClient {
     pub async fn capture_to_file(
         &self,
         service: &'static str,
+        operation: &'static str,
         profile: &Profile,
         url: String,
         output: &str,
@@ -74,9 +80,43 @@ impl ApiClient {
     ) -> Result<Value, AppError> {
         use std::{fs::OpenOptions, io::Write, path::Path};
         use tokio::time::{timeout, timeout_at, Duration, Instant};
-        let operation = "capture";
         let path = std::path::absolute(Path::new(output))
             .map_err(|e| AppError::invalid_input(service, operation, e.to_string()))?;
+        if profile.credential_source.as_deref() == Some("gateway") {
+            if duration_seconds.is_some() {
+                return Err(AppError::invalid_input(
+                    service,
+                    operation,
+                    "stream capture is not available for gateway profiles",
+                ));
+            }
+            let bytes = self
+                .download_with_accept(service, operation, profile, url, "application/octet-stream")
+                .await?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .map_err(|e| {
+                    AppError::invalid_input(
+                        service,
+                        operation,
+                        format!("cannot create output file: {e}"),
+                    )
+                })?;
+            file.write_all(&bytes).map_err(|e| {
+                AppError::internal(service, operation, format!("failed writing output: {e}"))
+            })?;
+            file.flush().map_err(|e| {
+                AppError::internal(service, operation, format!("failed flushing output: {e}"))
+            })?;
+            return Ok(serde_json::json!({
+                "path": path,
+                "content_type": "application/octet-stream",
+                "bytes": bytes.len(),
+                "termination_reason": "complete",
+            }));
+        }
         let token = self.bearer(service, operation, profile).await?;
         let effective = Profile {
             token: Some(token),
@@ -205,6 +245,26 @@ impl ApiClient {
         url: String,
         body: Option<Value>,
     ) -> Result<Value, AppError> {
+        if profile.credential_source.as_deref() == Some("gateway") {
+            let body = body
+                .map(|value| serde_json::to_vec(&value))
+                .transpose()
+                .map_err(|err| AppError::internal(service, operation, err.to_string()))?;
+            let response = self
+                .gateway_execute(GatewayExecuteRequest {
+                    service,
+                    operation,
+                    profile,
+                    method,
+                    url,
+                    body,
+                    content_type: Some("application/json"),
+                    accept: Some("application/json"),
+                    headers: Vec::new(),
+                })
+                .await?;
+            return parse_json_response(service, operation, response);
+        }
         Self::request_with(&self.client, service, operation, profile, method, url, body)
             .await
             .map(|(value, _)| value)
@@ -219,6 +279,26 @@ impl ApiClient {
         url: String,
         body: Option<Value>,
     ) -> Result<Value, AppError> {
+        if profile.credential_source.as_deref() == Some("gateway") {
+            let body = body
+                .map(|value| serde_json::to_vec(&value))
+                .transpose()
+                .map_err(|err| AppError::internal(service, operation, err.to_string()))?;
+            let response = self
+                .gateway_execute(GatewayExecuteRequest {
+                    service,
+                    operation,
+                    profile,
+                    method,
+                    url,
+                    body,
+                    content_type: Some("application/json"),
+                    accept: Some("application/json"),
+                    headers: Vec::new(),
+                })
+                .await?;
+            return parse_json_response(service, operation, response);
+        }
         let (value, next_url) = Self::request_with(
             &self.no_redirect_client,
             service,
@@ -312,6 +392,22 @@ impl ApiClient {
         url: String,
         accept: &str,
     ) -> Result<Vec<u8>, AppError> {
+        if profile.credential_source.as_deref() == Some("gateway") {
+            let response = self
+                .gateway_execute(GatewayExecuteRequest {
+                    service,
+                    operation,
+                    profile,
+                    method: Method::GET,
+                    url,
+                    body: None,
+                    content_type: None,
+                    accept: Some(accept),
+                    headers: Vec::new(),
+                })
+                .await?;
+            return response_bytes(service, operation, response);
+        }
         let token = crate::oauth::resolve_token(profile, &self.client, service, operation).await?;
         let effective = crate::config::Profile {
             token: Some(token),
@@ -372,6 +468,33 @@ impl ApiClient {
         profile: &Profile,
         request: BytesRequest,
     ) -> Result<RawResponse, AppError> {
+        if profile.credential_source.as_deref() == Some("gateway") {
+            let BytesRequest {
+                method,
+                url,
+                content_type,
+                headers,
+                body,
+            } = request;
+            let response = self
+                .gateway_execute(GatewayExecuteRequest {
+                    service,
+                    operation,
+                    profile,
+                    method,
+                    url,
+                    body: Some(body),
+                    content_type: Some(&content_type),
+                    accept: Some("application/json"),
+                    headers,
+                })
+                .await?;
+            let body = response_bytes(service, operation, response)?;
+            return Ok(RawResponse {
+                body: parse_body_value(&body),
+                location: None,
+            });
+        }
         let token = crate::oauth::resolve_token(profile, &self.client, service, operation).await?;
         let effective = crate::config::Profile {
             token: Some(token),
@@ -466,12 +589,28 @@ impl ApiClient {
         // closing boundary
         body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
 
+        let content_type = format!("multipart/form-data; boundary={boundary}");
+        if profile.credential_source.as_deref() == Some("gateway") {
+            let response = self
+                .gateway_execute(GatewayExecuteRequest {
+                    service,
+                    operation,
+                    profile,
+                    method: Method::POST,
+                    url,
+                    body: Some(body),
+                    content_type: Some(&content_type),
+                    accept: Some("application/json"),
+                    headers: vec![("X-Atlassian-Token".to_string(), "no-check".to_string())],
+                })
+                .await?;
+            return parse_json_response(service, operation, response);
+        }
         let token = crate::oauth::resolve_token(profile, &self.client, service, operation).await?;
         let effective = crate::config::Profile {
             token: Some(token),
             ..profile.clone()
         };
-        let content_type = format!("multipart/form-data; boundary={boundary}");
         let mut request = self
             .client
             .post(&url)
@@ -504,6 +643,188 @@ impl ApiClient {
                 Some(parsed),
             ))
         }
+    }
+
+    async fn gateway_execute(
+        &self,
+        request: GatewayExecuteRequest<'_>,
+    ) -> Result<GatewayResponse, AppError> {
+        let GatewayExecuteRequest {
+            service,
+            operation,
+            profile,
+            method,
+            url,
+            body,
+            content_type,
+            accept,
+            headers,
+        } = request;
+        if !gateway_catalog::allows(service, operation, &method) {
+            return Err(AppError::invalid_input(
+                service,
+                operation,
+                "gateway mode only supports valid typed operations",
+            ));
+        }
+        let gateway_url = profile.gateway_url.as_deref().ok_or_else(|| {
+            AppError::auth(service, operation, "gateway profile is missing gateway_url")
+        })?;
+        let profile_id = profile.gateway_profile_id.as_deref().ok_or_else(|| {
+            AppError::auth(
+                service,
+                operation,
+                "gateway profile is missing gateway_profile_id",
+            )
+        })?;
+        let token = profile.gateway_token.as_deref().ok_or_else(|| {
+            AppError::auth(
+                service,
+                operation,
+                "gateway profile is missing gateway token",
+            )
+        })?;
+        let metadata = ExecuteMetadata {
+            protocol_version: PROTOCOL_VERSION,
+            profile_id: profile_id.to_string(),
+            service: service.to_string(),
+            operation: operation.to_string(),
+            method: method.to_string(),
+            url,
+            content_type: content_type.map(str::to_string),
+            accept: accept.map(str::to_string),
+            headers: headers.clone(),
+        };
+        let metadata_json = serde_json::to_string(&metadata).map_err(|err| {
+            AppError::internal(
+                service,
+                operation,
+                format!("failed to encode gateway request: {err}"),
+            )
+        })?;
+        let metadata_part = reqwest::multipart::Part::text(metadata_json)
+            .mime_str("application/json")
+            .map_err(|err| AppError::internal(service, operation, err.to_string()))?;
+        let mut form = reqwest::multipart::Form::new().part("metadata", metadata_part);
+        if let Some(body) = body {
+            form = form.part("body", reqwest::multipart::Part::bytes(body));
+        }
+        let endpoint = format!("{}{}", gateway_url.trim_end_matches('/'), EXECUTE_PATH);
+        let response = self
+            .no_redirect_client
+            .post(endpoint)
+            .bearer_auth(token)
+            .multipart(form)
+            .send()
+            .await
+            .map_err(|err| {
+                AppError::internal(service, operation, format!("gateway request failed: {err}"))
+            })?;
+        let status = response.status();
+        let source = response
+            .headers()
+            .get(RESPONSE_SOURCE_HEADER)
+            .and_then(|value| value.to_str().ok())
+            .unwrap_or("gateway")
+            .to_string();
+        let body = response.bytes().await.map_err(|err| {
+            AppError::internal(
+                service,
+                operation,
+                format!("failed to read gateway response: {err}"),
+            )
+        })?;
+        if !status.is_success() {
+            if source == "provider" {
+                let details = serde_json::from_slice(&body).ok().or_else(|| {
+                    Some(Value::String(
+                        String::from_utf8_lossy(&body).chars().take(4096).collect(),
+                    ))
+                });
+                return Err(AppError::api(
+                    service,
+                    operation,
+                    status,
+                    format!("provider returned HTTP {}", status.as_u16()),
+                    details,
+                ));
+            }
+            let details = serde_json::from_slice::<GatewayErrorBody>(&body)
+                .ok()
+                .and_then(|error| serde_json::to_value(error).ok());
+            return Err(AppError::gateway(
+                service,
+                operation,
+                status,
+                format!("gateway rejected request (HTTP {})", status.as_u16()),
+                details,
+            ));
+        }
+        Ok(GatewayResponse {
+            status,
+            body: body.to_vec(),
+        })
+    }
+}
+
+struct GatewayExecuteRequest<'a> {
+    service: &'static str,
+    operation: &'static str,
+    profile: &'a Profile,
+    method: Method,
+    url: String,
+    body: Option<Vec<u8>>,
+    content_type: Option<&'a str>,
+    accept: Option<&'a str>,
+    headers: Vec<(String, String)>,
+}
+
+struct GatewayResponse {
+    status: reqwest::StatusCode,
+    body: Vec<u8>,
+}
+
+fn parse_body_value(body: &[u8]) -> Value {
+    if body.is_empty() {
+        Value::Object(serde_json::Map::new())
+    } else {
+        serde_json::from_slice(body)
+            .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(body).into_owned()))
+    }
+}
+
+fn parse_json_response(
+    service: &'static str,
+    operation: &'static str,
+    response: GatewayResponse,
+) -> Result<Value, AppError> {
+    if !response.status.is_success() {
+        return Err(AppError::api(
+            service,
+            operation,
+            response.status,
+            format!("provider returned HTTP {}", response.status.as_u16()),
+            Some(parse_body_value(&response.body)),
+        ));
+    }
+    Ok(parse_body_value(&response.body))
+}
+
+fn response_bytes(
+    service: &'static str,
+    operation: &'static str,
+    response: GatewayResponse,
+) -> Result<Vec<u8>, AppError> {
+    if response.status.is_success() {
+        Ok(response.body)
+    } else {
+        Err(AppError::api(
+            service,
+            operation,
+            response.status,
+            format!("provider returned HTTP {}", response.status.as_u16()),
+            Some(parse_body_value(&response.body)),
+        ))
     }
 }
 
@@ -589,7 +910,7 @@ async fn read_download(
     }
 }
 
-fn apply_auth(
+pub(crate) fn apply_auth(
     request: RequestBuilder,
     service: &'static str,
     operation: &'static str,
@@ -716,6 +1037,7 @@ mod tests {
     use std::{
         io::{Read, Write},
         net::TcpListener,
+        sync::{Arc, Mutex},
         thread,
     };
 
@@ -878,6 +1200,395 @@ mod tests {
 
         assert_eq!(error.code, "provider_api_error");
         assert_eq!(error.status, Some(302));
+    }
+
+    #[tokio::test]
+    async fn gateway_requests_do_not_follow_gateway_redirects() {
+        let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+        let address = listener.local_addr().unwrap();
+        let server = thread::spawn(move || {
+            let (mut stream, _) = listener.accept().unwrap();
+            let mut request = [0_u8; 4096];
+            let _ = stream.read(&mut request).unwrap();
+            stream
+                .write_all(
+                    b"HTTP/1.1 302 Found\r\nLocation: http://127.0.0.1:9/redirected\r\nContent-Length: 0\r\n\r\n",
+                )
+                .unwrap();
+        });
+        let client = ApiClient::new().unwrap();
+        let profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(format!("http://{address}")),
+            gateway_profile_id: Some("profile".into()),
+            gateway_token: Some("proxy-token".into()),
+            ..Profile::default()
+        };
+
+        let error = client
+            .request(
+                "github",
+                "items.list",
+                &profile,
+                Method::GET,
+                "http://provider.test/items".into(),
+                None,
+            )
+            .await
+            .unwrap_err();
+        server.join().unwrap();
+
+        assert_eq!(error.code, "gateway_error");
+        assert_eq!(error.status, Some(302));
+    }
+
+    async fn provider_once(
+        body: &'static [u8],
+        content_type: &'static str,
+    ) -> (String, Arc<Mutex<Option<String>>>) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        let authorization = Arc::new(Mutex::new(None));
+        let captured = Arc::clone(&authorization);
+        tokio::spawn(async move {
+            let (mut stream, _) = listener.accept().await.unwrap();
+            let mut bytes = vec![0_u8; 8192];
+            let count = stream.read(&mut bytes).await.unwrap();
+            let request = String::from_utf8_lossy(&bytes[..count]);
+            let value = request
+                .lines()
+                .find_map(|line| {
+                    line.strip_prefix("authorization: ")
+                        .or_else(|| line.strip_prefix("Authorization: "))
+                })
+                .map(str::to_string);
+            *captured.lock().unwrap() = value;
+            let head = format!("HTTP/1.1 200 OK\r\nContent-Type: {content_type}\r\nContent-Length: {}\r\nConnection: close\r\n\r\n", body.len());
+            stream.write_all(head.as_bytes()).await.unwrap();
+            stream.write_all(body).await.unwrap();
+        });
+        (format!("http://{address}"), authorization)
+    }
+
+    async fn gateway_profile(
+        provider_url: &str,
+        operation: &str,
+    ) -> (String, String, tempfile::TempDir) {
+        use crate::gateway_server::{router, GatewayApp, GatewayStore};
+        let temp = tempfile::tempdir().unwrap();
+        let store = GatewayStore::open(
+            temp.path().join("state.enc.json"),
+            temp.path().join("state.key"),
+        )
+        .unwrap();
+        let client = Client::builder().build().unwrap();
+        let app = GatewayApp {
+            store: Arc::new(tokio::sync::RwLock::new(store)),
+            admin_token: "admin".to_string(),
+            client: client.clone(),
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            axum::serve(listener, router(app)).await.unwrap();
+        });
+        let gateway_url = format!("http://{address}");
+        let profile = Profile {
+            provider: Some("github".into()),
+            auth_type: Some("bearer_token".into()),
+            base_url: Some(provider_url.into()),
+            gateway_profile_id: Some("fake".into()),
+            token: Some("provider-secret".into()),
+            ..Profile::default()
+        };
+        client
+            .post(format!("{gateway_url}/api/v1/admin/profiles"))
+            .bearer_auth("admin")
+            .json(&serde_json::json!({"profile": profile}))
+            .send()
+            .await
+            .unwrap();
+        let token_response: Value = client.post(format!("{gateway_url}/api/v1/admin/tokens")).bearer_auth("admin").json(&serde_json::json!({"grants": {"fake": {"allow_operations": [operation], "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE"]}}})).send().await.unwrap().json().await.unwrap();
+        (
+            gateway_url,
+            token_response["token"].as_str().unwrap().to_string(),
+            temp,
+        )
+    }
+
+    #[tokio::test]
+    async fn direct_json_request_keeps_provider_auth_local() {
+        let (provider, authorization) = provider_once(br#"{"ok":true}"#, "application/json").await;
+        let client = ApiClient::new().unwrap();
+        let profile = Profile {
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            token: Some("provider-secret".into()),
+            ..Profile::default()
+        };
+        let value = client
+            .request(
+                "github",
+                "items.list",
+                &profile,
+                Method::GET,
+                format!("{provider}/items"),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(value["ok"], true);
+        assert_eq!(
+            authorization.lock().unwrap().as_deref(),
+            Some("Bearer provider-secret")
+        );
+    }
+
+    #[tokio::test]
+    async fn gateway_json_request_injects_provider_auth_without_returning_it() {
+        let (provider, authorization) = provider_once(
+            br#"{"ok":true,"echo":"provider-secret"}"#,
+            "application/json",
+        )
+        .await;
+        let (gateway, proxy_token, _temp) = gateway_profile(&provider, "items.list").await;
+        let client = ApiClient::new().unwrap();
+        let profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(proxy_token),
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            ..Profile::default()
+        };
+        let value = client
+            .request(
+                "github",
+                "items.list",
+                &profile,
+                Method::GET,
+                format!("{provider}/items"),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(value["ok"], true);
+        assert_eq!(value["echo"], "[REDACTED]");
+        assert_eq!(
+            authorization.lock().unwrap().as_deref(),
+            Some("Bearer provider-secret")
+        );
+    }
+
+    #[tokio::test]
+    async fn services_added_after_gateway_v1_keep_working_in_direct_mode() {
+        for (service, operation, method) in [
+            ("agent-barn", "list_agents_get", Method::GET),
+            ("apollo", "people.search", Method::POST),
+            ("merkys", "ask", Method::POST),
+            ("microsoft", "planner.tasks.update", Method::PATCH),
+        ] {
+            let (provider, authorization) =
+                provider_once(br#"{"ok":true}"#, "application/json").await;
+            let profile = Profile {
+                base_url: Some(provider.clone()),
+                auth_type: Some("bearer_token".into()),
+                token: Some("provider-secret".into()),
+                ..Profile::default()
+            };
+            let value = ApiClient::new()
+                .unwrap()
+                .request(
+                    service,
+                    operation,
+                    &profile,
+                    method,
+                    format!("{provider}/typed"),
+                    None,
+                )
+                .await
+                .unwrap();
+            assert_eq!(value["ok"], true, "{service}");
+            assert_eq!(
+                authorization.lock().unwrap().as_deref(),
+                Some("Bearer provider-secret"),
+                "{service}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn services_added_after_gateway_v1_use_gateway_transport() {
+        for (service, operation, method) in [
+            ("agent-barn", "list_agents_get", Method::GET),
+            ("apollo", "people.search", Method::POST),
+            ("merkys", "ask", Method::POST),
+            ("microsoft", "planner.tasks.update", Method::PATCH),
+        ] {
+            let (provider, authorization) =
+                provider_once(br#"{"ok":true}"#, "application/json").await;
+            let (gateway, proxy_token, _temp) = gateway_profile(&provider, operation).await;
+            let profile = Profile {
+                credential_source: Some("gateway".into()),
+                gateway_url: Some(gateway),
+                gateway_profile_id: Some("fake".into()),
+                gateway_token: Some(proxy_token),
+                base_url: Some(provider.clone()),
+                auth_type: Some("bearer_token".into()),
+                ..Profile::default()
+            };
+            let value = ApiClient::new()
+                .unwrap()
+                .request(
+                    service,
+                    operation,
+                    &profile,
+                    method,
+                    format!("{provider}/typed"),
+                    None,
+                )
+                .await
+                .unwrap();
+            assert_eq!(value["ok"], true, "{service}");
+            assert_eq!(
+                authorization.lock().unwrap().as_deref(),
+                Some("Bearer provider-secret"),
+                "{service}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn direct_download_returns_provider_bytes() {
+        let (provider, authorization) =
+            provider_once(b"provider-secret", "application/octet-stream").await;
+        let client = ApiClient::new().unwrap();
+        let profile = Profile {
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            token: Some("provider-secret".into()),
+            ..Profile::default()
+        };
+        let bytes = client
+            .download(
+                "github",
+                "items.download",
+                &profile,
+                format!("{provider}/items/1"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(bytes, b"provider-secret");
+        assert_eq!(
+            authorization.lock().unwrap().as_deref(),
+            Some("Bearer provider-secret")
+        );
+    }
+
+    #[tokio::test]
+    async fn gateway_download_returns_redacted_bytes() {
+        let (provider, authorization) = provider_once(b"provider-secret", "text/plain").await;
+        let (gateway, proxy_token, _temp) = gateway_profile(&provider, "items.download").await;
+        let client = ApiClient::new().unwrap();
+        let profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(proxy_token),
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            ..Profile::default()
+        };
+        let bytes = client
+            .download(
+                "github",
+                "items.download",
+                &profile,
+                format!("{provider}/items/1"),
+            )
+            .await
+            .unwrap();
+        assert_eq!(bytes, b"[REDACTED]");
+        assert_eq!(
+            authorization.lock().unwrap().as_deref(),
+            Some("Bearer provider-secret")
+        );
+    }
+
+    #[tokio::test]
+    async fn direct_bytes_request_uses_provider_auth() {
+        let (provider, authorization) =
+            provider_once(br#"{"uploaded":true}"#, "application/json").await;
+        let client = ApiClient::new().unwrap();
+        let profile = Profile {
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            token: Some("provider-secret".into()),
+            ..Profile::default()
+        };
+        let response = client
+            .request_bytes(
+                "github",
+                "items.upload",
+                &profile,
+                BytesRequest {
+                    method: Method::POST,
+                    url: format!("{provider}/items"),
+                    content_type: "application/octet-stream".into(),
+                    headers: vec![],
+                    body: b"data".to_vec(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.body["uploaded"], true);
+        assert_eq!(
+            authorization.lock().unwrap().as_deref(),
+            Some("Bearer provider-secret")
+        );
+    }
+
+    #[tokio::test]
+    async fn gateway_bytes_request_uses_proxy_and_redacts_response() {
+        let (provider, authorization) = provider_once(
+            br#"{"uploaded":true,"key":"provider-secret"}"#,
+            "application/json",
+        )
+        .await;
+        let (gateway, proxy_token, _temp) = gateway_profile(&provider, "items.upload").await;
+        let client = ApiClient::new().unwrap();
+        let profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(proxy_token),
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            ..Profile::default()
+        };
+        let response = client
+            .request_bytes(
+                "github",
+                "items.upload",
+                &profile,
+                BytesRequest {
+                    method: Method::POST,
+                    url: format!("{provider}/items"),
+                    content_type: "application/octet-stream".into(),
+                    headers: vec![],
+                    body: b"data".to_vec(),
+                },
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.body["uploaded"], true);
+        assert_eq!(response.body["key"], "[REDACTED]");
+        assert_eq!(
+            authorization.lock().unwrap().as_deref(),
+            Some("Bearer provider-secret")
+        );
     }
 
     /// Answer one request per response, in order, and hand back the raw request texts.

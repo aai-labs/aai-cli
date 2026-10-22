@@ -5,6 +5,8 @@ description: Use aai-cli email commands with Gmail REST profiles to list, read, 
 
 # aai-cli Gmail
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Gmail through `aai-cli email` and a Gmail REST profile.
 
 Always pass the intended Gmail profile with `--profile` unless the active default profile is already known. `messages list` returns message stubs; use `messages get <MESSAGE_ID>` to read decoded subject and body content.

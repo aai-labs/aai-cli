@@ -5,6 +5,8 @@ description: Use aai-cli to read Slack channel metadata, files, bookmarks, links
 
 # aai-cli Slack
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Slack channel data through `aai-cli slack`.
 
 Before running commands, confirm the active profile or pass `--profile`. Slack profiles use a bot token (`auth_type = "bearer_token"`); this is a read-only integration — there is no message-sending and no OAuth install flow, only channel data reads.

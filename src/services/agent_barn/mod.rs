@@ -118,7 +118,14 @@ pub(crate) async fn dispatch(
                     None
                 };
                 return client
-                    .capture_to_file(SERVICE, &profile, url.to_string(), output, duration)
+                    .capture_to_file(
+                        SERVICE,
+                        e.operation_id.as_str(),
+                        &profile,
+                        url.to_string(),
+                        output,
+                        duration,
+                    )
                     .await;
             }
             if e.paging != "none" {
@@ -127,7 +134,14 @@ pub(crate) async fn dispatch(
             let method = Method::from_bytes(e.method.as_bytes())
                 .map_err(|_| invalid("invalid contract method"))?;
             client
-                .request_no_redirect(SERVICE, OP, &profile, method, url.to_string(), body)
+                .request_no_redirect(
+                    SERVICE,
+                    e.operation_id.as_str(),
+                    &profile,
+                    method,
+                    url.to_string(),
+                    body,
+                )
                 .await
         }
     }

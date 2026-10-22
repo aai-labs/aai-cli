@@ -2,6 +2,11 @@ mod cli;
 mod config;
 mod config_commands;
 mod error;
+mod gateway_catalog;
+mod gateway_commands;
+mod gateway_protocol;
+#[allow(dead_code)]
+mod gateway_server;
 mod http;
 mod input;
 mod oauth;
@@ -46,6 +51,7 @@ async fn run() -> Result<serde_json::Value, AppError> {
         // aai-cli's own tooling — these manage the CLI rather than doing work for an agent.
         cli::Command::Config(command) => config_commands::dispatch(cli.config.as_deref(), command),
         cli::Command::Skills(command) => skills::dispatch(command),
+        cli::Command::Gateway(command) => gateway_commands::dispatch(command).await,
         // Capability services follow. Excel is one of them, but it reads local files, so it
         // is the only one needing neither a profile nor an HTTP client — hence the early
         // arm. It still goes out through the same response envelope as the rest.

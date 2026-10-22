@@ -102,6 +102,23 @@ impl AppError {
         Self::new("internal_error", service, operation, message)
     }
 
+    pub fn gateway(
+        service: &'static str,
+        operation: &'static str,
+        status: StatusCode,
+        message: impl Into<String>,
+        details: Option<Value>,
+    ) -> Self {
+        Self {
+            code: "gateway_error",
+            message: message.into(),
+            service,
+            operation,
+            status: Some(status.as_u16()),
+            details,
+        }
+    }
+
     fn new(
         code: &'static str,
         service: &'static str,
