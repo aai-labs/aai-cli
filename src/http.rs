@@ -1593,11 +1593,12 @@ mod tests {
 
     /// Answer one request per response, in order, and hand back the raw request texts.
     fn redirect_to(location: &str) -> Vec<u8> {
-        format!("HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\n\r\n")
+        format!("HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n")
             .into_bytes()
     }
 
-    const FILE_RESPONSE: &[u8] = b"HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\npdf-bytes";
+    const FILE_RESPONSE: &[u8] =
+        b"HTTP/1.1 200 OK\r\nContent-Length: 9\r\nConnection: close\r\n\r\npdf-bytes";
 
     fn pipedrive_profile() -> Profile {
         Profile {

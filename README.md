@@ -49,11 +49,19 @@ Project features that are not provider services:
 
 ## Quick Start
 
-Install from the checked-out repository:
+Install from crates.io:
+
+```bash
+cargo install aai-cli --locked
+```
+
+Or install from the checked-out repository:
 
 ```bash
 cargo install --path .
 ```
+
+Maintainers: see the [crates.io release guide](docs/releasing.md) for packaging, validation, and publication.
 
 Build and test without installing:
 
