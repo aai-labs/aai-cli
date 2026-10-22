@@ -1,6 +1,7 @@
 use serde_json::{json, Value};
 
 const COLLECTION_KEYS: &[&str] = &[
+    "value",
     "values",
     "results",
     "issues",
@@ -19,12 +20,20 @@ const COLLECTION_KEYS: &[&str] = &[
     "permissions",
 ];
 
+/// Internal flag a service sets on a response it knows is complete although the provider
+/// sends no pagination metadata (an endpoint that is never paginated). Like
+/// `_aai_provider_next_url`, it is read here and removed before output, so the provider's
+/// response shape is untouched.
+pub(crate) const COMPLETE_MARKER: &str = "_aai_complete";
+
 pub(crate) fn annotate(value: Value, command_args: &[String]) -> Value {
     let analysis = analyze(&value, command_args);
     let metadata = json!({ "pagination": analysis });
     match value {
         Value::Object(mut object) => {
             object.remove("_aai_provider_next_url");
+            object.remove(COMPLETE_MARKER);
+            object.remove("_aai_collection");
             object.insert("_aai".to_string(), metadata);
             Value::Object(object)
         }
@@ -40,6 +49,35 @@ pub(crate) fn annotate(value: Value, command_args: &[String]) -> Value {
 }
 
 fn analyze(value: &Value, command_args: &[String]) -> Value {
+    if let Some(metadata) = value.get("_aai_collection") {
+        let parameters = metadata
+            .get("parameters")
+            .and_then(Value::as_object)
+            .map(|p| {
+                p.iter()
+                    .filter_map(|(k, v)| v.as_str().map(|v| (k.clone(), v.to_owned())))
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or_default();
+        let incomplete = metadata
+            .get("incomplete")
+            .and_then(Value::as_bool)
+            .unwrap_or(false);
+        let continuation = (!parameters.is_empty()).then_some(Continuation {
+            source: "agent-barn",
+            parameters,
+            next_url: None,
+        });
+        let more = continuation.is_some();
+        return json!({
+            "status": if more { "more_available" } else if incomplete { "unknown" } else { "complete" },
+            "has_more": if more { Some(true) } else if incomplete { None } else { Some(false) },
+            "returned_count": metadata.get("returned_count").cloned().unwrap_or_else(|| json!(returned_count(value))),
+            "next_command": if more { next_command(command_args, continuation.as_ref(), true) } else { None },
+            "continuation": continuation.map(|c| c.to_json()),
+            "instruction": if more { "Run next_command with the same filters to continue. Results can change between requests." } else if incomplete { "The provider capped this collection or no records were requested; do not assume the history is complete." } else { "All records in the requested provider view have been returned." }
+        });
+    }
     let returned_count = returned_count(value);
     let continuation = continuation(value);
     let truncated = value
@@ -172,6 +210,16 @@ fn continuation(value: &Value) -> Option<Continuation> {
         });
     }
 
+    if let Some(next_url) = value.get("@odata.nextLink").and_then(Value::as_str) {
+        if !next_url.is_empty() {
+            return Some(Continuation {
+                source: "@odata.nextLink",
+                parameters: query_parameters(next_url),
+                next_url: Some(next_url.to_string()),
+            });
+        }
+    }
+
     offset_continuation(value)
 }
 
@@ -191,7 +239,8 @@ fn offset_continuation(value: &Value) -> Option<Continuation> {
 }
 
 fn explicit_completion(value: &Value) -> Option<bool> {
-    if value.get("isLast").and_then(Value::as_bool) == Some(true)
+    if value.get(COMPLETE_MARKER).and_then(Value::as_bool) == Some(true)
+        || value.get("isLast").and_then(Value::as_bool) == Some(true)
         || value
             .pointer("/pagination/more_items_in_collection")
             .and_then(Value::as_bool)
@@ -202,6 +251,11 @@ fn explicit_completion(value: &Value) -> Option<bool> {
             == Some(false)
         || value.get("has_more").and_then(Value::as_bool) == Some(false)
         || value.get("truncated").and_then(Value::as_bool) == Some(false)
+        // Pipedrive v2 marks its last page with an explicit null cursor.
+        || value
+            .pointer("/additional_data")
+            .and_then(|data| data.get("next_cursor"))
+            == Some(&Value::Null)
     {
         return Some(true);
     }
@@ -296,6 +350,39 @@ fn next_command(
                 return Some(generic_next_command(args, &continuation.parameters));
             }
         }
+    }
+    if let Some(continuation) = continuation.filter(|c| c.source == "agent-barn") {
+        let keys = [
+            "--page",
+            "--page-size",
+            "--before-occurred-at",
+            "--before-id",
+            "--snapshot-id",
+            "--after-id",
+            "--page-skip",
+        ];
+        let mut output = Vec::new();
+        let mut index = 0;
+        while index < args.len() {
+            if keys.contains(&args[index].as_str()) {
+                index += 2;
+                continue;
+            }
+            if keys
+                .iter()
+                .any(|key| args[index].starts_with(&format!("{key}=")))
+            {
+                index += 1;
+                continue;
+            }
+            output.push(args[index].clone());
+            index += 1;
+        }
+        for (key, value) in &continuation.parameters {
+            output.push(format!("--{}", key.replace('_', "-")));
+            output.push(value.clone());
+        }
+        return Some(shell_command(&output));
     }
     if collection {
         return larger_limit_command(args);
@@ -448,6 +535,23 @@ mod tests {
     }
 
     #[test]
+    fn detects_microsoft_odata_next_link_and_value_count() {
+        let value = json!({
+            "value": [{"id": "one"}, {"id": "two"}],
+            "@odata.nextLink": "https://graph.microsoft.com/v1.0/users?$skiptoken=opaque"
+        });
+        let args = strings(&["aai-cli", "microsoft", "contacts", "list", "--limit", "2"]);
+        let output = annotate(value, &args);
+
+        assert_eq!(output["_aai"]["pagination"]["returned_count"], 2);
+        assert_eq!(output["_aai"]["pagination"]["status"], "more_available");
+        assert_eq!(
+            output["_aai"]["pagination"]["continuation"]["source"],
+            "@odata.nextLink"
+        );
+    }
+
+    #[test]
     fn typed_truncated_result_suggests_larger_limit() {
         let value = json!({"values": [1, 2], "truncated": true});
         let args = strings(&["aai-cli", "github", "branches", "list", "--limit", "2"]);
@@ -520,6 +624,16 @@ mod tests {
             &strings(&["aai-cli", "github", "prs", "comments", "get", "7"]),
         );
         assert_eq!(output["_aai"]["pagination"]["status"], "not_applicable");
+    }
+
+    #[test]
+    fn pipedrive_null_next_cursor_is_complete() {
+        let output = annotate(
+            json!({"data": [{"id": 1}], "additional_data": {"next_cursor": null}}),
+            &strings(&["aai-cli", "pipedrive", "fields", "deals", "list"]),
+        );
+        assert_eq!(output["_aai"]["pagination"]["status"], "complete");
+        assert_eq!(output["_aai"]["pagination"]["has_more"], false);
     }
 
     #[test]

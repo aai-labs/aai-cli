@@ -1,0 +1,107 @@
+[
+  {
+    "command": "memory-grants list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/memory-grants",
+    "operation_id": "list_memory_grants_organizations__organization_id__memory_grants_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "memory-grants create",
+    "method": "POST",
+    "path": "/organizations/{organization_id}/memory-grants",
+    "operation_id": "create_memory_grant_organizations__organization_id__memory_grants_post",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [
+      {
+        "name": "agent_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "source_agent_id",
+        "kind": "string",
+        "required": false,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "access",
+        "kind": "string",
+        "required": false,
+        "choices": [
+          "read",
+          "read_write"
+        ],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "body_required": true,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  },
+  {
+    "command": "memory-grants delete",
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/memory-grants/{grant_id}",
+    "operation_id": "revoke_memory_grant_organizations__organization_id__memory_grants__grant_id__delete",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      },
+      {
+        "name": "grant_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

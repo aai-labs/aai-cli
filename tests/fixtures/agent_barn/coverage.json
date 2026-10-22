@@ -1,0 +1,1412 @@
+[
+  {
+    "method": "GET",
+    "path": "/auth/context",
+    "operation_id": "get_api_context_auth_context_get",
+    "command": "auth context"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/forgot-password",
+    "operation_id": "forgot_password_auth_forgot_password_post",
+    "excluded": "Session and password lifecycle are outside configured-key authentication"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/login",
+    "operation_id": "login_for_access_token_auth_login_post",
+    "excluded": "Session and password lifecycle are outside configured-key authentication"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/logout",
+    "operation_id": "logout_auth_logout_post",
+    "excluded": "Session and password lifecycle are outside configured-key authentication"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/me",
+    "operation_id": "get_current_user_context_auth_me_get",
+    "command": "auth me get"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/me",
+    "operation_id": "update_current_user_profile_auth_me_post",
+    "command": "auth me update"
+  },
+  {
+    "method": "GET",
+    "path": "/auth/me/api-keys",
+    "operation_id": "list_api_keys_auth_me_api_keys_get",
+    "excluded": "Key management is performed in Account settings"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/me/api-keys",
+    "operation_id": "create_api_key_auth_me_api_keys_post",
+    "excluded": "Key management is performed in Account settings"
+  },
+  {
+    "method": "DELETE",
+    "path": "/auth/me/api-keys/{key_id}",
+    "operation_id": "revoke_api_key_auth_me_api_keys__key_id__delete",
+    "excluded": "Key management is performed in Account settings"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/me/change-password",
+    "operation_id": "change_current_user_password_auth_me_change_password_post",
+    "command": "auth me change-password"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/refresh",
+    "operation_id": "refresh_access_token_auth_refresh_post",
+    "excluded": "Session and password lifecycle are outside configured-key authentication"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/reset-password",
+    "operation_id": "reset_password_auth_reset_password_post",
+    "excluded": "Session and password lifecycle are outside configured-key authentication"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/set-password",
+    "operation_id": "set_password_auth_set_password_post",
+    "excluded": "Session and password lifecycle are outside configured-key authentication"
+  },
+  {
+    "method": "POST",
+    "path": "/auth/signup",
+    "operation_id": "signup_auth_signup_post",
+    "excluded": "Session and password lifecycle are outside configured-key authentication"
+  },
+  {
+    "method": "GET",
+    "path": "/developer",
+    "operation_id": "developer_index_developer_get",
+    "excluded": "Human/agent documentation; use discovery URLs"
+  },
+  {
+    "method": "GET",
+    "path": "/developer/{slug}",
+    "operation_id": "guide_html_developer__slug__get",
+    "excluded": "Human/agent documentation; use discovery URLs"
+  },
+  {
+    "method": "GET",
+    "path": "/developer/{slug}.md",
+    "operation_id": "guide_markdown_developer__slug__md_get",
+    "excluded": "Human/agent documentation; use discovery URLs"
+  },
+  {
+    "method": "GET",
+    "path": "/discovery",
+    "operation_id": "discover_discovery_get",
+    "command": "discovery"
+  },
+  {
+    "method": "GET",
+    "path": "/health",
+    "operation_id": "health_v1_health_get",
+    "command": "health"
+  },
+  {
+    "method": "GET",
+    "path": "/integrations/google/authorize-url",
+    "operation_id": "google_authorize_url_integrations_google_authorize_url_get",
+    "command": "integrations google authorize-url get"
+  },
+  {
+    "method": "GET",
+    "path": "/integrations/google/callback",
+    "operation_id": "google_callback_integrations_google_callback_get",
+    "excluded": "Browser/provider callback"
+  },
+  {
+    "method": "POST",
+    "path": "/integrations/google/token",
+    "operation_id": "google_token_exchange_integrations_google_token_post",
+    "command": "integrations google token create"
+  },
+  {
+    "method": "GET",
+    "path": "/integrations/microsoft/callback",
+    "operation_id": "microsoft_callback_integrations_microsoft_callback_get",
+    "excluded": "Browser/provider callback"
+  },
+  {
+    "method": "GET",
+    "path": "/llms-full.txt",
+    "operation_id": "llms_full_txt_llms_full_txt_get",
+    "excluded": "Human/agent documentation; use discovery URLs"
+  },
+  {
+    "method": "GET",
+    "path": "/llms.txt",
+    "operation_id": "llms_txt_llms_txt_get",
+    "excluded": "Human/agent documentation; use discovery URLs"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations",
+    "operation_id": "create_organization_for_current_user_organizations_post",
+    "command": "organizations create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}",
+    "operation_id": "delete_organization_organizations__organization_id__delete",
+    "command": "organizations delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}",
+    "operation_id": "get_organization_organizations__organization_id__get",
+    "command": "organizations get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}",
+    "operation_id": "update_organization_organizations__organization_id__patch",
+    "command": "organizations update"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agent-overview",
+    "operation_id": "get_agent_overview_organizations__organization_id__agent_overview_get",
+    "command": "agent-overview list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agent-settings",
+    "operation_id": "get_agent_settings_organizations__organization_id__agent_settings_get",
+    "command": "agent-settings get"
+  },
+  {
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agent-settings",
+    "operation_id": "update_agent_settings_organizations__organization_id__agent_settings_put",
+    "command": "agent-settings set"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents",
+    "operation_id": "list_agents_organizations__organization_id__agents_get",
+    "command": "agents list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents",
+    "operation_id": "create_agent_organizations__organization_id__agents_post",
+    "command": "agents create"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/llm-budgets",
+    "operation_id": "list_agent_llm_budgets_organizations__organization_id__agents_llm_budgets_get",
+    "command": "agents llm-budgets list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/models",
+    "operation_id": "list_models_organizations__organization_id__agents_models_get",
+    "command": "agents models get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/name-suggestion",
+    "operation_id": "suggest_agent_name_organizations__organization_id__agents_name_suggestion_get",
+    "command": "agents name-suggestion get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/share-roles",
+    "operation_id": "list_agent_share_roles_organizations__organization_id__agents_share_roles_get",
+    "command": "agents share-roles list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}",
+    "operation_id": "delete_agent_organizations__organization_id__agents__agent_id__delete",
+    "command": "agents delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}",
+    "operation_id": "get_agent_organizations__organization_id__agents__agent_id__get",
+    "command": "agents get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}",
+    "operation_id": "update_agent_organizations__organization_id__agents__agent_id__patch",
+    "command": "agents update"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/activity",
+    "operation_id": "get_agent_activity_organizations__organization_id__agents__agent_id__activity_get",
+    "command": "agents activity get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/activity/calls",
+    "operation_id": "list_agent_activity_calls_organizations__organization_id__agents__agent_id__activity_calls_get",
+    "command": "agents activity calls list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/activity/wakes",
+    "operation_id": "list_agent_wakes_organizations__organization_id__agents__agent_id__activity_wakes_get",
+    "command": "agents activity wakes list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration",
+    "operation_id": "get_agent_configuration_organizations__organization_id__agents__agent_id__configuration_get",
+    "command": "agents configuration get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/draft",
+    "operation_id": "update_agent_override_draft_organizations__organization_id__agents__agent_id__configuration_draft_patch",
+    "command": "agents configuration draft update"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/draft",
+    "operation_id": "start_agent_override_draft_organizations__organization_id__agents__agent_id__configuration_draft_post",
+    "command": "agents configuration draft create"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/draft/publish",
+    "operation_id": "publish_agent_override_organizations__organization_id__agents__agent_id__configuration_draft_publish_post",
+    "command": "agents configuration draft publish"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/configuration/select",
+    "operation_id": "select_agent_template_organizations__organization_id__agents__agent_id__configuration_select_post",
+    "command": "agents configuration select"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connection-directory-preview",
+    "operation_id": "preview_communication_connection_directory_organizations__organization_id__agents__agent_id__connection_directory_preview_post",
+    "command": "agents connection-directory-preview create"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections",
+    "operation_id": "list_communication_connections_organizations__organization_id__agents__agent_id__connections_get",
+    "command": "agents connections list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections",
+    "operation_id": "create_communication_connection_organizations__organization_id__agents__agent_id__connections_post",
+    "command": "agents connections create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}",
+    "operation_id": "retire_communication_connection_organizations__organization_id__agents__agent_id__connections__connection_id__delete",
+    "command": "agents connections delete"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}",
+    "operation_id": "update_communication_connection_organizations__organization_id__agents__agent_id__connections__connection_id__patch",
+    "command": "agents connections update"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/app-package",
+    "operation_id": "download_communication_app_package_organizations__organization_id__agents__agent_id__connections__connection_id__app_package_get",
+    "command": "agents connections app-package"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/deliveries/{delivery_id}/retry",
+    "operation_id": "retry_communication_delivery_organizations__organization_id__agents__agent_id__connections__connection_id__deliveries__delivery_id__retry_post",
+    "command": "agents connections deliveries retry"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/directory/{kind}",
+    "operation_id": "list_communication_connection_directory_organizations__organization_id__agents__agent_id__connections__connection_id__directory__kind__get",
+    "command": "agents connections directory list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/install-link",
+    "operation_id": "get_communication_install_link_organizations__organization_id__agents__agent_id__connections__connection_id__install_link_get",
+    "command": "agents connections install-link get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/journal",
+    "operation_id": "list_communication_connection_journal_organizations__organization_id__agents__agent_id__connections__connection_id__journal_get",
+    "command": "agents connections journal list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/reconnect",
+    "operation_id": "reconnect_communication_connection_organizations__organization_id__agents__agent_id__connections__connection_id__reconnect_post",
+    "command": "agents connections reconnect"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/connections/{connection_id}/summary",
+    "operation_id": "get_communication_connection_summary_organizations__organization_id__agents__agent_id__connections__connection_id__summary_get",
+    "command": "agents connections summary get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/conversations/channels",
+    "operation_id": "list_channels_organizations__organization_id__agents__agent_id__conversations_channels_get",
+    "command": "agents conversations channels list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/conversations/connections/{connection_id}/channels/{channel_id}/messages",
+    "operation_id": "list_channel_messages_organizations__organization_id__agents__agent_id__conversations_connections__connection_id__channels__channel_id__messages_get",
+    "command": "agents conversations connections channels messages list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/diagnostics",
+    "operation_id": "get_runtime_diagnostics_organizations__organization_id__agents__agent_id__diagnostics_get",
+    "command": "agents diagnostics get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/healthz",
+    "operation_id": "get_agent_healthz_organizations__organization_id__agents__agent_id__healthz_get",
+    "command": "agents healthz get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint",
+    "operation_id": "sharepoint_current_organizations__organization_id__agents__agent_id__integrations_sharepoint_get",
+    "command": "agents integrations sharepoint get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint/authorize-url",
+    "operation_id": "sharepoint_authorize_url_organizations__organization_id__agents__agent_id__integrations_sharepoint_authorize_url_get",
+    "command": "agents integrations sharepoint authorize-url get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint/setup",
+    "operation_id": "sharepoint_setup_organizations__organization_id__agents__agent_id__integrations_sharepoint_setup_get",
+    "command": "agents integrations sharepoint setup get"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/sharepoint/sign-in",
+    "operation_id": "complete_sharepoint_sign_in_organizations__organization_id__agents__agent_id__integrations_sharepoint_sign_in_post",
+    "command": "agents integrations sharepoint sign-in"
+  },
+  {
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/{provider}/isolation",
+    "operation_id": "apply_integration_isolation_organizations__organization_id__agents__agent_id__integrations__provider__isolation_put",
+    "command": "agents integrations isolation set"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/integrations/{provider}/validate",
+    "operation_id": "validate_integration_organizations__organization_id__agents__agent_id__integrations__provider__validate_post",
+    "command": "agents integrations validate"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/llm-budget",
+    "operation_id": "get_agent_llm_budget_organizations__organization_id__agents__agent_id__llm_budget_get",
+    "command": "agents llm-budget get"
+  },
+  {
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/llm-budget",
+    "operation_id": "set_agent_llm_budget_organizations__organization_id__agents__agent_id__llm_budget_put",
+    "command": "agents llm-budget set"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/logs",
+    "operation_id": "get_agent_logs_organizations__organization_id__agents__agent_id__logs_get",
+    "command": "agents logs get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/logs/history",
+    "operation_id": "get_agent_log_history_organizations__organization_id__agents__agent_id__logs_history_get",
+    "command": "agents logs history list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/logs/stream",
+    "operation_id": "stream_agent_logs_organizations__organization_id__agents__agent_id__logs_stream_get",
+    "command": "agents logs stream"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/managed-update",
+    "operation_id": "managed_update_organizations__organization_id__agents__agent_id__managed_update_post",
+    "command": "agents managed-update"
+  },
+  {
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/memory",
+    "operation_id": "set_agent_memory_organizations__organization_id__agents__agent_id__memory_put",
+    "command": "agents memory set"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/memory/items",
+    "operation_id": "list_agent_memories_organizations__organization_id__agents__agent_id__memory_items_get",
+    "command": "agents memory items list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/resource-usage",
+    "operation_id": "get_agent_resource_usage_organizations__organization_id__agents__agent_id__resource_usage_get",
+    "command": "agents resource-usage get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points",
+    "operation_id": "list_restore_points_organizations__organization_id__agents__agent_id__restore_points_get",
+    "command": "agents restore-points list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points",
+    "operation_id": "create_restore_point_organizations__organization_id__agents__agent_id__restore_points_post",
+    "command": "agents restore-points create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}",
+    "operation_id": "delete_restore_point_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__delete",
+    "command": "agents restore-points delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}",
+    "operation_id": "get_restore_point_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__get",
+    "command": "agents restore-points get"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}/configuration",
+    "operation_id": "apply_recorded_configuration_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__configuration_post",
+    "command": "agents restore-points configuration create"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/restore-points/{restore_point_id}/restore",
+    "operation_id": "restore_restore_point_organizations__organization_id__agents__agent_id__restore_points__restore_point_id__restore_post",
+    "command": "agents restore-points restore"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/share",
+    "operation_id": "get_agent_share_settings_organizations__organization_id__agents__agent_id__share_get",
+    "command": "agents share get"
+  },
+  {
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/share",
+    "operation_id": "replace_agent_share_settings_organizations__organization_id__agents__agent_id__share_put",
+    "command": "agents share set"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills",
+    "operation_id": "list_agent_skills_organizations__organization_id__agents__agent_id__skills_get",
+    "command": "agents skills list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills",
+    "operation_id": "create_agent_skill_organizations__organization_id__agents__agent_id__skills_post",
+    "command": "agents skills create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}",
+    "operation_id": "delete_agent_skill_organizations__organization_id__agents__agent_id__skills__skill_id__delete",
+    "command": "agents skills delete"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}",
+    "operation_id": "update_agent_skill_organizations__organization_id__agents__agent_id__skills__skill_id__patch",
+    "command": "agents skills update"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "discard_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_delete",
+    "command": "agents skills draft delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "get_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_get",
+    "command": "agents skills draft get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "update_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_patch",
+    "command": "agents skills draft update"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft",
+    "operation_id": "start_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_post",
+    "command": "agents skills draft create"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/draft/publish",
+    "operation_id": "publish_agent_skill_draft_organizations__organization_id__agents__agent_id__skills__skill_id__draft_publish_post",
+    "command": "agents skills draft publish"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/files",
+    "operation_id": "get_agent_skill_files_organizations__organization_id__agents__agent_id__skills__skill_id__files_get",
+    "command": "agents skills files get"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/fork",
+    "operation_id": "fork_agent_skill_organizations__organization_id__agents__agent_id__skills__skill_id__fork_post",
+    "command": "agents skills fork"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/source-update",
+    "operation_id": "apply_agent_skill_source_update_organizations__organization_id__agents__agent_id__skills__skill_id__source_update_post",
+    "command": "agents skills source-update"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/versions",
+    "operation_id": "list_agent_skill_versions_organizations__organization_id__agents__agent_id__skills__skill_id__versions_get",
+    "command": "agents skills versions list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "delete_agent_skill_version_organizations__organization_id__agents__agent_id__skills__skill_id__versions__version__delete",
+    "command": "agents skills versions delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "get_agent_skill_version_organizations__organization_id__agents__agent_id__skills__skill_id__versions__version__get",
+    "command": "agents skills versions get"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/start",
+    "operation_id": "start_agent_organizations__organization_id__agents__agent_id__start_post",
+    "command": "agents start"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/stop",
+    "operation_id": "stop_agent_organizations__organization_id__agents__agent_id__stop_post",
+    "command": "agents stop"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/template/{version}",
+    "operation_id": "get_agent_template_organizations__organization_id__agents__agent_id__template__version__get",
+    "command": "agents template get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/tool-calls",
+    "operation_id": "list_tool_calls_organizations__organization_id__agents__agent_id__tool_calls_get",
+    "command": "agents tool-calls list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/messages",
+    "operation_id": "list_web_chat_messages_organizations__organization_id__agents__agent_id__web_chat_messages_get",
+    "command": "agents web-chat messages list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/messages",
+    "operation_id": "send_web_chat_message_organizations__organization_id__agents__agent_id__web_chat_messages_post",
+    "command": "agents web-chat messages create"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/stream",
+    "operation_id": "stream_web_chat_messages_organizations__organization_id__agents__agent_id__web_chat_stream_get",
+    "command": "agents web-chat stream"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads",
+    "operation_id": "list_web_chat_threads_organizations__organization_id__agents__agent_id__web_chat_threads_get",
+    "command": "agents web-chat threads list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads/{thread_id}",
+    "operation_id": "delete_web_chat_thread_organizations__organization_id__agents__agent_id__web_chat_threads__thread_id__delete",
+    "command": "agents web-chat threads delete"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads/{thread_id}",
+    "operation_id": "rename_web_chat_thread_organizations__organization_id__agents__agent_id__web_chat_threads__thread_id__patch",
+    "command": "agents web-chat threads update"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/web-chat/threads/{thread_id}/stop",
+    "operation_id": "stop_web_chat_generation_organizations__organization_id__agents__agent_id__web_chat_threads__thread_id__stop_post",
+    "command": "agents web-chat threads stop"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks",
+    "operation_id": "list_agent_webhooks_organizations__organization_id__agents__agent_id__webhooks_get",
+    "command": "agents webhooks list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks",
+    "operation_id": "create_agent_webhook_organizations__organization_id__agents__agent_id__webhooks_post",
+    "command": "agents webhooks create"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/delivery-platforms",
+    "operation_id": "list_webhook_delivery_platforms_organizations__organization_id__agents__agent_id__webhooks_delivery_platforms_get",
+    "command": "agents webhooks delivery-platforms list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}",
+    "operation_id": "retire_agent_webhook_organizations__organization_id__agents__agent_id__webhooks__webhook_id__delete",
+    "command": "agents webhooks delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}",
+    "operation_id": "get_agent_webhook_organizations__organization_id__agents__agent_id__webhooks__webhook_id__get",
+    "command": "agents webhooks get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}",
+    "operation_id": "update_agent_webhook_organizations__organization_id__agents__agent_id__webhooks__webhook_id__patch",
+    "command": "agents webhooks update"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}/invocations",
+    "operation_id": "list_webhook_invocations_organizations__organization_id__agents__agent_id__webhooks__webhook_id__invocations_get",
+    "command": "agents webhooks invocations list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}/invocations/{invocation_id}/retry",
+    "operation_id": "retry_webhook_invocation_organizations__organization_id__agents__agent_id__webhooks__webhook_id__invocations__invocation_id__retry_post",
+    "command": "agents webhooks invocations retry"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/agents/{agent_id}/webhooks/{webhook_id}/rotate-secret",
+    "operation_id": "rotate_agent_webhook_secret_organizations__organization_id__agents__agent_id__webhooks__webhook_id__rotate_secret_post",
+    "command": "agents webhooks rotate-secret"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/communication-platforms",
+    "operation_id": "list_communication_platforms_organizations__organization_id__communication_platforms_get",
+    "command": "communication-platforms list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs",
+    "operation_id": "list_costs_organizations__organization_id__costs_get",
+    "command": "costs list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/agents",
+    "operation_id": "list_agent_spend_organizations__organization_id__costs_agents_get",
+    "command": "costs agents list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/agents/{agent_id}",
+    "operation_id": "get_agent_cost_organizations__organization_id__costs_agents__agent_id__get",
+    "command": "costs agents get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/agents/{agent_id}/calls",
+    "operation_id": "list_agent_costs_organizations__organization_id__costs_agents__agent_id__calls_get",
+    "command": "costs agents calls list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/agents/{agent_id}/filters/models",
+    "operation_id": "list_agent_model_filter_options_organizations__organization_id__costs_agents__agent_id__filters_models_get",
+    "command": "costs agents filters models list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/agents/{agent_id}/monthly",
+    "operation_id": "get_agent_monthly_costs_organizations__organization_id__costs_agents__agent_id__monthly_get",
+    "command": "costs agents monthly list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/filters/agents",
+    "operation_id": "list_agent_filter_options_organizations__organization_id__costs_filters_agents_get",
+    "command": "costs filters agents list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/filters/models",
+    "operation_id": "list_model_filter_options_organizations__organization_id__costs_filters_models_get",
+    "command": "costs filters models list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/monthly",
+    "operation_id": "get_monthly_costs_organizations__organization_id__costs_monthly_get",
+    "command": "costs monthly list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/costs/summary",
+    "operation_id": "get_cost_summary_organizations__organization_id__costs_summary_get",
+    "command": "costs summary get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/llm-budget",
+    "operation_id": "get_organization_llm_budget_organizations__organization_id__llm_budget_get",
+    "command": "llm-budget get"
+  },
+  {
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/llm-budget",
+    "operation_id": "set_organization_own_llm_budget_organizations__organization_id__llm_budget_put",
+    "command": "llm-budget set"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/members",
+    "operation_id": "list_members_organizations__organization_id__members_get",
+    "command": "organizations members list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/members",
+    "operation_id": "add_member_organizations__organization_id__members_post",
+    "command": "organizations members create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/members/{user_id}",
+    "operation_id": "remove_member_organizations__organization_id__members__user_id__delete",
+    "command": "organizations members delete"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/members/{user_id}",
+    "operation_id": "change_member_role_organizations__organization_id__members__user_id__patch",
+    "command": "organizations members update"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/members/{user_id}/resend-invite",
+    "operation_id": "resend_invite_organizations__organization_id__members__user_id__resend_invite_post",
+    "command": "organizations members resend-invite"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/memory-grants",
+    "operation_id": "list_memory_grants_organizations__organization_id__memory_grants_get",
+    "command": "memory-grants list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/memory-grants",
+    "operation_id": "create_memory_grant_organizations__organization_id__memory_grants_post",
+    "command": "memory-grants create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/memory-grants/{grant_id}",
+    "operation_id": "revoke_memory_grant_organizations__organization_id__memory_grants__grant_id__delete",
+    "command": "memory-grants delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/memory/items",
+    "operation_id": "list_organization_memories_organizations__organization_id__memory_items_get",
+    "command": "memory items list"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/shared-credentials",
+    "operation_id": "list_shared_credentials_organizations__organization_id__shared_credentials_get",
+    "command": "shared-credentials list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/shared-credentials",
+    "operation_id": "create_shared_credential_organizations__organization_id__shared_credentials_post",
+    "command": "shared-credentials create"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/shared-credentials/briefs",
+    "operation_id": "list_shared_credential_briefs_organizations__organization_id__shared_credentials_briefs_get",
+    "command": "shared-credentials briefs list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/shared-credentials/{credential_id}",
+    "operation_id": "delete_shared_credential_organizations__organization_id__shared_credentials__credential_id__delete",
+    "command": "shared-credentials delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/shared-credentials/{credential_id}",
+    "operation_id": "get_shared_credential_organizations__organization_id__shared_credentials__credential_id__get",
+    "command": "shared-credentials get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/shared-credentials/{credential_id}",
+    "operation_id": "update_shared_credential_organizations__organization_id__shared_credentials__credential_id__patch",
+    "command": "shared-credentials update"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/shared-credentials/{credential_id}/validate",
+    "operation_id": "validate_shared_credential_organizations__organization_id__shared_credentials__credential_id__validate_post",
+    "command": "shared-credentials validate"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills",
+    "operation_id": "list_skills_organizations__organization_id__skills_get",
+    "command": "skills list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills",
+    "operation_id": "create_skill_organizations__organization_id__skills_post",
+    "command": "skills create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/skills/{skill_id}",
+    "operation_id": "delete_skill_organizations__organization_id__skills__skill_id__delete",
+    "command": "skills delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}",
+    "operation_id": "get_skill_organizations__organization_id__skills__skill_id__get",
+    "command": "skills get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/skills/{skill_id}",
+    "operation_id": "update_skill_organizations__organization_id__skills__skill_id__patch",
+    "command": "skills update"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "discard_skill_draft_organizations__organization_id__skills__skill_id__draft_delete",
+    "command": "skills draft delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "get_skill_draft_organizations__organization_id__skills__skill_id__draft_get",
+    "command": "skills draft get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "update_skill_draft_organizations__organization_id__skills__skill_id__draft_patch",
+    "command": "skills draft update"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft",
+    "operation_id": "start_skill_draft_organizations__organization_id__skills__skill_id__draft_post",
+    "command": "skills draft create"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/draft/publish",
+    "operation_id": "publish_skill_draft_organizations__organization_id__skills__skill_id__draft_publish_post",
+    "command": "skills draft publish"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/files",
+    "operation_id": "get_skill_files_organizations__organization_id__skills__skill_id__files_get",
+    "command": "skills files get"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/fork",
+    "operation_id": "fork_skill_organizations__organization_id__skills__skill_id__fork_post",
+    "command": "skills fork"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/source-update",
+    "operation_id": "apply_source_update_organizations__organization_id__skills__skill_id__source_update_post",
+    "command": "skills source-update"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/versions",
+    "operation_id": "list_skill_versions_organizations__organization_id__skills__skill_id__versions_get",
+    "command": "skills versions list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "delete_skill_version_organizations__organization_id__skills__skill_id__versions__version__delete",
+    "command": "skills versions delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/skills/{skill_id}/versions/{version}",
+    "operation_id": "get_skill_version_organizations__organization_id__skills__skill_id__versions__version__get",
+    "command": "skills versions get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates",
+    "operation_id": "list_templates_organizations__organization_id__templates_get",
+    "command": "templates list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates",
+    "operation_id": "create_template_organizations__organization_id__templates_post",
+    "command": "templates create"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/lineages",
+    "operation_id": "list_org_template_lineages_organizations__organization_id__templates_lineages_get",
+    "command": "templates lineages list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/templates/{template_key}",
+    "operation_id": "delete_template_organizations__organization_id__templates__template_key__delete",
+    "command": "templates delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/{template_key}",
+    "operation_id": "get_template_organizations__organization_id__templates__template_key__get",
+    "command": "templates get"
+  },
+  {
+    "method": "DELETE",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "discard_org_draft_organizations__organization_id__templates__template_key__draft_delete",
+    "command": "templates draft delete"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "get_org_draft_organizations__organization_id__templates__template_key__draft_get",
+    "command": "templates draft get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "update_org_draft_organizations__organization_id__templates__template_key__draft_patch",
+    "command": "templates draft update"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft",
+    "operation_id": "start_org_draft_organizations__organization_id__templates__template_key__draft_post",
+    "command": "templates draft create"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates/{template_key}/draft/publish",
+    "operation_id": "publish_org_draft_organizations__organization_id__templates__template_key__draft_publish_post",
+    "command": "templates draft publish"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/templates/{template_key}/platform-update",
+    "operation_id": "update_from_platform_organizations__organization_id__templates__template_key__platform_update_post",
+    "command": "templates platform-update"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/templates/{template_key}/versions",
+    "operation_id": "list_template_versions_organizations__organization_id__templates__template_key__versions_get",
+    "command": "templates versions list"
+  },
+  {
+    "method": "POST",
+    "path": "/organizations/{organization_id}/transfer-ownership",
+    "operation_id": "transfer_ownership_organizations__organization_id__transfer_ownership_post",
+    "command": "organizations transfer-ownership"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/value",
+    "operation_id": "get_organization_value_organizations__organization_id__value_get",
+    "command": "value get"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/value-settings",
+    "operation_id": "get_value_settings_organizations__organization_id__value_settings_get",
+    "command": "value-settings get"
+  },
+  {
+    "method": "PUT",
+    "path": "/organizations/{organization_id}/value-settings",
+    "operation_id": "update_value_settings_organizations__organization_id__value_settings_put",
+    "command": "value-settings set"
+  },
+  {
+    "method": "GET",
+    "path": "/organizations/{organization_id}/value/activity",
+    "operation_id": "get_organization_activity_organizations__organization_id__value_activity_get",
+    "command": "value activity get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/costs",
+    "operation_id": "list_platform_costs_platform_costs_get",
+    "command": "platform costs list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/costs/filters/agents",
+    "operation_id": "list_platform_agent_filter_options_platform_costs_filters_agents_get",
+    "command": "platform costs filters agents list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/costs/filters/models",
+    "operation_id": "list_platform_model_filter_options_platform_costs_filters_models_get",
+    "command": "platform costs filters models list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/costs/monthly",
+    "operation_id": "get_platform_monthly_costs_platform_costs_monthly_get",
+    "command": "platform costs monthly list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/costs/organizations",
+    "operation_id": "list_organizations_by_spend_platform_costs_organizations_get",
+    "command": "platform costs organizations list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/costs/summary",
+    "operation_id": "get_platform_cost_summary_platform_costs_summary_get",
+    "command": "platform costs summary get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/event-deliveries",
+    "operation_id": "get_event_deliveries_platform_event_deliveries_get",
+    "command": "platform event-deliveries list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/event-deliveries/event-types",
+    "operation_id": "get_event_delivery_event_types_platform_event_deliveries_event_types_get",
+    "command": "platform event-deliveries event-types list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/event-deliveries/summary",
+    "operation_id": "get_event_delivery_summary_platform_event_deliveries_summary_get",
+    "command": "platform event-deliveries summary get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/organizations",
+    "operation_id": "get_organizations_platform_organizations_get",
+    "command": "platform organizations list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/organizations/{organization_id}",
+    "operation_id": "get_platform_organization_platform_organizations__organization_id__get",
+    "command": "platform organizations get"
+  },
+  {
+    "method": "PUT",
+    "path": "/platform/organizations/{organization_id}/llm-budget",
+    "operation_id": "set_organization_llm_budget_platform_organizations__organization_id__llm_budget_put",
+    "command": "platform organizations llm-budget set"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/organizations/{organization_id}/llm-budget/coverage",
+    "operation_id": "get_organization_llm_coverage_platform_organizations__organization_id__llm_budget_coverage_get",
+    "command": "platform organizations llm-budget coverage get"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/organizations/{organization_id}/llm-budget/enroll",
+    "operation_id": "enroll_organization_llm_keys_platform_organizations__organization_id__llm_budget_enroll_post",
+    "command": "platform organizations llm-budget enroll create"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/organizations/{organization_id}/members",
+    "operation_id": "list_platform_members_platform_organizations__organization_id__members_get",
+    "command": "platform organizations members list"
+  },
+  {
+    "method": "PUT",
+    "path": "/platform/resource-limits",
+    "operation_id": "update_platform_resource_limits_platform_resource_limits_put",
+    "command": "platform resource-limits set"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/resource-usage",
+    "operation_id": "get_platform_resource_usage_platform_resource_usage_get",
+    "command": "platform resource-usage get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/resource-usage/agents/{agent_id}",
+    "operation_id": "get_platform_agent_details_platform_resource_usage_agents__agent_id__get",
+    "command": "platform resource-usage agents get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/settings/agent-memory",
+    "operation_id": "read_settings_platform_settings_agent_memory_get",
+    "command": "platform settings agent-memory get"
+  },
+  {
+    "method": "PUT",
+    "path": "/platform/settings/agent-memory",
+    "operation_id": "update_settings_platform_settings_agent_memory_put",
+    "command": "platform settings agent-memory set"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/settings/agent-memory/models",
+    "operation_id": "list_models_platform_settings_agent_memory_models_get",
+    "command": "platform settings agent-memory models get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/skills",
+    "operation_id": "list_global_skills_for_platform_admin_platform_skills_get",
+    "command": "platform skills list"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/skills",
+    "operation_id": "create_platform_skill_platform_skills_post",
+    "command": "platform skills create"
+  },
+  {
+    "method": "DELETE",
+    "path": "/platform/skills/{skill_id}",
+    "operation_id": "delete_platform_skill_platform_skills__skill_id__delete",
+    "command": "platform skills delete"
+  },
+  {
+    "method": "PATCH",
+    "path": "/platform/skills/{skill_id}",
+    "operation_id": "update_platform_skill_platform_skills__skill_id__patch",
+    "command": "platform skills update"
+  },
+  {
+    "method": "DELETE",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "discard_platform_skill_draft_platform_skills__skill_id__draft_delete",
+    "command": "platform skills draft delete"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "get_platform_skill_draft_platform_skills__skill_id__draft_get",
+    "command": "platform skills draft get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "update_platform_skill_draft_platform_skills__skill_id__draft_patch",
+    "command": "platform skills draft update"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/skills/{skill_id}/draft",
+    "operation_id": "start_platform_skill_draft_platform_skills__skill_id__draft_post",
+    "command": "platform skills draft create"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/skills/{skill_id}/draft/publish",
+    "operation_id": "publish_platform_skill_draft_platform_skills__skill_id__draft_publish_post",
+    "command": "platform skills draft publish"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/files",
+    "operation_id": "get_platform_skill_files_platform_skills__skill_id__files_get",
+    "command": "platform skills files get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/versions",
+    "operation_id": "list_platform_skill_versions_platform_skills__skill_id__versions_get",
+    "command": "platform skills versions list"
+  },
+  {
+    "method": "DELETE",
+    "path": "/platform/skills/{skill_id}/versions/{version}",
+    "operation_id": "delete_platform_skill_version_platform_skills__skill_id__versions__version__delete",
+    "command": "platform skills versions delete"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/skills/{skill_id}/versions/{version}",
+    "operation_id": "get_platform_skill_version_platform_skills__skill_id__versions__version__get",
+    "command": "platform skills versions get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/stats/agents",
+    "operation_id": "get_platform_agent_stats_platform_stats_agents_get",
+    "command": "platform stats agents get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/stats/messages",
+    "operation_id": "get_platform_message_stats_platform_stats_messages_get",
+    "command": "platform stats messages get"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/templates",
+    "operation_id": "list_platform_lineages_platform_templates_get",
+    "command": "platform templates list"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/templates",
+    "operation_id": "create_new_template_draft_platform_templates_post",
+    "command": "platform templates create"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/templates/{template_key}",
+    "operation_id": "get_published_platform_template_platform_templates__template_key__get",
+    "command": "platform templates get"
+  },
+  {
+    "method": "DELETE",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "discard_draft_platform_templates__template_key__draft_delete",
+    "command": "platform templates draft delete"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "get_draft_platform_templates__template_key__draft_get",
+    "command": "platform templates draft get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "update_draft_platform_templates__template_key__draft_patch",
+    "command": "platform templates draft update"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/templates/{template_key}/draft",
+    "operation_id": "start_draft_platform_templates__template_key__draft_post",
+    "command": "platform templates draft create"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/templates/{template_key}/draft/publish",
+    "operation_id": "publish_draft_platform_templates__template_key__draft_publish_post",
+    "command": "platform templates draft publish"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/templates/{template_key}/versions",
+    "operation_id": "list_published_platform_template_versions_platform_templates__template_key__versions_get",
+    "command": "platform templates versions list"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/users",
+    "operation_id": "list_users_platform_users_get",
+    "command": "platform users list"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/users",
+    "operation_id": "create_user_platform_users_post",
+    "command": "platform users create"
+  },
+  {
+    "method": "GET",
+    "path": "/platform/users/{user_id}",
+    "operation_id": "get_user_platform_users__user_id__get",
+    "command": "platform users get"
+  },
+  {
+    "method": "PATCH",
+    "path": "/platform/users/{user_id}/platform-privilege",
+    "operation_id": "change_platform_privilege_platform_users__user_id__platform_privilege_patch",
+    "command": "platform users platform-privilege update"
+  },
+  {
+    "method": "POST",
+    "path": "/platform/users/{user_id}/resend-invite",
+    "operation_id": "resend_user_invite_platform_users__user_id__resend_invite_post",
+    "command": "platform users resend-invite"
+  }
+]

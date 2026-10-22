@@ -14,6 +14,8 @@ mod pagination;
 mod secrets;
 mod services;
 mod skills;
+#[cfg(test)]
+mod test_support;
 
 use std::process::ExitCode;
 
@@ -57,7 +59,20 @@ async fn run() -> Result<serde_json::Value, AppError> {
             services::excel::dispatch(command)?,
             &command_args,
         )),
+        // URL parsing is deterministic local work. Keep it usable before an agent has
+        // selected or configured the Jira profile it will use for the resulting target.
+        cli::Command::Jira(cli::JiraCommand {
+            resource:
+                cli::JiraResource::Ideas(cli::JiraIdeasCommand {
+                    action: cli::JiraIdeasAction::ParseUrl(args),
+                }),
+        }) => Ok(pagination::annotate(
+            services::jira::parse_idea_url(&args.url)?,
+            &command_args,
+        )),
         command => {
+            // Custom API returns the upstream `{status,body}` envelope unannotated.
+            let annotate = !matches!(command, cli::Command::CustomApi(_));
             let ctx = config::Context::load(
                 cli.config.as_deref(),
                 cli.profile.as_deref(),
@@ -65,7 +80,11 @@ async fn run() -> Result<serde_json::Value, AppError> {
                 cli.key_file.as_deref(),
             )?;
             let value = services::dispatch(&ctx, command).await?;
-            Ok(pagination::annotate(value, &command_args))
+            Ok(if annotate {
+                pagination::annotate(value, &command_args)
+            } else {
+                value
+            })
         }
     }
 }

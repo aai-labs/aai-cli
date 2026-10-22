@@ -1,0 +1,16 @@
+[
+  {
+    "command": "health",
+    "method": "GET",
+    "path": "/health",
+    "operation_id": "health_v1_health_get",
+    "query": [],
+    "path_fields": [],
+    "fields": [],
+    "body_required": false,
+    "paging": "none",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

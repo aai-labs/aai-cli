@@ -1,0 +1,10 @@
+{
+  "repository": "https://github.com/aai-labs/agent-barn",
+  "revision": "9ffaf06ddff8b80b6dcf30f3b3821cbfa150b00f",
+  "schema_source": "api.api_app.create_app(Injector()); mounted /api/v1 subapplication.openapi(); no lifespan or service startup",
+  "regenerate": "python3 scripts/generate-agent-barn-contract.py",
+  "additional_endpoints": [
+    "GET /openapi.json"
+  ],
+  "license": "Apache-2.0"
+}

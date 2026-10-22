@@ -434,6 +434,7 @@ fn default_hosts(service: &str) -> &'static [&'static str] {
         "slack" => &["slack.com"],
         "openpanel" => &["api.openpanel.dev"],
         "posthog" => &["us.i.posthog.com", "eu.i.posthog.com"],
+        "microsoft" => &["graph.microsoft.com"],
         "drive" | "sheets" | "email" | "calendar" => &[
             "www.googleapis.com",
             "sheets.googleapis.com",
@@ -477,6 +478,7 @@ async fn forward(
                 | "x-upload-content-type"
                 | "x-upload-content-length"
                 | "x-atlassian-token"
+                | "if-match"
         ) {
             return gateway_error(
                 StatusCode::BAD_REQUEST,

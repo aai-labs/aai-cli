@@ -213,6 +213,15 @@ pub(crate) async fn dispatch(
                     .await
             }
             JiraIdeasAction::Fields(args) => list_idea_fields(client, ctx, args).await,
+            JiraIdeasAction::ParseUrl(args) => parse_idea_url(&args.url),
+            JiraIdeasAction::Transitions(command) => match command.action {
+                JiraIdeaTransitionsAction::List(args) => {
+                    list_idea_transitions(client, ctx, &args.id).await
+                }
+                JiraIdeaTransitionsAction::Perform(args) => {
+                    perform_idea_transition(client, ctx, args).await
+                }
+            },
         },
         JiraResource::Sprints(command) => match command.action {
             JiraSprintsAction::List(args) => {
@@ -398,7 +407,11 @@ async fn search_issues(
     object.insert("isLast".to_string(), Value::Bool(next_page_token.is_none()));
     object.remove("nextPageToken");
     object.remove("self");
-    trim_array(object, "issues", trim_issue);
+    if let Some(items) = object.get_mut("issues").and_then(Value::as_array_mut) {
+        for item in items.iter_mut() {
+            *item = trim_issue_fields(item, fields);
+        }
+    }
     Ok(response)
 }
 
@@ -731,7 +744,7 @@ async fn list_idea_fields(
     let issue_type = select_issue_type(&issue_types, args.issue_type.as_deref())?;
     let issue_type_id = issue_type
         .get("id")
-        .and_then(issue_type_id_string)
+        .and_then(json_id_string)
         .ok_or_else(|| {
             AppError::internal(
                 "jira",
@@ -816,7 +829,211 @@ async fn list_idea_fields(
     Ok(response)
 }
 
-fn issue_type_id_string(value: &Value) -> Option<String> {
+pub(crate) fn parse_idea_url(raw_url: &str) -> Result<Value, AppError> {
+    let url = reqwest::Url::parse(raw_url).map_err(|err| {
+        AppError::invalid_input(
+            "jira",
+            "ideas.parse-url",
+            format!("invalid Jira URL: {err}"),
+        )
+    })?;
+    if !matches!(url.scheme(), "http" | "https") || url.host_str().is_none() {
+        return Err(AppError::invalid_input(
+            "jira",
+            "ideas.parse-url",
+            "Jira URL must use http or https and include a host",
+        ));
+    }
+
+    let site_url = url.origin().ascii_serialization();
+    let segments = url
+        .path_segments()
+        .map(|parts| parts.collect::<Vec<_>>())
+        .unwrap_or_default();
+
+    if let ["jira", "polaris", "projects", project, "ideas", "view", view, ..] = segments.as_slice()
+    {
+        let issue_key = url
+            .query_pairs()
+            .find_map(|(key, value)| (key == "selectedIssue").then(|| value.into_owned()));
+        if issue_key
+            .as_deref()
+            .is_some_and(|key| issue_project_key(key).is_none())
+        {
+            return Err(AppError::invalid_input(
+                "jira",
+                "ideas.parse-url",
+                "selectedIssue is not a Jira issue key such as MDP-123",
+            ));
+        }
+        let target_type = if issue_key.is_some() {
+            "product_discovery_idea"
+        } else {
+            "product_discovery_view"
+        };
+        return Ok(json!({
+            "targetType": target_type,
+            "siteUrl": site_url,
+            "projectKey": project,
+            "viewId": view,
+            "issueKey": issue_key,
+        }));
+    }
+
+    if let ["browse", issue_key, ..] = segments.as_slice() {
+        let project_key = issue_project_key(issue_key).ok_or_else(|| {
+            AppError::invalid_input(
+                "jira",
+                "ideas.parse-url",
+                "browse URL does not contain a Jira issue key such as MDP-123",
+            )
+        })?;
+        return Ok(json!({
+            "targetType": "jira_issue",
+            "siteUrl": site_url,
+            "projectKey": project_key,
+            "viewId": Value::Null,
+            "issueKey": issue_key,
+        }));
+    }
+
+    Err(AppError::invalid_input(
+        "jira",
+        "ideas.parse-url",
+        "expected a Jira Product Discovery /jira/polaris/projects/PROJECT/ideas/view/VIEW URL or /browse/ISSUE-KEY URL",
+    ))
+}
+
+fn issue_project_key(issue_key: &str) -> Option<&str> {
+    let (project, number) = issue_key.rsplit_once('-')?;
+    (!project.is_empty()
+        && !number.is_empty()
+        && number.chars().all(|character| character.is_ascii_digit()))
+    .then_some(project)
+}
+
+async fn list_idea_transitions(
+    client: &ApiClient,
+    ctx: &Context,
+    idea: &str,
+) -> Result<Value, AppError> {
+    let url = format!(
+        "{}/rest/api/3/issue/{}/transitions",
+        site_url(ctx.profile(), "jira", "ideas.transitions.list")?,
+        enc(idea),
+    );
+    client
+        .request(
+            "jira",
+            "ideas.transitions.list",
+            ctx.profile(),
+            Method::GET,
+            url,
+            None,
+        )
+        .await
+}
+
+async fn perform_idea_transition(
+    client: &ApiClient,
+    ctx: &Context,
+    args: JiraIdeaTransitionPerform,
+) -> Result<Value, AppError> {
+    let idea = args.id;
+    let mut body = input::read_json_arg("jira", "ideas.transitions.perform", args.json.as_deref())?;
+    let requested_transition = args.transition.trim();
+    if requested_transition.is_empty() {
+        return Err(AppError::invalid_input(
+            "jira",
+            "ideas.transitions.perform",
+            "--transition must contain an available transition id or name",
+        ));
+    }
+    let transition_id = if requested_transition
+        .chars()
+        .all(|character| character.is_ascii_digit())
+    {
+        requested_transition.to_string()
+    } else {
+        let available = list_idea_transitions(client, ctx, &idea).await?;
+        resolve_transition_id(&available, requested_transition)?
+    };
+    set_transition_id(&mut body, &transition_id);
+    let url = format!(
+        "{}/rest/api/3/issue/{}/transitions",
+        site_url(ctx.profile(), "jira", "ideas.transitions.perform")?,
+        enc(&idea),
+    );
+    client
+        .request(
+            "jira",
+            "ideas.transitions.perform",
+            ctx.profile(),
+            Method::POST,
+            url,
+            Some(body),
+        )
+        .await
+}
+
+fn resolve_transition_id(response: &Value, requested_name: &str) -> Result<String, AppError> {
+    let transitions = response
+        .get("transitions")
+        .and_then(Value::as_array)
+        .map(Vec::as_slice)
+        .unwrap_or_default();
+    let matches = transitions
+        .iter()
+        .filter(|transition| {
+            transition
+                .get("name")
+                .and_then(Value::as_str)
+                .is_some_and(|name| name.eq_ignore_ascii_case(requested_name))
+        })
+        .collect::<Vec<_>>();
+    if matches.len() == 1 {
+        return matches[0]
+            .get("id")
+            .and_then(json_id_string)
+            .ok_or_else(|| {
+                AppError::internal(
+                    "jira",
+                    "ideas.transitions.perform",
+                    "matching Jira transition has no id",
+                )
+            });
+    }
+
+    let available = transitions
+        .iter()
+        .filter_map(|transition| {
+            let id = transition.get("id").and_then(json_id_string)?;
+            let name = transition.get("name").and_then(Value::as_str)?;
+            Some(format!("{id}: {name}"))
+        })
+        .collect::<Vec<_>>()
+        .join(", ");
+    let message = if matches.is_empty() {
+        format!(
+            "transition {requested_name:?} is not available; available transitions: {available}"
+        )
+    } else {
+        format!(
+            "multiple transitions are named {requested_name:?}; pass a transition id instead: {available}"
+        )
+    };
+    Err(AppError::invalid_input(
+        "jira",
+        "ideas.transitions.perform",
+        message,
+    ))
+}
+
+fn set_transition_id(body: &mut Value, transition_id: &str) {
+    input::ensure_object(body).insert("transition".to_string(), json!({ "id": transition_id }));
+}
+
+fn json_id_string(value: &Value) -> Option<String> {
     match value {
         Value::String(id) => Some(id.clone()),
         Value::Number(id) => Some(id.to_string()),
@@ -1109,7 +1326,7 @@ fn jql_updated_since_clause(value: &str) -> String {
     }
 }
 
-fn trim_issue(src: &Value) -> Value {
+fn trim_issue_fields(src: &Value, requested_fields: Option<&str>) -> Value {
     let mut out = serde_json::Map::new();
     let Some(obj) = src.as_object() else {
         return src.clone();
@@ -1156,6 +1373,18 @@ fn trim_issue(src: &Value) -> Value {
         }
         if let Some(pj) = fields.get("project") {
             f.insert("project".to_string(), pick(pj, &["key", "name"]));
+        }
+        for requested in requested_fields
+            .unwrap_or_default()
+            .split(',')
+            .map(str::trim)
+            .filter(|field| !field.is_empty())
+        {
+            if !f.contains_key(requested) {
+                if let Some(value) = fields.get(requested) {
+                    f.insert(requested.to_string(), value.clone());
+                }
+            }
         }
         out.insert("fields".to_string(), Value::Object(f));
     }
@@ -1447,6 +1676,87 @@ mod tests {
         assert_eq!(body["fields"]["customfield_10012"], 7);
         assert_eq!(body["fields"]["summary"], "New summary");
         assert_eq!(body["fields"]["description"]["type"], "doc");
+    }
+
+    #[test]
+    fn parse_idea_url_identifies_view_without_inventing_an_issue() {
+        let parsed = parse_idea_url(
+            "https://example.atlassian.net/jira/polaris/projects/MDP/ideas/view/24ea4b72-37ad-4950-b41c-9bc93ee5f2c8",
+        )
+        .unwrap();
+        assert_eq!(parsed["targetType"], "product_discovery_view");
+        assert_eq!(parsed["projectKey"], "MDP");
+        assert_eq!(parsed["viewId"], "24ea4b72-37ad-4950-b41c-9bc93ee5f2c8");
+        assert!(parsed["issueKey"].is_null());
+    }
+
+    #[test]
+    fn parse_idea_url_reads_selected_issue_from_view_query() {
+        let parsed = parse_idea_url(
+            "https://example.atlassian.net/jira/polaris/projects/MDP/ideas/view/123?selectedIssue=MDP-42&issueViewSection=comments",
+        )
+        .unwrap();
+        assert_eq!(parsed["targetType"], "product_discovery_idea");
+        assert_eq!(parsed["projectKey"], "MDP");
+        assert_eq!(parsed["viewId"], "123");
+        assert_eq!(parsed["issueKey"], "MDP-42");
+    }
+
+    #[test]
+    fn parse_idea_url_rejects_malformed_selected_issue() {
+        let err = parse_idea_url(
+            "https://example.atlassian.net/jira/polaris/projects/MDP/ideas/view/123?selectedIssue=not-an-issue",
+        )
+        .unwrap_err();
+        assert_eq!(err.code, "invalid_input");
+        assert!(err.message.contains("selectedIssue"));
+    }
+
+    #[test]
+    fn parse_idea_url_accepts_browse_issue_url() {
+        let parsed = parse_idea_url("https://example.atlassian.net/browse/MDP-42").unwrap();
+        assert_eq!(parsed["targetType"], "jira_issue");
+        assert_eq!(parsed["projectKey"], "MDP");
+        assert_eq!(parsed["issueKey"], "MDP-42");
+        assert!(parsed["viewId"].is_null());
+    }
+
+    #[test]
+    fn parse_idea_url_rejects_opaque_uuid_as_issue_target() {
+        let err =
+            parse_idea_url("https://example.atlassian.net/24ea4b72-37ad-4950-b41c").unwrap_err();
+        assert_eq!(err.code, "invalid_input");
+        assert!(err.message.contains("Product Discovery"));
+    }
+
+    #[test]
+    fn transition_name_resolves_case_insensitively() {
+        let response = json!({
+            "transitions": [
+                {"id": "21", "name": "Parking lot"},
+                {"id": "31", "name": "Research"}
+            ]
+        });
+        assert_eq!(resolve_transition_id(&response, "research").unwrap(), "31");
+    }
+
+    #[test]
+    fn unknown_transition_reports_available_ids_and_names() {
+        let response = json!({"transitions": [{"id": "31", "name": "Research"}]});
+        let err = resolve_transition_id(&response, "Delivery").unwrap_err();
+        assert_eq!(err.code, "invalid_input");
+        assert!(err.message.contains("31: Research"));
+    }
+
+    #[test]
+    fn transition_flag_overrides_json_transition_and_preserves_fields() {
+        let mut body = json!({
+            "transition": {"id": "21"},
+            "fields": {"resolution": {"name": "Done"}}
+        });
+        set_transition_id(&mut body, "31");
+        assert_eq!(body["transition"]["id"], "31");
+        assert_eq!(body["fields"]["resolution"]["name"], "Done");
     }
 
     fn ideas_list(
@@ -1761,7 +2071,7 @@ mod tests {
                 }
             }
         });
-        let trimmed = trim_issue(&src);
+        let trimmed = trim_issue_fields(&src, None);
         let obj = trimmed.as_object().unwrap();
         assert!(!obj.contains_key("expand"));
         assert!(!obj.contains_key("self"));
@@ -1785,6 +2095,30 @@ mod tests {
         assert!(!project.contains_key("avatarUrls"));
         assert!(fields.get("assignee").unwrap().is_null());
         assert!(fields.get("description").unwrap().is_object());
+    }
+
+    #[test]
+    fn trim_issue_preserves_explicitly_requested_custom_fields() {
+        let src = json!({
+            "id": "10101",
+            "key": "MDP-42",
+            "fields": {
+                "summary": "Multiplexing",
+                "customfield_10011": {"id": "10", "value": "Research"},
+                "customfield_10012": null,
+                "unrequested": "noise"
+            }
+        });
+        let trimmed = trim_issue_fields(
+            &src,
+            Some("key,summary,customfield_10011,customfield_10012"),
+        );
+        assert_eq!(
+            trimmed["fields"]["customfield_10011"],
+            json!({"id": "10", "value": "Research"})
+        );
+        assert!(trimmed["fields"]["customfield_10012"].is_null());
+        assert!(trimmed["fields"].get("unrequested").is_none());
     }
 
     #[test]

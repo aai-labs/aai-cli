@@ -15,6 +15,12 @@ pub fn allows(service: &str, operation: &str, method: &Method) -> bool {
         return false;
     }
     let suffix = operation.rsplit('.').next().unwrap_or_default();
+    if service == "apollo" && suffix == "search" {
+        return matches!(method, &Method::GET | &Method::POST);
+    }
+    if service == "posthog" && operation == "events.query" {
+        return method == Method::POST;
+    }
     let read = matches!(
         suffix,
         "about"
@@ -71,5 +77,14 @@ mod tests {
         assert!(!allows("github", "repos.list", &Method::POST));
         assert!(allows("github", "issues.create", &Method::POST));
         assert!(!allows("github", "issues.create", &Method::GET));
+    }
+
+    #[test]
+    fn catalog_accepts_typed_operations_for_services_added_after_gateway_v1() {
+        assert!(allows("agent-barn", "list_agents_get", &Method::GET));
+        assert!(allows("apollo", "people.search", &Method::POST));
+        assert!(allows("merkys", "ask", &Method::POST));
+        assert!(allows("microsoft", "planner.tasks.update", &Method::PATCH));
+        assert!(allows("posthog", "events.query", &Method::POST));
     }
 }

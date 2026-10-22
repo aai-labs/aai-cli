@@ -15,7 +15,7 @@ axum = { version = "0.8", features = ["multipart"] }
 base64 = "0.22"
 calamine = "0.36.1"
 chacha20poly1305 = { version = "0.10", features = ["std"] }
-clap = { version = "4.5", features = ["derive", "env"] }
+clap = { version = "4.5", features = ["derive", "env", "string"] }
 csv = "1.4.0"
 dirs = "6.0"
 imap = { version = "2.4", default-features = false }
@@ -28,7 +28,7 @@ sha2 = "0.10"
 serde_json = "1.0"
 subtle = "2.6"
 thiserror = "2.0"
-tokio = { version = "1.48", features = ["macros", "rt-multi-thread", "net", "sync", "signal"] }
+tokio = { version = "1.48", features = ["macros", "net", "rt-multi-thread", "signal", "sync", "time"] }
 toml = "0.9"
 url = "2.5"
 umya-spreadsheet = "3.0.1"
@@ -39,4 +39,5 @@ zip = { version = "6", default-features = false, features = ["deflate"] }
 zip = { version = "6", default-features = false, features = ["deflate"] }
 
 [dev-dependencies]
+tokio = { version = "1.48", features = ["test-util"] }
 tempfile = "3.23"

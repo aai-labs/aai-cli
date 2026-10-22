@@ -6,7 +6,7 @@ use clap::{Args, Parser, Subcommand, ValueEnum};
 #[command(name = "aai-cli")]
 #[command(about = "Agent-friendly CLI wrappers for common work APIs")]
 #[command(
-    long_about = "Agent-friendly CLI wrappers for common work APIs.\n\nEvery successful service response includes `_aai.pagination` with pagination status, continuation values, and instructions for retrieving more results. Bare provider arrays are wrapped under `results` so this metadata is always visible."
+    long_about = "Agent-friendly CLI wrappers for common work APIs.\n\nProvider service responses (except custom-api) include `_aai.pagination` with pagination status, continuation values, and instructions for retrieving more results. Bare provider arrays are wrapped under `results` so this metadata is always visible."
 )]
 pub struct Cli {
     #[arg(long, global = true, env = "AAI_PROFILE")]
@@ -23,6 +23,10 @@ pub struct Cli {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
+    /// Manage Agent Barn agents, resources, and platform administration.
+    AgentBarn(crate::services::agent_barn::AgentBarnCommand),
+    /// Call an absolute URL within a named Custom API profile.
+    CustomApi(CustomApiCommand),
     Jira(JiraCommand),
     Confluence(ConfluenceCommand),
     Bitbucket(BitbucketCommand),
@@ -55,6 +59,10 @@ pub enum Command {
     Posthog(PosthogCommand),
     /// Manage and use a remote credential gateway.
     Gateway(GatewayCommand),
+    /// Authenticate to and call Microsoft Graph.
+    Microsoft(MicrosoftCommand),
+    /// Ask Merkys questions, run deep research, and read its knowledge base.
+    Merkys(MerkysCommand),
 }
 
 #[derive(Debug, Args)]
@@ -116,6 +124,743 @@ pub struct GatewayJsonId {
     /// JSON object inline, from a file, or - for stdin.
     #[arg(long)]
     pub json: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftResource {
+    /// Bootstrap or validate Microsoft authentication.
+    Auth(MicrosoftAuthCommand),
+    /// Upload, download, or delete OneDrive and SharePoint drive files.
+    Files(MicrosoftFilesCommand),
+    /// Read and manage Outlook messages, drafts, and sending.
+    Mail(MicrosoftMailCommand),
+    /// Read and manage Outlook calendar events.
+    Calendar(MicrosoftCalendarCommand),
+    /// Read and manage Outlook contacts.
+    Contacts(MicrosoftContactsCommand),
+    /// Transfer SharePoint files and manage lists and list items.
+    Sharepoint(MicrosoftSharepointCommand),
+    /// Read Teams, channels, members, messages, and chats.
+    Teams(MicrosoftTeamsCommand),
+    /// Read and manage Microsoft To Do lists and tasks (delegated only).
+    Todo(MicrosoftTodoCommand),
+    /// Read Planner plans/buckets and manage Planner tasks.
+    Planner(MicrosoftPlannerCommand),
+    /// Read and edit Excel workbooks stored in OneDrive or SharePoint.
+    Excel(MicrosoftExcelCommand),
+    /// Call a Microsoft Graph endpoint with profile authentication.
+    Request(GenericRequest),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftExcelResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelResource {
+    /// Inspect and manage workbook worksheets.
+    Worksheets(MicrosoftExcelWorksheetsCommand),
+    /// Read, update, or clear worksheet ranges.
+    Ranges(MicrosoftExcelRangesCommand),
+    /// Inspect and manage workbook tables and rows.
+    Tables(MicrosoftExcelTablesCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftWorkbookTarget {
+    /// Drive item ID of the .xlsx workbook.
+    #[arg(long, conflicts_with = "path", required_unless_present = "path")]
+    pub item_id: Option<String>,
+    /// Path to the .xlsx workbook relative to the selected drive root.
+    #[arg(long, conflicts_with = "item_id", required_unless_present = "item_id")]
+    pub path: Option<String>,
+    /// SharePoint or OneDrive drive ID. Omit to use the configured user's OneDrive.
+    #[arg(long, conflicts_with = "user_id")]
+    pub drive_id: Option<String>,
+    /// User ID whose OneDrive should be used. Defaults to profile.user_id.
+    #[arg(long, conflicts_with = "drive_id")]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelWorksheetsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelWorksheetsAction {
+    /// List worksheet tabs in a workbook.
+    List(MicrosoftExcelWorksheetTarget),
+    /// Add a worksheet tab.
+    Add(MicrosoftExcelWorksheetMutation),
+    /// Rename a worksheet tab.
+    Rename(MicrosoftExcelWorksheetRename),
+    /// Delete a worksheet tab.
+    Delete(MicrosoftExcelWorksheetDelete),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetDelete {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetMutation {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Name for the new worksheet.
+    pub name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelWorksheetRename {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or current name.
+    pub worksheet: String,
+    /// New worksheet name.
+    pub name: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelRangesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelRangesAction {
+    /// Read a worksheet range.
+    Get(MicrosoftExcelRangeTarget),
+    /// Update values, formulas, or number formats in a range.
+    Update(MicrosoftExcelRangeUpdate),
+    /// Clear values, formats, or all content in a range.
+    Clear(MicrosoftExcelRangeClear),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+    /// A1 range address, such as A1:C5.
+    pub range: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeUpdate {
+    #[command(flatten)]
+    pub target: MicrosoftExcelRangeTarget,
+    /// JSON matrix for the Graph `values` property.
+    #[arg(long)]
+    pub values: Option<String>,
+    /// JSON matrix for the Graph `formulas` property.
+    #[arg(long)]
+    pub formulas: Option<String>,
+    /// JSON matrix for the Graph `numberFormat` property.
+    #[arg(long)]
+    pub number_format: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelRangeClear {
+    #[command(flatten)]
+    pub target: MicrosoftExcelRangeTarget,
+    /// Clear scope: Contents, Formats, or All.
+    #[arg(long, default_value = "Contents")]
+    pub apply_to: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTablesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftExcelTablesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelTablesAction {
+    /// List workbook tables.
+    List(MicrosoftExcelTableWorkbookTarget),
+    /// Create a table over a worksheet range.
+    Create(MicrosoftExcelTableCreate),
+    /// Delete a table.
+    Delete(MicrosoftExcelTableTarget),
+    /// Inspect and append table rows.
+    #[command(subcommand)]
+    Rows(MicrosoftExcelTableRowsCommand),
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftExcelTableRowsCommand {
+    /// List rows in a table.
+    List(MicrosoftExcelTableRowsList),
+    /// Append one or more rows to a table.
+    Append(MicrosoftExcelTableRowsAppend),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableWorkbookTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableTarget {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Table ID or name.
+    pub table: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableRowsList {
+    #[command(flatten)]
+    pub target: MicrosoftExcelTableTarget,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableCreate {
+    #[command(flatten)]
+    pub workbook: MicrosoftWorkbookTarget,
+    /// Worksheet ID or name.
+    pub worksheet: String,
+    /// Table range, such as A1:C10.
+    pub range: String,
+    /// Whether the first row is a header row.
+    #[arg(long)]
+    pub has_headers: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftExcelTableRowsAppend {
+    #[command(flatten)]
+    pub target: MicrosoftExcelTableTarget,
+    /// JSON array of row arrays, for example [["Ada", "Ready"], ["Grace", "Blocked"]].
+    #[arg(long)]
+    pub values: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListArgs {
+    /// Maximum number of resources to aggregate across Graph pages.
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserArg {
+    /// User ID or UPN. Defaults to profile.user_id.
+    #[arg(long)]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserListArgs {
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserItemArg {
+    pub id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserCreate {
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    /// Provider JSON object, inline or from a path; use - to read stdin.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftUserUpdate {
+    pub id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    /// Provider JSON object, inline or from a path; use - to read stdin.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftMailCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftMailResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftMailResource {
+    Messages(MicrosoftMessagesCommand),
+    /// Send a message. JSON must contain the Graph sendMail request body.
+    Send(MicrosoftUserCreate),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftMessagesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftMessagesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftMessagesAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    /// Create a draft message.
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftCalendarCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftCalendarResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftCalendarResource {
+    Events(MicrosoftEventsCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftEventsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftEventsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftEventsAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftContactsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftContactsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftContactsAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftSharepointResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointResource {
+    /// Upload, download, or delete files in a SharePoint document library.
+    Files(MicrosoftSharepointFilesCommand),
+    Lists(MicrosoftSharepointListsCommand),
+    Items(MicrosoftSharepointItemsCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFilesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftSharepointFilesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointFilesAction {
+    /// Upload a local file to a SharePoint document library.
+    Upload(MicrosoftSharepointFileUpload),
+    /// Download a SharePoint document-library file to a local path.
+    Download(MicrosoftSharepointFileDownload),
+    /// Delete a file from a SharePoint document library.
+    Delete(MicrosoftSharepointFileTarget),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileTarget {
+    /// Path relative to the document-library root.
+    pub path: String,
+    /// SharePoint document-library drive ID.
+    #[arg(long)]
+    pub drive_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileUpload {
+    /// Local file containing the bytes to upload.
+    pub file: String,
+    #[command(flatten)]
+    pub target: MicrosoftSharepointFileTarget,
+    /// MIME type sent to Microsoft Graph.
+    #[arg(long, default_value = "application/octet-stream")]
+    pub mime_type: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointFileDownload {
+    #[command(flatten)]
+    pub target: MicrosoftSharepointFileTarget,
+    /// Local output path. File content is never written to stdout.
+    #[arg(long)]
+    pub output: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointListsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftSharepointListsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointListsAction {
+    List(MicrosoftSiteListArgs),
+    Get(MicrosoftSiteListArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSharepointItemsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftSharepointItemsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftSharepointItemsAction {
+    List(MicrosoftListItemListArgs),
+    Get(MicrosoftListItemArg),
+    Create(MicrosoftListItemCreate),
+    Update(MicrosoftListItemUpdate),
+    Delete(MicrosoftListItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSiteListArgs {
+    pub site_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftSiteListArg {
+    pub site_id: String,
+    pub list_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemListArgs {
+    pub site_id: String,
+    pub list_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemArg {
+    pub site_id: String,
+    pub list_id: String,
+    pub item_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemCreate {
+    pub site_id: String,
+    pub list_id: String,
+    /// Graph listItem JSON. Usually `{ "fields": { ... } }`.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftListItemUpdate {
+    pub site_id: String,
+    pub list_id: String,
+    pub item_id: String,
+    /// Fields JSON object sent to the list item's `/fields` endpoint.
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTeamsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftTeamsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTeamsAction {
+    Get(MicrosoftTeamArg),
+    Channels(MicrosoftTeamListArgs),
+    Channel(MicrosoftChannelArg),
+    Members(MicrosoftTeamListArgs),
+    Messages(MicrosoftChannelListArgs),
+    Chats(MicrosoftUserListArgs),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTeamArg {
+    pub team_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTeamListArgs {
+    pub team_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftChannelArg {
+    pub team_id: String,
+    pub channel_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftChannelListArgs {
+    pub team_id: String,
+    pub channel_id: String,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftTodoResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTodoResource {
+    Lists(MicrosoftTodoListsCommand),
+    Tasks(MicrosoftTodoTasksCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoListsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftTodoListsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTodoListsAction {
+    List(MicrosoftUserListArgs),
+    Get(MicrosoftUserItemArg),
+    Create(MicrosoftUserCreate),
+    Update(MicrosoftUserUpdate),
+    Delete(MicrosoftUserItemArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTasksCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftTodoTasksAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftTodoTasksAction {
+    List(MicrosoftTodoTaskListArgs),
+    Get(MicrosoftTodoTaskArg),
+    Create(MicrosoftTodoTaskCreate),
+    Update(MicrosoftTodoTaskUpdate),
+    Delete(MicrosoftTodoTaskArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskListArgs {
+    pub list_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[command(flatten)]
+    pub list: MicrosoftListArgs,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskArg {
+    pub list_id: String,
+    pub task_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskCreate {
+    pub list_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftTodoTaskUpdate {
+    pub list_id: String,
+    pub task_id: String,
+    #[command(flatten)]
+    pub user: MicrosoftUserArg,
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerCommand {
+    #[command(subcommand)]
+    pub resource: MicrosoftPlannerResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftPlannerResource {
+    Plans(MicrosoftPlannerPlansCommand),
+    Buckets(MicrosoftPlannerBucketsCommand),
+    Tasks(MicrosoftPlannerTasksCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerPlansCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftPlannerGetAction,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerBucketsCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftPlannerGetAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftPlannerGetAction {
+    Get(IdArg),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerTasksCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftPlannerTasksAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftPlannerTasksAction {
+    Get(IdArg),
+    Create(MicrosoftJsonCreate),
+    Update(MicrosoftPlannerTaskUpdate),
+    Delete(MicrosoftPlannerTaskDelete),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftJsonCreate {
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerTaskUpdate {
+    pub id: String,
+    /// Last observed Planner task ETag.
+    #[arg(long)]
+    pub etag: String,
+    #[arg(long)]
+    pub json: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftPlannerTaskDelete {
+    pub id: String,
+    /// Last observed Planner task ETag.
+    #[arg(long)]
+    pub etag: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFilesCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftFilesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftFilesAction {
+    Upload(MicrosoftFileUpload),
+    Download(MicrosoftFileDownload),
+    Delete(MicrosoftFileTarget),
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFileTarget {
+    /// Path relative to the drive root.
+    pub path: String,
+    /// SharePoint or OneDrive drive ID. Omit to use the configured user's OneDrive.
+    #[arg(long, conflicts_with = "user_id")]
+    pub drive_id: Option<String>,
+    /// User ID whose OneDrive should be used. Defaults to profile.user_id.
+    #[arg(long, conflicts_with = "drive_id")]
+    pub user_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFileUpload {
+    /// Local file containing the bytes to upload.
+    pub file: String,
+    #[command(flatten)]
+    pub target: MicrosoftFileTarget,
+    /// MIME type sent to Microsoft Graph.
+    #[arg(long, default_value = "application/octet-stream")]
+    pub mime_type: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftFileDownload {
+    #[command(flatten)]
+    pub target: MicrosoftFileTarget,
+    /// Local output path. File content is never written to stdout.
+    #[arg(long)]
+    pub output: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MicrosoftAuthCommand {
+    #[command(subcommand)]
+    pub action: MicrosoftAuthAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MicrosoftAuthAction {
+    /// Sign in once with device code and save the refresh token encrypted.
+    Login,
+    /// Prove saved credentials can acquire a token without interaction.
+    Status,
 }
 
 #[derive(Debug, Args)]
@@ -451,6 +1196,10 @@ pub enum JiraIdeasAction {
     Update(JiraIdeasUpdate),
     /// Discover the fields available on a Product Discovery project's idea type.
     Fields(JiraIdeasFields),
+    /// Parse a Product Discovery view or idea URL into its project, view, and issue parts.
+    ParseUrl(JiraIdeasParseUrl),
+    /// List or perform workflow transitions for an idea.
+    Transitions(JiraIdeaTransitionsCommand),
 }
 
 #[derive(Debug, Args)]
@@ -506,6 +1255,36 @@ pub struct JiraIdeasFields {
     pub issue_type: Option<String>,
     #[arg(long, default_value_t = 200)]
     pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct JiraIdeasParseUrl {
+    pub url: String,
+}
+
+#[derive(Debug, Args)]
+pub struct JiraIdeaTransitionsCommand {
+    #[command(subcommand)]
+    pub action: JiraIdeaTransitionsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum JiraIdeaTransitionsAction {
+    /// List workflow transitions currently available for an idea.
+    List(IdArg),
+    /// Perform a workflow transition by id or exact name (case-insensitive).
+    Perform(JiraIdeaTransitionPerform),
+}
+
+#[derive(Debug, Args)]
+pub struct JiraIdeaTransitionPerform {
+    pub id: String,
+    /// Available transition id or name, for example 31 or Research.
+    #[arg(long)]
+    pub transition: String,
+    /// Optional Jira transition body; --transition overrides its transition.id.
+    #[arg(long)]
+    pub json: Option<String>,
 }
 
 #[derive(Debug, Args)]
@@ -1553,6 +2332,16 @@ pub enum PipedriveResource {
     Activities(PipedriveActivitiesCommand),
     /// List or get notes across CRM records.
     Notes(PipedriveNotesCommand),
+    /// List, inspect, and download files attached to CRM records.
+    Files(PipedriveFilesCommand),
+    /// Read field definitions: custom-field keys, types, and option labels.
+    Fields(PipedriveFieldsCommand),
+    /// Look up company users (deal owners, note authors).
+    Users(PipedriveUsersCommand),
+    /// List or get sales pipelines.
+    Pipelines(PipedrivePipelinesCommand),
+    /// List or get pipeline stages.
+    Stages(PipedriveStagesCommand),
     /// Inspect synced email messages and threads.
     Mailbox(PipedriveMailboxCommand),
     /// Call an uncommon Pipedrive REST endpoint with profile authentication.
@@ -1639,6 +2428,8 @@ pub struct PipedriveLeadUpdate {
     pub organization_id: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -1676,6 +2467,8 @@ pub enum PipedrivePersonsAction {
     Update(PipedrivePersonUpdate),
     /// Delete a person.
     Delete(PipedriveIdArg),
+    /// Merge this person into another; `--merge-with-id` survives and its data wins conflicts.
+    Merge(PipedriveMergeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -1749,6 +2542,8 @@ pub struct PipedrivePersonUpdate {
     pub phone: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -1779,6 +2574,8 @@ pub enum PipedriveOrganizationsAction {
     Update(PipedriveOrganizationUpdate),
     /// Delete an organization.
     Delete(PipedriveIdArg),
+    /// Merge this organization into another; `--merge-with-id` survives and its data wins conflicts.
+    Merge(PipedriveMergeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -1838,6 +2635,8 @@ pub struct PipedriveOrganizationUpdate {
     pub address: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -1870,6 +2669,8 @@ pub enum PipedriveDealsAction {
     Update(PipedriveDealUpdate),
     /// Delete a deal.
     Delete(PipedriveIdArg),
+    /// Merge this deal into another; `--merge-with-id` survives and its data wins conflicts.
+    Merge(PipedriveMergeArgs),
 }
 
 #[derive(Debug, Args)]
@@ -1965,6 +2766,8 @@ pub struct PipedriveDealUpdate {
     pub stage_id: Option<String>,
     #[arg(long)]
     pub label_ids: Option<String>,
+    #[command(flatten)]
+    pub labels: PipedriveLabelEdits,
 }
 
 #[derive(Debug, Args)]
@@ -2968,6 +3771,12 @@ pub enum PipedriveActivitiesAction {
     List(Box<PipedriveActivityList>),
     /// Get one activity.
     Get(PipedriveIdArg),
+    /// Create an activity (call, meeting, task, ...) from flags and/or JSON.
+    Create(Box<PipedriveActivityWrite>),
+    /// Update an activity from flags and/or JSON, e.g. mark it done.
+    Update(Box<PipedriveActivityUpdate>),
+    /// Delete an activity.
+    Delete(PipedriveIdArg),
 }
 
 #[derive(Debug, Args)]
@@ -3017,6 +3826,12 @@ pub enum PipedriveNotesAction {
     List(PipedriveNoteList),
     /// Get one note.
     Get(PipedriveIdArg),
+    /// Create a note on a deal, person, organization, or lead.
+    Create(PipedriveNoteWrite),
+    /// Update a note's content or links.
+    Update(PipedriveNoteUpdate),
+    /// Delete a note.
+    Delete(PipedriveIdArg),
 }
 
 #[derive(Debug, Args)]
@@ -3042,6 +3857,281 @@ pub struct PipedriveNoteList {
     pub end_date: Option<String>,
     #[arg(long)]
     pub updated_since: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveMergeArgs {
+    /// ID of the record merged away.
+    pub id: String,
+    /// ID of the record that remains after the merge.
+    #[arg(long)]
+    pub merge_with_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveNoteWrite {
+    #[arg(long)]
+    pub json: Option<String>,
+    /// Note body. Pipedrive accepts basic HTML.
+    #[arg(long)]
+    pub content: String,
+    #[command(flatten)]
+    pub links: PipedriveNoteLinks,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveNoteUpdate {
+    pub id: String,
+    #[arg(long)]
+    pub json: Option<String>,
+    #[arg(long)]
+    pub content: Option<String>,
+    #[command(flatten)]
+    pub links: PipedriveNoteLinks,
+}
+
+/// Label edits that keep the record's other labels, unlike `--label-ids`, which replaces
+/// the whole set. Flattened into each record type's update command.
+#[derive(Debug, Clone, Default, Args)]
+pub struct PipedriveLabelEdits {
+    /// Label IDs to add, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub add_label_ids: Option<String>,
+    /// Label IDs to remove, keeping the record's other labels.
+    #[arg(long, conflicts_with = "label_ids")]
+    pub remove_label_ids: Option<String>,
+}
+
+/// The records a note is attached to.
+#[derive(Debug, Default, Args)]
+pub struct PipedriveNoteLinks {
+    #[arg(long)]
+    pub deal_id: Option<String>,
+    #[arg(long)]
+    pub person_id: Option<String>,
+    #[arg(long)]
+    pub org_id: Option<String>,
+    #[arg(long)]
+    pub lead_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveActivityFields {
+    /// Activity type key, e.g. call, meeting, task, deadline, email, lunch.
+    #[arg(long = "type")]
+    pub activity_type: Option<String>,
+    /// Due date, YYYY-MM-DD.
+    #[arg(long)]
+    pub due_date: Option<String>,
+    /// Due time in UTC, HH:MM.
+    #[arg(long)]
+    pub due_time: Option<String>,
+    /// Duration, HH:MM.
+    #[arg(long)]
+    pub duration: Option<String>,
+    #[arg(long)]
+    pub deal_id: Option<String>,
+    #[arg(long)]
+    pub lead_id: Option<String>,
+    #[arg(long)]
+    pub person_id: Option<String>,
+    #[arg(long)]
+    pub org_id: Option<String>,
+    /// User ID the activity is assigned to.
+    #[arg(long)]
+    pub owner_id: Option<String>,
+    /// Private note on the activity.
+    #[arg(long)]
+    pub note: Option<String>,
+    #[arg(long)]
+    pub done: Option<bool>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveActivityWrite {
+    #[arg(long)]
+    pub json: Option<String>,
+    #[arg(long)]
+    pub subject: String,
+    #[command(flatten)]
+    pub fields: PipedriveActivityFields,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveActivityUpdate {
+    pub id: String,
+    #[arg(long)]
+    pub json: Option<String>,
+    #[arg(long)]
+    pub subject: Option<String>,
+    #[command(flatten)]
+    pub fields: PipedriveActivityFields,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveUsersCommand {
+    #[command(subcommand)]
+    pub action: PipedriveUsersAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveUsersAction {
+    /// List every user in the company. Pipedrive returns them in one response.
+    List,
+    /// Get one user.
+    Get(PipedriveIdArg),
+    /// Get the user the API token belongs to.
+    Me,
+    /// Find users by name, or by email with --search-by-email.
+    Find(PipedriveUserFind),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveUserFind {
+    #[arg(long)]
+    pub term: String,
+    /// Match the term against email addresses instead of names.
+    #[arg(long)]
+    pub search_by_email: bool,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedrivePipelinesCommand {
+    #[command(subcommand)]
+    pub action: PipedrivePipelinesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedrivePipelinesAction {
+    /// List pipelines.
+    List(PipedriveSortedList),
+    /// Get one pipeline.
+    Get(PipedriveIdArg),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveStagesCommand {
+    #[command(subcommand)]
+    pub action: PipedriveStagesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveStagesAction {
+    /// List stages, across all pipelines or in one.
+    List(PipedriveStageList),
+    /// Get one stage.
+    Get(PipedriveIdArg),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveSortedList {
+    /// Maximum records to aggregate.
+    #[arg(long, default_value_t = 500)]
+    pub limit: u32,
+    /// Sort field, e.g. id, update_time, or add_time.
+    #[arg(long)]
+    pub sort_by: Option<String>,
+    #[arg(long, value_enum)]
+    pub sort_direction: Option<PipedriveSortDirection>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveStageList {
+    /// Only stages in this pipeline.
+    #[arg(long)]
+    pub pipeline_id: Option<String>,
+    #[command(flatten)]
+    pub list: PipedriveSortedList,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldsCommand {
+    #[command(subcommand)]
+    pub resource: PipedriveFieldResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveFieldResource {
+    /// Deal fields. Leads use the deal field definitions for their custom fields.
+    Deals(PipedriveFieldCommand),
+    /// Person fields.
+    Persons(PipedriveFieldCommand),
+    /// Organization fields, including Industry and other option fields.
+    Organizations(PipedriveFieldCommand),
+    /// Activity fields.
+    Activities(PipedriveFieldCommand),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldCommand {
+    #[command(subcommand)]
+    pub action: PipedriveFieldAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveFieldAction {
+    /// List field definitions with their option labels.
+    List(PipedriveFieldList),
+    /// Get one field definition by its field code (the key used in record payloads).
+    Get(PipedriveFieldCodeArg),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldList {
+    /// Maximum fields to aggregate. Defaults high because a partial field map silently
+    /// leaves custom-field keys and option IDs unresolved.
+    #[arg(long, default_value_t = 500)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFieldCodeArg {
+    /// Field code, e.g. a custom field's 40-character hash key.
+    pub field_code: String,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFilesCommand {
+    #[command(subcommand)]
+    pub action: PipedriveFilesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum PipedriveFilesAction {
+    /// List files, either account-wide or attached to one deal, person, or organization.
+    List(PipedriveFileList),
+    /// Get one file's metadata.
+    Get(PipedriveIdArg),
+    /// Download one file's content to --output.
+    Download(PipedriveFileDownload),
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFileList {
+    /// Maximum files to aggregate.
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+    /// Only files attached to this deal.
+    #[arg(long, conflicts_with_all = ["person_id", "org_id"])]
+    pub deal_id: Option<String>,
+    /// Only files attached to this person.
+    #[arg(long, conflicts_with = "org_id")]
+    pub person_id: Option<String>,
+    /// Only files attached to this organization.
+    #[arg(long)]
+    pub org_id: Option<String>,
+    /// Pipedrive sort expression, e.g. "add_time DESC".
+    #[arg(long)]
+    pub sort: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct PipedriveFileDownload {
+    /// Pipedrive file ID.
+    pub id: String,
+    /// Path to write the file content to. Content never goes to stdout.
+    #[arg(long)]
+    pub output: String,
 }
 
 #[derive(Debug, Args)]
@@ -3297,6 +4387,185 @@ mod tests {
     }
 
     #[test]
+    fn pipedrive_field_lists_default_to_the_whole_field_map() {
+        let cli = Cli::try_parse_from(["aai-cli", "pipedrive", "fields", "organizations", "list"])
+            .expect("parse organization field list");
+        let Command::Pipedrive(command) = cli.command else {
+            panic!("expected pipedrive command");
+        };
+        let PipedriveResource::Fields(PipedriveFieldsCommand {
+            resource: PipedriveFieldResource::Organizations(command),
+        }) = command.resource
+        else {
+            panic!("expected organization fields");
+        };
+        let PipedriveFieldAction::List(args) = command.action else {
+            panic!("expected list");
+        };
+        assert_eq!(args.limit, 500);
+    }
+
+    #[test]
+    fn pipedrive_label_edits_cannot_be_combined_with_a_full_replacement() {
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "deals",
+            "update",
+            "1",
+            "--add-label-ids",
+            "7",
+            "--remove-label-ids",
+            "6",
+        ])
+        .expect("parse label add and remove");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "leads",
+            "update",
+            "abc",
+            "--label-ids",
+            "7",
+            "--add-label-ids",
+            "8",
+        ])
+        .expect_err("--label-ids replaces the set, so it conflicts with add/remove");
+    }
+
+    #[test]
+    fn pipedrive_merge_requires_the_surviving_record() {
+        for resource in ["persons", "organizations", "deals"] {
+            Cli::try_parse_from([
+                "aai-cli",
+                "pipedrive",
+                resource,
+                "merge",
+                "7",
+                "--merge-with-id",
+                "9",
+            ])
+            .unwrap_or_else(|err| panic!("parse {resource} merge: {err}"));
+            Cli::try_parse_from(["aai-cli", "pipedrive", resource, "merge", "7"])
+                .expect_err("merge requires --merge-with-id");
+        }
+    }
+
+    #[test]
+    fn pipedrive_note_create_requires_content() {
+        Cli::try_parse_from(["aai-cli", "pipedrive", "notes", "create", "--deal-id", "1"])
+            .expect_err("a note needs content");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "notes",
+            "create",
+            "--content",
+            "Call notes",
+            "--deal-id",
+            "1",
+        ])
+        .expect("parse note create");
+    }
+
+    #[test]
+    fn pipedrive_activity_update_accepts_done() {
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "activities",
+            "update",
+            "5",
+            "--done",
+            "true",
+        ])
+        .expect("parse activity completion");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "activities",
+            "create",
+            "--type",
+            "call",
+        ])
+        .expect_err("an activity needs a subject");
+    }
+
+    #[test]
+    fn pipedrive_user_find_requires_a_term() {
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "users",
+            "find",
+            "--term",
+            "ana@example.com",
+            "--search-by-email",
+        ])
+        .expect("parse user find by email");
+        Cli::try_parse_from(["aai-cli", "pipedrive", "users", "find"])
+            .expect_err("user find requires --term");
+    }
+
+    #[test]
+    fn pipedrive_stages_list_can_scope_to_one_pipeline() {
+        let cli = Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "stages",
+            "list",
+            "--pipeline-id",
+            "3",
+            "--sort-direction",
+            "desc",
+        ])
+        .expect("parse pipeline-scoped stage list");
+        let Command::Pipedrive(command) = cli.command else {
+            panic!("expected pipedrive command");
+        };
+        let PipedriveResource::Stages(PipedriveStagesCommand {
+            action: PipedriveStagesAction::List(args),
+        }) = command.resource
+        else {
+            panic!("expected stage list");
+        };
+        assert_eq!(args.pipeline_id.as_deref(), Some("3"));
+        assert_eq!(args.list.limit, 500);
+    }
+
+    #[test]
+    fn pipedrive_field_get_takes_a_field_code() {
+        Cli::try_parse_from(["aai-cli", "pipedrive", "fields", "deals", "get", "abc123"])
+            .expect("parse deal field get");
+        Cli::try_parse_from(["aai-cli", "pipedrive", "fields", "deals", "get"])
+            .expect_err("field get requires a field code");
+    }
+
+    #[test]
+    fn pipedrive_files_download_requires_an_output_path() {
+        // Content must never land on stdout, so there is no default for --output.
+        Cli::try_parse_from(["aai-cli", "pipedrive", "files", "download", "7"])
+            .expect_err("download without --output must fail");
+    }
+
+    #[test]
+    fn pipedrive_files_list_accepts_one_record_filter_at_most() {
+        Cli::try_parse_from(["aai-cli", "pipedrive", "files", "list", "--deal-id", "12"])
+            .expect("parse deal-scoped file list");
+        Cli::try_parse_from([
+            "aai-cli",
+            "pipedrive",
+            "files",
+            "list",
+            "--deal-id",
+            "12",
+            "--org-id",
+            "3",
+        ])
+        .expect_err("a file list is scoped to one record");
+    }
+
+    #[test]
     fn drive_exposes_reads_and_only_the_upload_write() {
         let mut command = Cli::command();
         let drive = command.find_subcommand_mut("drive").expect("drive command");
@@ -3354,6 +4623,60 @@ mod tests {
     }
 
     #[test]
+    fn jira_ideas_parse_url_accepts_a_view_url() {
+        let cli = Cli::try_parse_from([
+            "aai-cli",
+            "jira",
+            "ideas",
+            "parse-url",
+            "https://example.atlassian.net/jira/polaris/projects/MDP/ideas/view/123",
+        ])
+        .expect("parse jira ideas parse-url");
+        let Command::Jira(jira) = cli.command else {
+            panic!("expected jira command");
+        };
+        let JiraResource::Ideas(ideas) = jira.resource else {
+            panic!("expected ideas resource");
+        };
+        let JiraIdeasAction::ParseUrl(args) = ideas.action else {
+            panic!("expected parse-url action");
+        };
+        assert!(args.url.contains("/projects/MDP/"));
+    }
+
+    #[test]
+    fn jira_ideas_transition_parses_name_and_json() {
+        let cli = Cli::try_parse_from([
+            "aai-cli",
+            "jira",
+            "ideas",
+            "transitions",
+            "perform",
+            "MDP-42",
+            "--transition",
+            "Research",
+            "--json",
+            r#"{"fields":{"customfield_10011":{"id":"10"}}}"#,
+        ])
+        .expect("parse jira idea transition");
+        let Command::Jira(jira) = cli.command else {
+            panic!("expected jira command");
+        };
+        let JiraResource::Ideas(ideas) = jira.resource else {
+            panic!("expected ideas resource");
+        };
+        let JiraIdeasAction::Transitions(command) = ideas.action else {
+            panic!("expected transitions action");
+        };
+        let JiraIdeaTransitionsAction::Perform(args) = command.action else {
+            panic!("expected transition perform action");
+        };
+        assert_eq!(args.id, "MDP-42");
+        assert_eq!(args.transition, "Research");
+        assert!(args.json.is_some());
+    }
+
+    #[test]
     fn config_profile_commands_are_discoverable_in_help() {
         let mut command = Cli::command();
         let config = command
@@ -3389,6 +4712,87 @@ mod tests {
             let help = String::from_utf8(help).unwrap();
             assert!(help.contains("request"), "{service} help lacks request");
         }
+    }
+
+    #[test]
+    fn microsoft_typed_resources_are_discoverable_and_parse() {
+        let mut command = Cli::command();
+        let microsoft = command
+            .find_subcommand_mut("microsoft")
+            .expect("microsoft command");
+        let mut help = Vec::new();
+        microsoft.write_long_help(&mut help).unwrap();
+        let help = String::from_utf8(help).unwrap();
+
+        for resource in [
+            "auth",
+            "files",
+            "mail",
+            "calendar",
+            "contacts",
+            "sharepoint",
+            "teams",
+            "todo",
+            "planner",
+            "excel",
+            "request",
+        ] {
+            assert!(help.contains(resource), "microsoft help lacks {resource}");
+        }
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "planner",
+            "tasks",
+            "update",
+            "task-id",
+            "--etag",
+            "etag-value",
+            "--json",
+            r#"{"title":"updated"}"#,
+        ])
+        .expect("parse planner task update");
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            "report.docx",
+            "--drive-id",
+            "drive-id",
+            "--output",
+            "report.docx",
+        ])
+        .expect("parse explicit SharePoint download");
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "sharepoint",
+            "files",
+            "download",
+            "report.docx",
+            "--output",
+            "report.docx",
+        ])
+        .expect_err("SharePoint file commands require --drive-id");
+
+        Cli::try_parse_from([
+            "aai-cli",
+            "microsoft",
+            "excel",
+            "tables",
+            "rows",
+            "append",
+            "--item-id",
+            "workbook-id",
+            "Table1",
+            "--values",
+            r#"[["Ada",42]]"#,
+        ])
+        .expect("parse Graph Excel table row append");
     }
 
     #[test]
@@ -4796,4 +6200,198 @@ pub struct PosthogAnnotationGetArgs {
     #[arg(long)]
     pub project_id: Option<String>,
     pub annotation_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysCommand {
+    #[command(subcommand)]
+    pub resource: MerkysResource,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysResource {
+    /// Ask a question and get one grounded answer with its cited sources.
+    Ask(MerkysAsk),
+    /// Start, poll, and stop deep research runs.
+    Research(MerkysResearchCommand),
+    /// List, search, and read conversations.
+    Conversations(MerkysConversationsCommand),
+    /// List uploaded documents.
+    Documents(MerkysDocumentsCommand),
+    /// List connected data sources.
+    Sources(MerkysSourcesCommand),
+    /// List custom assistants.
+    Assistants(MerkysAssistantsCommand),
+    /// Call an uncommon Merkys endpoint with profile authentication.
+    Request(GenericRequest),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysAsk {
+    /// The question to ask.
+    pub question: String,
+    /// Continue an existing conversation instead of starting a new one.
+    #[arg(long)]
+    pub conversation_id: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysResearchCommand {
+    #[command(subcommand)]
+    pub action: MerkysResearchAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysResearchAction {
+    /// Start a deep research run. Returns the run id unless --wait is set.
+    Start(MerkysResearchStart),
+    /// Get a run's status, plan, final report, and sources.
+    Get(MerkysRunId),
+    /// Stop a running deep research run.
+    Stop(MerkysRunId),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysResearchStart {
+    /// The research question.
+    pub question: String,
+    /// Run inside an existing conversation instead of a new one.
+    #[arg(long)]
+    pub conversation_id: Option<String>,
+    /// Poll until the run completes or fails, then return the finished run.
+    #[arg(long)]
+    pub wait: bool,
+    /// With --wait: give up after this many seconds. The run keeps going.
+    #[arg(long, default_value_t = 900)]
+    pub timeout_secs: u64,
+    /// With --wait: seconds between polls.
+    #[arg(long, default_value_t = 5)]
+    pub poll_secs: u64,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysRunId {
+    pub run_id: String,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysConversationsCommand {
+    #[command(subcommand)]
+    pub action: MerkysConversationsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysConversationsAction {
+    /// List the key owner's conversations, newest first.
+    List(MerkysPagedList),
+    /// Search conversation titles and messages.
+    Search(MerkysConversationSearch),
+    /// List a conversation's messages, including sources on assistant answers.
+    Messages(MerkysConversationMessages),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysPagedList {
+    #[arg(long, default_value_t = 20)]
+    pub limit: u32,
+    /// Continuation token from a previous response's next_page_token.
+    #[arg(long)]
+    pub page_token: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysConversationSearch {
+    pub query: String,
+    #[command(flatten)]
+    pub page: MerkysPagedList,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysConversationMessages {
+    pub conversation_id: String,
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+    /// Continuation token from a previous response's next_page_token.
+    #[arg(long)]
+    pub page_token: Option<String>,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysDocumentsCommand {
+    #[command(subcommand)]
+    pub action: MerkysDocumentsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysDocumentsAction {
+    /// List items.
+    List(MerkysDocumentsList),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysDocumentsList {
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysSourcesCommand {
+    #[command(subcommand)]
+    pub action: MerkysSourcesAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysSourcesAction {
+    /// List data sources the key owner can manage or read.
+    List(MerkysSourcesList),
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysSourcesList {
+    #[arg(long, default_value_t = 50)]
+    pub limit: u32,
+    #[arg(long, default_value_t = 0)]
+    pub offset: u32,
+}
+
+#[derive(Debug, Args)]
+pub struct MerkysAssistantsCommand {
+    #[command(subcommand)]
+    pub action: MerkysAssistantsAction,
+}
+
+#[derive(Debug, Subcommand)]
+pub enum MerkysAssistantsAction {
+    /// List custom assistants the key owner can use.
+    List,
+}
+
+#[derive(Debug, Args)]
+pub struct CustomApiCommand {
+    #[command(subcommand)]
+    pub action: CustomApiAction,
+}
+#[derive(Debug, Subcommand)]
+pub enum CustomApiAction {
+    Request(CustomApiRequest),
+}
+#[derive(Debug, Args)]
+pub struct CustomApiRequest {
+    #[arg(
+        long,
+        required_unless_present = "request_json",
+        conflicts_with = "request_json"
+    )]
+    pub url: Option<String>,
+    #[arg(long, default_value = "GET", conflicts_with = "request_json")]
+    pub method: String,
+    #[arg(long, conflicts_with = "request_json")]
+    pub query: Vec<String>,
+    #[arg(long, conflicts_with = "request_json")]
+    pub header: Vec<String>,
+    #[arg(long, conflicts_with = "request_json")]
+    pub json: Option<String>,
+    /// Complete request object from a JSON file or standard input (-).
+    #[arg(long)]
+    pub request_json: Option<String>,
 }

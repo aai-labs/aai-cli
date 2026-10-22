@@ -9,7 +9,9 @@ Jira commands cover issues, Jira Product Discovery ideas, projects, Agile boards
 
 ## Jira Product Discovery
 
-Product Discovery ideas are Jira issues in `product_discovery`-type projects, managed through the Jira platform REST API with the same site and credentials. `jira ideas` commands scope searches to Product Discovery projects and discover project-specific idea fields (for example Impact or Effort custom fields) via the create-meta endpoints. Set idea custom fields by passing `fields.customfield_*` entries in `--json`; discover their ids with `jira ideas fields PROJECT`. Votes, reactions, insights, and formula values are not exposed by Atlassian's public APIs.
+Product Discovery ideas are Jira issues in `product_discovery`-type projects, managed through the Jira platform REST API with the same site and credentials. `jira ideas` commands scope searches to Product Discovery projects and discover project-specific idea fields (for example Impact or Effort custom fields) via the create-meta endpoints. Set idea custom fields by passing `fields.customfield_*` entries in `--json`; discover their ids with `jira ideas fields PROJECT`. Explicitly requested custom fields are preserved in `ideas list` results.
+
+Use `jira ideas parse-url URL` to distinguish a Product Discovery saved-view URL from an existing idea. The opaque `/ideas/view/VIEW_ID` path value is view context; the optional `selectedIssue` query parameter is the Jira issue key. Use `jira ideas transitions` to list and perform workflow status transitions by id or name. Votes, reactions, insights, formula values, and saved-view configuration are not exposed by Atlassian's public APIs.
 
 ## Original API Docs
 

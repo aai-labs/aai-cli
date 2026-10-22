@@ -7,6 +7,8 @@ description: Use aai-cli to create local spreadsheet files, manage their sheet t
 
 Use this skill when working with spreadsheet files on disk through `aai-cli excel`.
 
+For workbooks stored in Microsoft 365, use the separate `aai-cli microsoft excel` command group. It calls Microsoft Graph's remote workbook API and requires delegated Microsoft credentials. Do not confuse the two surfaces: `excel` edits a local path, while `microsoft excel` addresses a OneDrive or SharePoint drive item/path.
+
 Read and write `.xlsx`, `.xlsm`, `.csv`, `.tsv`. Read-only: `.xls` (Excel 97–2003), `.xlsb`, `.ods` — to edit one, save it as `.xlsx` or `.csv` first.
 
 These are local files. There is no account, profile, or credential involved — do **not** pass `--profile`, and do not ask the user to authenticate. Just point the command at a file path.

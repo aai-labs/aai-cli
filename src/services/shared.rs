@@ -201,6 +201,23 @@ pub(crate) fn slack_base(profile: &Profile) -> String {
         .unwrap_or_else(|| "https://slack.com/api".to_string())
 }
 
+/// Merkys has no public default host: each deployment (cloud or on-prem) has its own, so
+/// the profile must say where to send requests.
+pub(crate) fn merkys_base(profile: &Profile, operation: &'static str) -> Result<String, AppError> {
+    profile
+        .base_url
+        .as_deref()
+        .map(trim_url)
+        .filter(|url| !url.is_empty())
+        .ok_or_else(|| {
+            AppError::service_config(
+                "merkys",
+                operation,
+                format!("merkys.{operation} requires profile.base_url"),
+            )
+        })
+}
+
 pub(crate) fn openpanel_base(profile: &Profile) -> String {
     profile
         .base_url

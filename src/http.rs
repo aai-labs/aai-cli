@@ -1,3 +1,5 @@
+#[path = "http/custom_api.rs"]
+pub(crate) mod custom_api;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -63,6 +65,175 @@ impl ApiClient {
             client,
             no_redirect_client,
         })
+    }
+
+    /// Capture downloads or bounded SSE without buffering the complete response.
+    /// Uses the shared authentication boundary and refuses all redirects.
+    pub async fn capture_to_file(
+        &self,
+        service: &'static str,
+        operation: &'static str,
+        profile: &Profile,
+        url: String,
+        output: &str,
+        duration_seconds: Option<u64>,
+    ) -> Result<Value, AppError> {
+        use std::{fs::OpenOptions, io::Write, path::Path};
+        use tokio::time::{timeout, timeout_at, Duration, Instant};
+        let path = std::path::absolute(Path::new(output))
+            .map_err(|e| AppError::invalid_input(service, operation, e.to_string()))?;
+        if profile.credential_source.as_deref() == Some("gateway") {
+            if duration_seconds.is_some() {
+                return Err(AppError::invalid_input(
+                    service,
+                    operation,
+                    "stream capture is not available for gateway profiles",
+                ));
+            }
+            let bytes = self
+                .download_with_accept(service, operation, profile, url, "application/octet-stream")
+                .await?;
+            let mut file = OpenOptions::new()
+                .write(true)
+                .create_new(true)
+                .open(&path)
+                .map_err(|e| {
+                    AppError::invalid_input(
+                        service,
+                        operation,
+                        format!("cannot create output file: {e}"),
+                    )
+                })?;
+            file.write_all(&bytes).map_err(|e| {
+                AppError::internal(service, operation, format!("failed writing output: {e}"))
+            })?;
+            file.flush().map_err(|e| {
+                AppError::internal(service, operation, format!("failed flushing output: {e}"))
+            })?;
+            return Ok(serde_json::json!({
+                "path": path,
+                "content_type": "application/octet-stream",
+                "bytes": bytes.len(),
+                "termination_reason": "complete",
+            }));
+        }
+        let token = self.bearer(service, operation, profile).await?;
+        let effective = Profile {
+            token: Some(token),
+            ..profile.clone()
+        };
+        let request = apply_auth(
+            self.no_redirect_client.get(url),
+            service,
+            operation,
+            &effective,
+        )?
+        .header(
+            "Accept",
+            if duration_seconds.is_some() {
+                "text/event-stream"
+            } else {
+                "application/octet-stream"
+            },
+        );
+        let mut file = OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&path)
+            .map_err(|e| {
+                AppError::invalid_input(
+                    service,
+                    operation,
+                    format!("cannot create output file: {e}"),
+                )
+            })?;
+        let partial = |message: String| {
+            let mut error = AppError::internal(service, operation, message);
+            error.details = Some(serde_json::json!({"partial_file": path}));
+            error
+        };
+        let mut response = timeout(Duration::from_secs(30), request.send())
+            .await
+            .map_err(|_| partial("timed out waiting for response headers".into()))?
+            .map_err(|e| partial(format!("capture request failed: {e}")))?;
+        let status = response.status();
+        if !status.is_success() {
+            let body = timeout(Duration::from_secs(30), response.text())
+                .await
+                .map_err(|_| partial("timed out reading provider error".into()))?
+                .map_err(|e| partial(format!("failed reading provider error: {e}")))?;
+            let details = serde_json::from_str::<Value>(&body)
+                .unwrap_or_else(|_| Value::String(body.chars().take(4096).collect()));
+            let error = AppError::api(
+                service,
+                operation,
+                status,
+                format!("provider returned HTTP {}", status.as_u16()),
+                Some(details),
+            );
+            // No response bytes were saved; do not leave an empty artifact after an HTTP error.
+            drop(file);
+            let _ = std::fs::remove_file(&path);
+            return Err(error);
+        }
+        let content_type = response
+            .headers()
+            .get(reqwest::header::CONTENT_TYPE)
+            .and_then(|v| v.to_str().ok())
+            .unwrap_or("application/octet-stream")
+            .to_owned();
+        if duration_seconds.is_some()
+            && content_type
+                .split(';')
+                .next()
+                .is_none_or(|s| s.trim() != "text/event-stream")
+        {
+            return Err(partial("expected text/event-stream response".into()));
+        }
+        let deadline =
+            duration_seconds.map(|seconds| Instant::now() + Duration::from_secs(seconds));
+        let mut bytes = 0_u64;
+        let reason = loop {
+            let next = if let Some(deadline) = deadline {
+                match timeout_at(deadline, response.chunk()).await {
+                    Ok(chunk) => chunk,
+                    Err(_) => break "duration_elapsed",
+                }
+            } else {
+                timeout(Duration::from_secs(30), response.chunk())
+                    .await
+                    .map_err(|_| partial("download stalled; partial file retained".into()))?
+            };
+            match next.map_err(|e| partial(format!("transfer interrupted: {e}")))? {
+                Some(chunk) => {
+                    file.write_all(&chunk)
+                        .map_err(|e| partial(format!("failed writing output: {e}")))?;
+                    bytes += chunk.len() as u64;
+                }
+                None if duration_seconds.is_some() => {
+                    return Err(partial(
+                        "stream disconnected before requested duration; partial file retained"
+                            .into(),
+                    ))
+                }
+                None => break "complete",
+            }
+        };
+        file.flush()
+            .map_err(|e| partial(format!("failed flushing output: {e}")))?;
+        Ok(
+            serde_json::json!({"path":path,"content_type":content_type,"bytes":bytes,"termination_reason":reason}),
+        )
+    }
+
+    /// Resolve the profile's bearer token without making a provider request.
+    pub async fn bearer(
+        &self,
+        service: &'static str,
+        operation: &'static str,
+        profile: &crate::config::Profile,
+    ) -> Result<String, AppError> {
+        crate::oauth::resolve_token(profile, &self.client, service, operation).await
     }
 
     pub async fn request(
@@ -242,41 +413,47 @@ impl ApiClient {
             token: Some(token),
             ..profile.clone()
         };
-        let mut request = self.client.request(Method::GET, &url);
-        request = apply_auth(request, service, operation, &effective)?;
-        request = request.header("Accept", accept);
-
-        let response = request.send().await.map_err(|err| {
-            AppError::internal(service, operation, format!("request failed: {err}"))
-        })?;
-        let status = response.status();
-        let bytes = response.bytes().await.map_err(|err| {
-            AppError::internal(
-                service,
-                operation,
-                format!("failed to read response: {err}"),
-            )
-        })?;
-
-        if status.is_success() {
-            Ok(bytes.to_vec())
-        } else {
-            let details = std::str::from_utf8(&bytes)
-                .ok()
-                .and_then(|text| serde_json::from_str(text).ok())
-                .or_else(|| {
-                    Some(Value::String(
-                        String::from_utf8_lossy(&bytes).chars().take(4096).collect(),
-                    ))
-                });
-            Err(AppError::api(
-                service,
-                operation,
-                status,
-                format!("provider returned HTTP {}", status.as_u16()),
-                details,
-            ))
+        let mut target = parse_url(service, operation, &url)?;
+        // Origin includes the scheme, so an http -> https hop on the same host also drops
+        // credentials. reqwest compared only host and port; this is the stricter choice.
+        let credentialed_origin = target.origin();
+        // Redirects are followed here rather than by reqwest, which strips only the
+        // standard auth headers on a cross-origin hop: a provider-specific header such as
+        // Pipedrive's x-api-token would otherwise reach a signed-storage host.
+        for _ in 0..=MAX_DOWNLOAD_REDIRECTS {
+            let mut request = self
+                .no_redirect_client
+                .request(Method::GET, target.clone())
+                .header("Accept", accept);
+            if target.origin() == credentialed_origin {
+                request = apply_auth(request, service, operation, &effective)?;
+            }
+            let response = request.send().await.map_err(|err| {
+                AppError::internal(service, operation, format!("request failed: {err}"))
+            })?;
+            if !response.status().is_redirection() {
+                return read_download(service, operation, response).await;
+            }
+            let Some(location) = response
+                .headers()
+                .get(reqwest::header::LOCATION)
+                .and_then(|value| value.to_str().ok())
+            else {
+                return read_download(service, operation, response).await;
+            };
+            target = target.join(location).map_err(|err| {
+                AppError::internal(
+                    service,
+                    operation,
+                    format!("invalid redirect location {location:?}: {err}"),
+                )
+            })?;
         }
+        Err(AppError::internal(
+            service,
+            operation,
+            format!("download exceeded {MAX_DOWNLOAD_REDIRECTS} redirects"),
+        ))
     }
 
     /// Send an already-encoded byte body and parse the JSON reply.
@@ -686,6 +863,53 @@ fn attach_provider_next_url(value: Value, next_url: Option<String>) -> Value {
     }
 }
 
+const MAX_DOWNLOAD_REDIRECTS: usize = 10;
+
+fn parse_url(
+    service: &'static str,
+    operation: &'static str,
+    url: &str,
+) -> Result<reqwest::Url, AppError> {
+    reqwest::Url::parse(url).map_err(|err| {
+        AppError::internal(service, operation, format!("invalid URL {url:?}: {err}"))
+    })
+}
+
+async fn read_download(
+    service: &'static str,
+    operation: &'static str,
+    response: reqwest::Response,
+) -> Result<Vec<u8>, AppError> {
+    let status = response.status();
+    let bytes = response.bytes().await.map_err(|err| {
+        AppError::internal(
+            service,
+            operation,
+            format!("failed to read response: {err}"),
+        )
+    })?;
+
+    if status.is_success() {
+        Ok(bytes.to_vec())
+    } else {
+        let details = std::str::from_utf8(&bytes)
+            .ok()
+            .and_then(|text| serde_json::from_str(text).ok())
+            .or_else(|| {
+                Some(Value::String(
+                    String::from_utf8_lossy(&bytes).chars().take(4096).collect(),
+                ))
+            });
+        Err(AppError::api(
+            service,
+            operation,
+            status,
+            format!("provider returned HTTP {}", status.as_u16()),
+            details,
+        ))
+    }
+}
+
 pub(crate) fn apply_auth(
     request: RequestBuilder,
     service: &'static str,
@@ -746,6 +970,24 @@ pub(crate) fn apply_auth(
                 })?;
             Ok(request.header("x-api-key", token))
         }
+        "api_key_header" | "api-key-header" => {
+            let token = profile
+                .api_token
+                .as_deref()
+                .or(profile.token.as_deref())
+                .ok_or_else(|| {
+                    AppError::auth(service, operation, "profile is missing api_token or token")
+                })?;
+            let name = profile.api_key_header.as_deref().unwrap_or("X-API-Key");
+            let name = reqwest::header::HeaderName::from_bytes(name.as_bytes()).map_err(|_| {
+                AppError::service_config(
+                    service,
+                    operation,
+                    format!("profile.api_key_header {name:?} is not a valid header name"),
+                )
+            })?;
+            Ok(request.header(name, token))
+        }
         "hubspot_service_key"
         | "hubspot-service-key"
         | "hubspot_legacy_private_app"
@@ -790,6 +1032,7 @@ pub(crate) fn apply_auth(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::test_support::serve;
     use reqwest::Method;
     use std::{
         io::{Read, Write},
@@ -873,6 +1116,42 @@ mod tests {
             "openpanel-secret"
         );
         assert!(!request.headers().contains_key("authorization"));
+    }
+
+    fn api_key_header_request(header: Option<&str>) -> Result<reqwest::Request, AppError> {
+        let profile = Profile {
+            auth_type: Some("api_key_header".to_string()),
+            api_token: Some("key-1".to_string()),
+            api_key_header: header.map(str::to_string),
+            ..Profile::default()
+        };
+        apply_auth(
+            Client::new().request(Method::GET, "https://example.test/x"),
+            "merkys",
+            "conversations.list",
+            &profile,
+        )
+        .map(|request| request.build().unwrap())
+    }
+
+    #[test]
+    fn api_key_header_defaults_to_x_api_key() {
+        let request = api_key_header_request(None).unwrap();
+        assert_eq!(request.headers()["x-api-key"], "key-1");
+        assert!(!request.headers().contains_key("authorization"));
+    }
+
+    #[test]
+    fn api_key_header_uses_the_configured_header_name() {
+        let request = api_key_header_request(Some("X-Custom-Key")).unwrap();
+        assert_eq!(request.headers()["x-custom-key"], "key-1");
+        assert!(!request.headers().contains_key("x-api-key"));
+    }
+
+    #[test]
+    fn api_key_header_rejects_an_invalid_header_name() {
+        let error = api_key_header_request(Some("bad header")).unwrap_err();
+        assert_eq!(error.code, "config_error");
     }
 
     #[test]
@@ -1030,7 +1309,7 @@ mod tests {
             .send()
             .await
             .unwrap();
-        let token_response: Value = client.post(format!("{gateway_url}/api/v1/admin/tokens")).bearer_auth("admin").json(&serde_json::json!({"grants": {"fake": {"allow_operations": [operation], "allow_methods": ["GET", "POST"]}}})).send().await.unwrap().json().await.unwrap();
+        let token_response: Value = client.post(format!("{gateway_url}/api/v1/admin/tokens")).bearer_auth("admin").json(&serde_json::json!({"grants": {"fake": {"allow_operations": [operation], "allow_methods": ["GET", "POST", "PUT", "PATCH", "DELETE"]}}})).send().await.unwrap().json().await.unwrap();
         (
             gateway_url,
             token_response["token"].as_str().unwrap().to_string(),
@@ -1101,6 +1380,84 @@ mod tests {
             authorization.lock().unwrap().as_deref(),
             Some("Bearer provider-secret")
         );
+    }
+
+    #[tokio::test]
+    async fn services_added_after_gateway_v1_keep_working_in_direct_mode() {
+        for (service, operation, method) in [
+            ("agent-barn", "list_agents_get", Method::GET),
+            ("apollo", "people.search", Method::POST),
+            ("merkys", "ask", Method::POST),
+            ("microsoft", "planner.tasks.update", Method::PATCH),
+        ] {
+            let (provider, authorization) =
+                provider_once(br#"{"ok":true}"#, "application/json").await;
+            let profile = Profile {
+                base_url: Some(provider.clone()),
+                auth_type: Some("bearer_token".into()),
+                token: Some("provider-secret".into()),
+                ..Profile::default()
+            };
+            let value = ApiClient::new()
+                .unwrap()
+                .request(
+                    service,
+                    operation,
+                    &profile,
+                    method,
+                    format!("{provider}/typed"),
+                    None,
+                )
+                .await
+                .unwrap();
+            assert_eq!(value["ok"], true, "{service}");
+            assert_eq!(
+                authorization.lock().unwrap().as_deref(),
+                Some("Bearer provider-secret"),
+                "{service}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn services_added_after_gateway_v1_use_gateway_transport() {
+        for (service, operation, method) in [
+            ("agent-barn", "list_agents_get", Method::GET),
+            ("apollo", "people.search", Method::POST),
+            ("merkys", "ask", Method::POST),
+            ("microsoft", "planner.tasks.update", Method::PATCH),
+        ] {
+            let (provider, authorization) =
+                provider_once(br#"{"ok":true}"#, "application/json").await;
+            let (gateway, proxy_token, _temp) = gateway_profile(&provider, operation).await;
+            let profile = Profile {
+                credential_source: Some("gateway".into()),
+                gateway_url: Some(gateway),
+                gateway_profile_id: Some("fake".into()),
+                gateway_token: Some(proxy_token),
+                base_url: Some(provider.clone()),
+                auth_type: Some("bearer_token".into()),
+                ..Profile::default()
+            };
+            let value = ApiClient::new()
+                .unwrap()
+                .request(
+                    service,
+                    operation,
+                    &profile,
+                    method,
+                    format!("{provider}/typed"),
+                    None,
+                )
+                .await
+                .unwrap();
+            assert_eq!(value["ok"], true, "{service}");
+            assert_eq!(
+                authorization.lock().unwrap().as_deref(),
+                Some("Bearer provider-secret"),
+                "{service}"
+            );
+        }
     }
 
     #[tokio::test]
@@ -1232,5 +1589,119 @@ mod tests {
             authorization.lock().unwrap().as_deref(),
             Some("Bearer provider-secret")
         );
+    }
+
+    /// Answer one request per response, in order, and hand back the raw request texts.
+    fn redirect_to(location: &str) -> Vec<u8> {
+        format!("HTTP/1.1 302 Found\r\nLocation: {location}\r\nContent-Length: 0\r\n\r\n")
+            .into_bytes()
+    }
+
+    const FILE_RESPONSE: &[u8] = b"HTTP/1.1 200 OK\r\nContent-Length: 9\r\n\r\npdf-bytes";
+
+    fn pipedrive_profile() -> Profile {
+        Profile {
+            auth_type: Some("pipedrive_personal_token".to_string()),
+            api_token: Some("pd-secret".to_string()),
+            ..Profile::default()
+        }
+    }
+
+    #[tokio::test]
+    async fn download_does_not_forward_credentials_to_the_redirect_target() {
+        let (storage, storage_server) = serve(vec![FILE_RESPONSE.to_vec()]);
+        let (api, api_server) = serve(vec![redirect_to(&format!(
+            "http://{storage}/signed?sig=abc"
+        ))]);
+
+        let bytes = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap();
+        let api_requests = api_server.join().unwrap();
+        let storage_requests = storage_server.join().unwrap();
+
+        assert_eq!(bytes, b"pdf-bytes");
+        assert!(api_requests[0].contains("x-api-token: pd-secret"));
+        assert!(
+            !storage_requests[0].contains("pd-secret"),
+            "credentials reached the redirect target:\n{}",
+            storage_requests[0]
+        );
+    }
+
+    #[tokio::test]
+    async fn download_keeps_credentials_on_a_same_origin_redirect() {
+        let (api, api_server) = serve(vec![
+            redirect_to("/v1/files/7/content"),
+            FILE_RESPONSE.to_vec(),
+        ]);
+
+        let bytes = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap();
+        let requests = api_server.join().unwrap();
+
+        assert_eq!(bytes, b"pdf-bytes");
+        assert!(requests[1].starts_with("get /v1/files/7/content"));
+        assert!(requests[1].contains("x-api-token: pd-secret"));
+    }
+
+    #[tokio::test]
+    async fn download_stops_after_the_redirect_limit() {
+        let responses = (0..=MAX_DOWNLOAD_REDIRECTS)
+            .map(|hop| redirect_to(&format!("/v1/files/7/hop{hop}")))
+            .collect();
+        let (api, api_server) = serve(responses);
+
+        let error = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap_err();
+        let requests = api_server.join().unwrap();
+
+        assert_eq!(requests.len(), MAX_DOWNLOAD_REDIRECTS + 1);
+        assert!(error.to_string().contains("redirects"), "{error}");
+    }
+
+    #[tokio::test]
+    async fn download_reports_a_redirect_without_a_location() {
+        let (api, api_server) = serve(vec![
+            b"HTTP/1.1 302 Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".to_vec(),
+        ]);
+
+        let error = ApiClient::new()
+            .unwrap()
+            .download(
+                "pipedrive",
+                "files.download",
+                &pipedrive_profile(),
+                format!("http://{api}/v1/files/7/download"),
+            )
+            .await
+            .unwrap_err();
+        let requests = api_server.join().unwrap();
+
+        assert_eq!(requests.len(), 1);
+        assert!(error.to_string().contains("302"), "{error}");
     }
 }

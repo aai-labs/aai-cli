@@ -14,8 +14,12 @@ Each proxy token can be granted several remote profiles. A grant requires both a
 allowed operation (or `allow_all_operations`) and an allowed HTTP method. Explicit
 operation and method denies win. New grants allow nothing.
 
-The gateway does not expose the CLI's generic `request` escape hatch. SMTP/IMAP,
-CalDAV, and local Excel operations are not gateway transports in this version.
+The gateway supports typed HTTP operations for Agent Barn, Apollo, Bitbucket,
+Confluence, GitHub, Google Drive, Gmail, Google Sheets, HubSpot, Jira, Merkys,
+Microsoft Graph, OpenPanel, Pipedrive, PostHog, Slack, and Zoho Mail. It does not
+expose generic `request` or Custom API escape hatches. SMTP/IMAP, CalDAV, Agent Barn
+stream capture, Microsoft interactive device login, and local Excel operations are
+not gateway transports in this version.
 
 ## Administration
 

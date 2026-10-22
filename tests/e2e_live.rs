@@ -364,6 +364,18 @@ fn jira_idea_crud_and_field_discovery() {
         "product_discovery"
     );
 
+    let transitions = cli_required(
+        "AAI_E2E_JIRA_PROFILE",
+        &["jira", "ideas", "transitions", "list", &idea_key],
+    );
+    assert!(
+        transitions
+            .get("transitions")
+            .and_then(Value::as_array)
+            .is_some(),
+        "expected available idea transitions array: {transitions:#}"
+    );
+
     let updated_summary = format!("{summary}-updated");
     let _ = cli_required(
         "AAI_E2E_JIRA_PROFILE",
@@ -1523,6 +1535,8 @@ fn pipedrive_crm_crud_and_labels() {
     let lead_label_id = find_string(&label, &["id"])
         .or_else(|| find_u64(&label, &["id"]).map(|id| id.to_string()))
         .expect("Pipedrive lead label response missing id");
+    let mut cleanup = PipedriveCleanup::new();
+    cleanup.track(&["labels", "leads", "delete", &lead_label_id]);
 
     let org = cli_required(
         "AAI_E2E_PIPEDRIVE_PROFILE",
@@ -1539,6 +1553,7 @@ fn pipedrive_crm_crud_and_labels() {
     let org_id = find_u64(&org, &["id"])
         .map(|id| id.to_string())
         .expect("Pipedrive organization response missing id");
+    cleanup.track(&["organizations", "delete", &org_id]);
 
     let person = cli_required(
         "AAI_E2E_PIPEDRIVE_PROFILE",
@@ -1557,6 +1572,7 @@ fn pipedrive_crm_crud_and_labels() {
     let person_id = find_u64(&person, &["id"])
         .map(|id| id.to_string())
         .expect("Pipedrive person response missing id");
+    cleanup.track(&["persons", "delete", &person_id]);
 
     let deal = cli_required(
         "AAI_E2E_PIPEDRIVE_PROFILE",
@@ -1579,6 +1595,7 @@ fn pipedrive_crm_crud_and_labels() {
     let deal_id = find_u64(&deal, &["id"])
         .map(|id| id.to_string())
         .expect("Pipedrive deal response missing id");
+    cleanup.track(&["deals", "delete", &deal_id]);
 
     let lead = cli_required(
         "AAI_E2E_PIPEDRIVE_PROFILE",
@@ -1597,6 +1614,7 @@ fn pipedrive_crm_crud_and_labels() {
         ],
     );
     let lead_id = find_string(&lead, &["id"]).expect("Pipedrive lead response missing id");
+    cleanup.track(&["leads", "delete", &lead_id]);
 
     let _ = cli_required("AAI_E2E_PIPEDRIVE_PROFILE", &["pipedrive", "leads", "list"]);
     let _ = cli_required(
@@ -1664,6 +1682,362 @@ fn pipedrive_crm_crud_and_labels() {
         "AAI_E2E_PIPEDRIVE_PROFILE",
         &["pipedrive", "labels", "leads", "delete", &lead_label_id],
     );
+    cleanup.done();
+}
+
+const PD: &str = "AAI_E2E_PIPEDRIVE_PROFILE";
+
+fn pipedrive_id(value: &Value) -> String {
+    match &value["data"]["id"] {
+        Value::String(id) => id.clone(),
+        id => id.to_string(),
+    }
+}
+
+fn pagination_status(value: &Value) -> &str {
+    value["_aai"]["pagination"]["status"].as_str().unwrap_or("")
+}
+
+/// Deletes the Pipedrive records a test created, newest first, when the test ends,
+/// including when an assertion fails partway. Deletion is best-effort and never panics,
+/// because a panic while unwinding would abort the test run.
+struct PipedriveCleanup(Vec<Vec<String>>);
+
+impl PipedriveCleanup {
+    fn new() -> Self {
+        Self(Vec::new())
+    }
+
+    /// Remembers the delete command for a record, e.g. `["deals", "delete", id]`.
+    fn track(&mut self, args: &[&str]) {
+        self.0
+            .push(args.iter().map(|arg| arg.to_string()).collect());
+    }
+
+    /// The test deleted everything itself, so nothing is left to clean up.
+    fn done(mut self) {
+        self.0.clear();
+    }
+}
+
+impl Drop for PipedriveCleanup {
+    fn drop(&mut self) {
+        let (Ok(config), Ok(profile)) = (env::var("AAI_E2E_CONFIG"), env::var(PD)) else {
+            return;
+        };
+        for args in self.0.drain(..).rev() {
+            let _ = Command::new(env!("CARGO_BIN_EXE_aai-cli"))
+                .arg("--config")
+                .arg(&config)
+                .arg("--profile")
+                .arg(&profile)
+                .arg("pipedrive")
+                .args(&args)
+                .output();
+        }
+    }
+}
+
+#[test]
+#[ignore = "requires live Pipedrive credentials"]
+fn pipedrive_reference_data_resolves_ids() {
+    let Some(me) = cli(PD, &["pipedrive", "users", "me"]) else {
+        return;
+    };
+    let users = cli_required(PD, &["pipedrive", "users", "list"]);
+    assert!(users["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|user| user["id"] == me["data"]["id"]));
+
+    let pipelines = cli_required(PD, &["pipedrive", "pipelines", "list"]);
+    assert_eq!(pagination_status(&pipelines), "complete");
+    let pipeline = pipelines["data"][0]["id"].clone();
+    let pipeline_id = pipeline.to_string();
+    let stages = cli_required(
+        PD,
+        &["pipedrive", "stages", "list", "--pipeline-id", &pipeline_id],
+    );
+    assert!(stages["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|stage| stage["pipeline_id"] == pipeline));
+
+    let fields = cli_required(PD, &["pipedrive", "fields", "organizations", "list"]);
+    assert_eq!(pagination_status(&fields), "complete");
+    assert!(fields["data"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|field| field["options"].is_array()));
+}
+
+#[test]
+#[ignore = "requires live Pipedrive credentials and disposable CRM records"]
+fn pipedrive_notes_activities_merges_and_label_edits() {
+    let Some(org) = cli(
+        PD,
+        &[
+            "pipedrive",
+            "organizations",
+            "create",
+            "--name",
+            &unique("aai-e2e-org"),
+        ],
+    ) else {
+        return;
+    };
+    let org_id = pipedrive_id(&org);
+    let mut cleanup = PipedriveCleanup::new();
+    cleanup.track(&["organizations", "delete", &org_id]);
+    let keep = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "persons",
+            "create",
+            "--name",
+            &unique("aai-e2e-keep"),
+            "--org-id",
+            &org_id,
+        ],
+    ));
+    cleanup.track(&["persons", "delete", &keep]);
+    let merged = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "persons",
+            "create",
+            "--name",
+            &unique("aai-e2e-merged"),
+            "--email",
+            "aai-e2e-merged@example.com",
+        ],
+    ));
+    cleanup.track(&["persons", "delete", &merged]);
+    let deal_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "deals",
+            "create",
+            "--title",
+            &unique("aai-e2e-deal"),
+            "--org-id",
+            &org_id,
+        ],
+    ));
+    cleanup.track(&["deals", "delete", &deal_id]);
+
+    let note_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "notes",
+            "create",
+            "--content",
+            "aai-e2e note",
+            "--deal-id",
+            &deal_id,
+        ],
+    ));
+    cleanup.track(&["notes", "delete", &note_id]);
+    let note = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "notes",
+            "update",
+            &note_id,
+            "--content",
+            "aai-e2e note edited",
+        ],
+    );
+    assert_eq!(note["data"]["content"], "aai-e2e note edited");
+    assert_eq!(note["data"]["deal_id"].to_string(), deal_id);
+    cli_required(PD, &["pipedrive", "notes", "delete", &note_id]);
+
+    let activity_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "activities",
+            "create",
+            "--subject",
+            "aai-e2e follow-up",
+            "--type",
+            "call",
+            "--due-date",
+            "2030-01-15",
+            "--deal-id",
+            &deal_id,
+        ],
+    ));
+    cleanup.track(&["activities", "delete", &activity_id]);
+    let activity = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "activities",
+            "update",
+            &activity_id,
+            "--done",
+            "true",
+        ],
+    );
+    assert_eq!(activity["data"]["done"], true);
+    cli_required(PD, &["pipedrive", "activities", "delete", &activity_id]);
+
+    let label_a = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "labels",
+            "leads",
+            "create",
+            "--name",
+            &unique("aai-e2e-a"),
+            "--color",
+            "green",
+        ],
+    ));
+    cleanup.track(&["labels", "leads", "delete", &label_a]);
+    let label_b = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "labels",
+            "leads",
+            "create",
+            "--name",
+            &unique("aai-e2e-b"),
+            "--color",
+            "blue",
+        ],
+    ));
+    cleanup.track(&["labels", "leads", "delete", &label_b]);
+    let lead_id = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "leads",
+            "create",
+            "--title",
+            &unique("aai-e2e-lead"),
+            "--organization-id",
+            &org_id,
+            "--label-ids",
+            &label_a,
+        ],
+    ));
+    cleanup.track(&["leads", "delete", &lead_id]);
+    let lead = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "leads",
+            "update",
+            &lead_id,
+            "--add-label-ids",
+            &label_b,
+        ],
+    );
+    assert_eq!(
+        lead["data"]["label_ids"],
+        serde_json::json!([label_a, label_b])
+    );
+    let lead = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "leads",
+            "update",
+            &lead_id,
+            "--remove-label-ids",
+            &label_a,
+        ],
+    );
+    assert_eq!(lead["data"]["label_ids"], serde_json::json!([label_b]));
+
+    let result = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "persons",
+            "merge",
+            &merged,
+            "--merge-with-id",
+            &keep,
+        ],
+    );
+    assert_eq!(pipedrive_id(&result), keep);
+    let kept = cli_required(PD, &["pipedrive", "persons", "get", &keep]);
+    assert!(kept["data"]["emails"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .any(|email| email["value"] == "aai-e2e-merged@example.com"));
+
+    let other_org = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "organizations",
+            "create",
+            "--name",
+            &unique("aai-e2e-org-merged"),
+        ],
+    ));
+    cleanup.track(&["organizations", "delete", &other_org]);
+    let result = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "organizations",
+            "merge",
+            &other_org,
+            "--merge-with-id",
+            &org_id,
+        ],
+    );
+    assert_eq!(pipedrive_id(&result), org_id);
+
+    let other_deal = pipedrive_id(&cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "deals",
+            "create",
+            "--title",
+            &unique("aai-e2e-deal-merged"),
+            "--org-id",
+            &org_id,
+        ],
+    ));
+    cleanup.track(&["deals", "delete", &other_deal]);
+    let result = cli_required(
+        PD,
+        &[
+            "pipedrive",
+            "deals",
+            "merge",
+            &other_deal,
+            "--merge-with-id",
+            &deal_id,
+        ],
+    );
+    assert_eq!(pipedrive_id(&result), deal_id);
+
+    cli_required(PD, &["pipedrive", "leads", "delete", &lead_id]);
+    cli_required(PD, &["pipedrive", "labels", "leads", "delete", &label_a]);
+    cli_required(PD, &["pipedrive", "labels", "leads", "delete", &label_b]);
+    cli_required(PD, &["pipedrive", "deals", "delete", &deal_id]);
+    cli_required(PD, &["pipedrive", "persons", "delete", &keep]);
+    cli_required(PD, &["pipedrive", "organizations", "delete", &org_id]);
+    cleanup.done();
 }
 
 #[test]
@@ -1932,4 +2306,98 @@ fn openpanel_projects_insights_and_profiles_read() {
         ],
     );
     assert!(profiles.is_array() || profiles.is_object());
+}
+
+#[test]
+#[ignore = "requires a live Merkys API key and a deployment with at least one indexed document"]
+fn merkys_ask_research_and_read() {
+    const MK: &str = "AAI_E2E_MERKYS_PROFILE";
+    let question = std::env::var("AAI_E2E_MERKYS_QUESTION")
+        .ok()
+        .filter(|question| !question.trim().is_empty())
+        .unwrap_or_else(|| "What documents do you have knowledge about?".to_string());
+
+    let limits = cli_required(MK, &["merkys", "request", "get", "/api/limits"]);
+    assert!(limits["documentMaxFileSizeMb"].is_number());
+
+    let conversations = cli_required(MK, &["merkys", "conversations", "list", "--limit", "2"]);
+    assert!(conversations["items"].as_array().is_some());
+
+    let documents = cli_required(MK, &["merkys", "documents", "list", "--limit", "5"]);
+    assert!(documents["results"].as_array().is_some());
+
+    let asked = cli_required(MK, &["merkys", "ask", &question]);
+    assert!(asked["answer"].as_str().is_some_and(|a| !a.is_empty()));
+    assert!(asked["sources"].as_array().is_some());
+    let conversation_id = str_at(&asked, &["conversation_id"]);
+
+    let messages = cli_required(
+        MK,
+        &["merkys", "conversations", "messages", conversation_id],
+    );
+    assert!(messages["items"].as_array().is_some_and(|m| m.len() >= 2));
+
+    let started = cli_required(MK, &["merkys", "research", "start", &question]);
+    let run_id = str_at(&started, &["run_id"]);
+    let run = cli_required(MK, &["merkys", "research", "get", run_id]);
+    assert_eq!(str_at(&run, &["run_id"]), run_id);
+    cli_required(MK, &["merkys", "research", "stop", run_id]);
+}
+
+#[test]
+#[ignore = "requires AAI_E2E_CONFIG, AAI_E2E_AGENT_BARN_PROFILE, and AAI_E2E_AGENT_BARN_ORGANIZATION; read-only"]
+fn agent_barn_read_only_smoke() {
+    let profile = "AAI_E2E_AGENT_BARN_PROFILE";
+    let organization = env::var("AAI_E2E_AGENT_BARN_ORGANIZATION")
+        .expect("set AAI_E2E_AGENT_BARN_ORGANIZATION explicitly");
+    let context = cli_required(profile, &["agent-barn", "auth", "context"]);
+    assert!(context["user_id"].is_string());
+    assert_eq!(context["credential_class"], "API_KEY");
+    assert!(
+        context["organizations"]
+            .as_array()
+            .expect("organization memberships")
+            .iter()
+            .any(|item| item["organization_id"] == organization),
+        "the configured key must belong to the selected organization"
+    );
+    let discovery = cli_required(profile, &["agent-barn", "discovery"]);
+    assert_eq!(discovery["api_version"], "v1");
+    assert!(discovery["operations"].is_array());
+    let schema = cli_required(profile, &["agent-barn", "openapi"]);
+    assert!(schema["paths"]["/auth/context"].is_object());
+    let agents = cli_required(
+        profile,
+        &[
+            "agent-barn",
+            "--organization-id",
+            &organization,
+            "agents",
+            "list",
+            "--limit",
+            "2",
+        ],
+    );
+    assert!(agents["items"].is_array());
+    assert!(agents["_aai"]["pagination"].is_object());
+    if let Some(id) = agents["items"]
+        .as_array()
+        .unwrap()
+        .first()
+        .and_then(|a| a["id"].as_str())
+    {
+        let agent = cli_required(
+            profile,
+            &[
+                "agent-barn",
+                "--organization-id",
+                &organization,
+                "agents",
+                "get",
+                "--agent-id",
+                id,
+            ],
+        );
+        assert_eq!(agent["id"], id);
+    }
 }

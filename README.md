@@ -8,20 +8,24 @@ The goal is not to replace full SDKs. The goal is to make common agent tasks saf
 
 | Service | CLI coverage | Local docs | Original API docs |
 | --- | --- | --- | --- |
-| Jira Cloud | Issues, Product Discovery ideas and idea field discovery, projects, Agile boards, sprints, comments, attachments | [docs/services/jira.md](docs/services/jira.md) | [Jira REST API v3](https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/), [Jira Software REST API](https://developer.atlassian.com/cloud/jira/software/rest/intro/) |
+| Jira Cloud | Issues, Product Discovery ideas, URL parsing, field discovery and workflow transitions, projects, Agile boards, sprints, comments, attachments | [docs/services/jira.md](docs/services/jira.md) | [Jira REST API v3](https://developer.atlassian.com/cloud/jira/platform/rest/v3/intro/), [Jira Software REST API](https://developer.atlassian.com/cloud/jira/software/rest/intro/) |
 | Confluence Cloud | Spaces, pages, comments, attachments, search, page moves | [docs/services/confluence.md](docs/services/confluence.md) | [Confluence REST API v2](https://developer.atlassian.com/cloud/confluence/rest/v2/intro/) |
 | Bitbucket Cloud | Repositories, branches, commits, source files, pull requests, comments, pipelines | [docs/services/bitbucket.md](docs/services/bitbucket.md) | [Bitbucket REST API](https://developer.atlassian.com/cloud/bitbucket/rest/intro/) |
 | GitHub | Repositories, branches, files, issues, pull requests, reviews, Actions runs/jobs/logs | [docs/services/github.md](docs/services/github.md) | [GitHub REST API](https://docs.github.com/en/rest) |
 | Email | Gmail REST profiles and Zoho SMTP/IMAP profiles | [docs/services/email.md](docs/services/email.md) | [Gmail API](https://developers.google.com/gmail/api/reference/rest), [Zoho Mail API](https://www.zoho.com/mail/help/api/) |
 | Calendar | Google Calendar REST profiles and Zoho CalDAV profiles | [docs/services/calendar.md](docs/services/calendar.md) | [Google Calendar API](https://developers.google.com/calendar/api/v3/reference), [Zoho CalDAV](https://www.zoho.com/calendar/help/caldav-sync.html) |
-| Pipedrive | Leads, persons, organizations, deals, labels, activities, notes, synced email history | [docs/services/pipedrive.md](docs/services/pipedrive.md) | [Pipedrive API](https://developers.pipedrive.com/docs/api/v1), [Pipedrive API v2](https://developers.pipedrive.com/docs/api/v2) |
+| Pipedrive | Leads, persons, organizations, deals, labels, activities, notes, file attachments, field definitions, users, pipelines and stages, merges, synced email history | [docs/services/pipedrive.md](docs/services/pipedrive.md) | [Pipedrive API](https://developers.pipedrive.com/docs/api/v1), [Pipedrive API v2](https://developers.pipedrive.com/docs/api/v2) |
 | Apollo | People and organization search/enrichment, contacts, accounts, deals, tasks, calls, outreach, conversations, analytics | [docs/services/apollo.md](docs/services/apollo.md) | [Apollo API docs](https://docs.apollo.io/docs/apollo-api-overview), [Apollo OpenAPI](https://docs.apollo.io/openapi/apollo-rest-api.json) |
 | HubSpot | CRM object reads/search, files, events, conversations, visitor identification, custom channels | [docs/services/hubspot.md](docs/services/hubspot.md) | [HubSpot API docs](https://developers.hubspot.com/docs/api/overview) |
 | Google Sheets | Spreadsheet listing plus sheet value reads/writes | [docs/services/sheets.md](docs/services/sheets.md) | [Google Sheets API](https://developers.google.com/sheets/api/reference/rest) |
 | Google Drive | Files and folders, blob and Google-native content reads, shared drives, sharing (read-only), storage quota, plus file upload | [docs/services/drive.md](docs/services/drive.md) | [Google Drive API v3](https://developers.google.com/workspace/drive/api/reference/rest/v3) |
 | Slack | Channel metadata, files, bookmarks, links, channel canvas download (read-only, bot token) | [docs/services/slack.md](docs/services/slack.md) | [Slack Web API](https://docs.slack.dev/reference/methods) |
 | Slack | Channel metadata, files, bookmarks, links, channel canvas download (read-only, bot token) | [docs/services/slack.md](docs/services/slack.md) | [Slack Web API](https://docs.slack.dev/reference/methods) |
+| Agent Barn | Agents, configuration, access, templates, skills, communications, activity, costs, platform administration, downloads and streams | [docs/services/agent-barn.md](docs/services/agent-barn.md) | [Agent Barn product API](https://github.com/aai-labs/agent-barn) |
+| Custom API | Scoped absolute-URL requests with direct or isolated credentials | [docs/services/custom-api.md](docs/services/custom-api.md) | Assigned API documentation |
+| Merkys | Ask questions with cited sources, deep research, conversations, documents, data sources (read-only, user API key) | [docs/services/merkys.md](docs/services/merkys.md) | In-house FastAPI OpenAPI (`/openapi.json` on a deployment) |
 | OpenPanel | Projects, raw event export, insights (metrics, pages, referrers, devices, geo), profiles (read-only, client ID/secret) | [docs/services/openpanel.md](docs/services/openpanel.md) | [OpenPanel API docs](https://openpanel.dev/docs/api) |
+| Microsoft Graph | Durable app-only and delegated authentication, or tokens fetched from a platform `token_url`; Outlook mail/calendar/contacts; OneDrive and SharePoint files/lists; delegated Graph Excel worksheets/ranges/tables; Teams reads; To Do lists/tasks; Planner tasks; generic Graph requests | [docs/microsoft-e2e-setup.md](docs/microsoft-e2e-setup.md) | [Microsoft Graph REST API](https://learn.microsoft.com/en-us/graph/api/overview) |
 
 Project features that are not provider services:
 
@@ -36,6 +40,11 @@ Project features that are not provider services:
 - [Auth matrix](docs/auth-matrix.md): supported credential models and provider-specific auth notes.
 - [API documentation snapshot](docs/README.md): local machine-readable specs and saved provider docs.
 - [Token refresh notes](docs/token-refresh.md): OAuth token refresh behavior for supported REST profiles.
+- [Microsoft Graph setup and live tests](docs/microsoft-e2e-setup.md): idempotent tenant provisioning, durable login, resource checks, and behavioral verification.
+- [Microsoft Graph ADR](docs/adr/0001-microsoft-graph-integration.md): command structure, auth choices, alternatives, and compatibility consequences.
+- [Office file boundary ADR](docs/adr/0002-office-file-boundaries.md): typed Graph Excel operations and download/edit/upload handling for Word files.
+- Word documents are intentionally file-transfer-only: download and edit them with an external library/program, then upload the complete replacement.
+- [Changelog](CHANGELOG.md): user-visible additions and changes.
 - [Apollo implementation notes](docs/apollo/api-client.md): Apollo-specific base URLs, auth, rate limits, and endpoint coverage.
 
 ## Quick Start
@@ -173,9 +182,10 @@ aai-cli --profile github-work github request get /repos/acme/app/issues --query 
 aai-cli --profile hubspot-work hubspot request get /crm/v3/objects/contacts
 aai-cli --profile apollo-work apollo request get /users/api_profile
 aai-cli --profile jira-work jira request post /rest/api/3/issue --allow-write --json -
+aai-cli --profile microsoft-e2e-delegated microsoft request get /me
 ```
 
-Supported services are `jira`, `confluence`, `bitbucket`, `github`, `hubspot`, `pipedrive`, `apollo`, and REST-backed `email` and `calendar` profiles. SMTP/IMAP and CalDAV profiles are intentionally excluded.
+Supported services are `jira`, `confluence`, `bitbucket`, `github`, `hubspot`, `pipedrive`, `apollo`, `microsoft`, and REST-backed `email` and `calendar` profiles. SMTP/IMAP and CalDAV profiles are intentionally excluded.
 
 ## Development
 

@@ -1,0 +1,25 @@
+[
+  {
+    "command": "communication-platforms list",
+    "method": "GET",
+    "path": "/organizations/{organization_id}/communication-platforms",
+    "operation_id": "list_communication_platforms_organizations__organization_id__communication_platforms_get",
+    "query": [],
+    "path_fields": [
+      {
+        "name": "organization_id",
+        "kind": "string",
+        "required": true,
+        "choices": [],
+        "minimum": null,
+        "maximum": null
+      }
+    ],
+    "fields": [],
+    "body_required": false,
+    "paging": "single",
+    "key": "",
+    "mode": "json",
+    "deprecated": false
+  }
+]

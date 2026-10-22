@@ -32,9 +32,12 @@ Validation enforces these provider/auth/reference combinations:
 - Pipedrive: `pipedrive_personal_token` with `api_token_secret`
 - Apollo: `apollo_api_key` with `api_token_secret`
 - GitHub: `bearer_token` with `token_secret`
+- Agent Barn: `bearer_token` with `token_secret` and `base_url` ending in `/api/v1`
 - HubSpot: `hubspot_service_key` or `hubspot_legacy_private_app` with `token_secret`
 - Slack: `bearer_token` with `token_secret`
+- Merkys: `api_key_header` with `api_token_secret` and `base_url`
 - Jira, Confluence, and Bitbucket: `basic_api_token` with `api_token_secret`
+- Microsoft: `microsoft_client_credentials` with `tenant_id`, `client_id`, and `client_secret_secret`; `microsoft_delegated` with `tenant_id`, `client_id`, `scope`, and `refresh_token_secret`; or `token_url` with `token_url` and `api_token_secret`
 
 ## Generic Authenticated Requests
 
@@ -134,9 +137,14 @@ aai-cli jira ideas get <idea-key-or-id>
 aai-cli jira ideas create [--json <path|->] [--project KEY] [--type NAME] [--summary TEXT] [--description TEXT]
 aai-cli jira ideas update <idea-key-or-id> [--json <path|->] [--summary TEXT] [--description TEXT]
 aai-cli jira ideas fields <project-key-or-id> [--type NAME] [--limit N]
+aai-cli jira ideas parse-url <product-discovery-or-browse-url>
+aai-cli jira ideas transitions list <idea-key-or-id>
+aai-cli jira ideas transitions perform <idea-key-or-id> --transition <id-or-name> [--json <path|->]
 ```
 
 Ideas are Jira issues in Product Discovery projects; `ideas list` always scopes its JQL to `projectType = product_discovery` and accepts the same filter flags as `issues list` (except `--type` and `--sprint`). `ideas create` defaults the issue type name to `Idea`; override with `--type` when the project renames it.
+
+Use `ideas parse-url` before acting on a supplied Product Discovery URL. The opaque id in `/ideas/view/<id>` identifies a saved view, not an idea; an existing selected idea appears in the `selectedIssue` query parameter. Use `ideas transitions` for workflow status changes because Jira does not apply transitions through ordinary issue updates.
 
 Project-specific idea fields (Impact, Effort, ratings, and other Product Discovery custom fields) are custom fields. Discover them with `ideas fields`, which resolves the project's idea issue type (pass `--type` when the project exposes several) and returns each field's `fieldId`, `schema`, `operations`, and trimmed `allowedValues`, plus the resolved `issueType`. Set those fields through `--json`:
 
@@ -217,7 +225,7 @@ aai-cli pipedrive leads list [--limit N] [--owner-id ID] [--person-id ID] [--org
 aai-cli pipedrive leads search --term TEXT [--fields LIST] [--exact-match] [--person-id ID] [--organization-id ID] [--limit N]
 aai-cli pipedrive leads get <lead-id>
 aai-cli pipedrive leads create [--json <path|->] --title TEXT [--person-id ID] [--organization-id ID] [--label-ids CSV]
-aai-cli pipedrive leads update <lead-id> [--json <path|->] [--title TEXT] [--person-id ID] [--organization-id ID] [--label-ids CSV]
+aai-cli pipedrive leads update <lead-id> [--json <path|->] [--title TEXT] [--person-id ID] [--organization-id ID] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive leads delete <lead-id>
 aai-cli pipedrive leads convert <lead-id> [--json <path|->]
 ```
@@ -231,8 +239,9 @@ aai-cli pipedrive persons activities <person-id> [--limit N]
 aai-cli pipedrive persons notes <person-id> [--limit N]
 aai-cli pipedrive persons mail-messages <person-id> [--limit N]
 aai-cli pipedrive persons create [--json <path|->] --name TEXT [--org-id ID] [--email EMAIL] [--phone PHONE] [--label-ids CSV]
-aai-cli pipedrive persons update <person-id> [--json <path|->] [--name TEXT] [--org-id ID] [--email EMAIL] [--phone PHONE] [--label-ids CSV]
+aai-cli pipedrive persons update <person-id> [--json <path|->] [--name TEXT] [--org-id ID] [--email EMAIL] [--phone PHONE] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive persons delete <person-id>
+aai-cli pipedrive persons merge <person-id> --merge-with-id ID
 ```
 
 ```bash
@@ -244,8 +253,9 @@ aai-cli pipedrive organizations activities <organization-id> [--limit N]
 aai-cli pipedrive organizations notes <organization-id> [--limit N]
 aai-cli pipedrive organizations mail-messages <organization-id> [--limit N]
 aai-cli pipedrive organizations create [--json <path|->] --name TEXT [--address TEXT] [--label-ids CSV]
-aai-cli pipedrive organizations update <organization-id> [--json <path|->] [--name TEXT] [--address TEXT] [--label-ids CSV]
+aai-cli pipedrive organizations update <organization-id> [--json <path|->] [--name TEXT] [--address TEXT] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive organizations delete <organization-id>
+aai-cli pipedrive organizations merge <organization-id> --merge-with-id ID
 ```
 
 ```bash
@@ -258,8 +268,9 @@ aai-cli pipedrive deals notes <deal-id> [--limit N]
 aai-cli pipedrive deals mail-messages <deal-id> [--limit N]
 aai-cli pipedrive deals flow <deal-id> [--limit N]
 aai-cli pipedrive deals create [--json <path|->] --title TEXT [--person-id ID] [--org-id ID] [--value NUM] [--currency CODE] [--pipeline-id ID] [--stage-id ID] [--label-ids CSV]
-aai-cli pipedrive deals update <deal-id> [--json <path|->] [--title TEXT] [--person-id ID] [--org-id ID] [--value NUM] [--currency CODE] [--pipeline-id ID] [--stage-id ID] [--label-ids CSV]
+aai-cli pipedrive deals update <deal-id> [--json <path|->] [--title TEXT] [--person-id ID] [--org-id ID] [--value NUM] [--currency CODE] [--pipeline-id ID] [--stage-id ID] [--label-ids CSV | --add-label-ids CSV --remove-label-ids CSV]
 aai-cli pipedrive deals delete <deal-id>
+aai-cli pipedrive deals merge <deal-id> --merge-with-id ID
 ```
 
 ```bash
@@ -277,9 +288,31 @@ Use `view` for a combined JSON response containing the CRM record, activities, a
 ```bash
 aai-cli pipedrive activities list [--deal-id ID] [--lead-id ID] [--person-id ID] [--org-id ID] [--owner-id ID] [--done true|false] [--updated-since TS] [--updated-until TS] [--sort-by FIELD] [--sort-direction asc|desc] [--include-attendees] [--limit N]
 aai-cli pipedrive activities get <activity-id>
+aai-cli pipedrive activities create [--json <path|->] --subject TEXT [--type KEY] [--due-date DATE] [--due-time HH:MM] [--duration HH:MM] [--deal-id ID] [--lead-id UUID] [--person-id ID] [--org-id ID] [--owner-id ID] [--note TEXT] [--done true|false]
+aai-cli pipedrive activities update <activity-id> [--json <path|->] [--subject TEXT] [same flags as create]
+aai-cli pipedrive activities delete <activity-id>
 
 aai-cli pipedrive notes list [--deal-id ID] [--lead-id ID] [--person-id ID] [--org-id ID] [--user-id ID] [--sort SORT] [--start-date DATE] [--end-date DATE] [--updated-since TS] [--limit N]
 aai-cli pipedrive notes get <note-id>
+aai-cli pipedrive notes create [--json <path|->] --content TEXT [--deal-id ID] [--person-id ID] [--org-id ID] [--lead-id UUID]
+aai-cli pipedrive notes update <note-id> [--json <path|->] [--content TEXT] [--deal-id ID] [--person-id ID] [--org-id ID] [--lead-id UUID]
+aai-cli pipedrive notes delete <note-id>
+
+aai-cli pipedrive files list [--deal-id ID | --person-id ID | --org-id ID] [--sort SORT] [--limit N]
+aai-cli pipedrive files get <file-id>
+aai-cli pipedrive files download <file-id> --output PATH
+
+aai-cli pipedrive fields <deals|persons|organizations|activities> list [--limit N]
+aai-cli pipedrive fields <deals|persons|organizations|activities> get <field-code>
+
+aai-cli pipedrive users list
+aai-cli pipedrive users get <user-id>
+aai-cli pipedrive users me
+aai-cli pipedrive users find --term TEXT [--search-by-email]
+aai-cli pipedrive pipelines list [--sort-by FIELD] [--sort-direction asc|desc] [--limit N]
+aai-cli pipedrive pipelines get <pipeline-id>
+aai-cli pipedrive stages list [--pipeline-id ID] [--sort-by FIELD] [--sort-direction asc|desc] [--limit N]
+aai-cli pipedrive stages get <stage-id>
 
 aai-cli pipedrive mailbox messages get <message-id> [--include-body]
 aai-cli pipedrive mailbox threads list [--folder inbox|drafts|sent|archive] [--limit N]
@@ -312,6 +345,30 @@ aai-cli slack canvas download <channel-id> --output PATH
 `files download` takes a file ID from `files list`'s `id` field, resolves its `url_private_download` via `files.info`, and writes the raw bytes to `--output` — returns JSON metadata (`output`, `bytes`, `file_id`, `title`) and never prints content to stdout.
 
 `canvas download` resolves the channel's canvas, downloads it via `url_private_download`, and writes it to `--output`. Like the GitHub Actions and Bitbucket Pipelines download commands, it returns JSON metadata (`output`, `bytes`, `canvas_id`, `title`) and never prints content to stdout. Canvas content is written as an HTML fragment (Slack's internal Quip-document format), not markdown. A channel with no canvas returns `not_found`. `files download` and `canvas download` share the same download mechanism internally — the only difference is how each resolves the file ID to download.
+
+## Merkys
+
+Merkys is a read-and-ask integration with a Merkys knowledge-base deployment. It authenticates with a **user API key** sent in the `X-API-Key` header (`auth_type = "api_key_header"`; the header name can be changed with `profile.api_key_header`). `profile.base_url` is required: there is no default host. Calls run as the key's owner, so results are limited by that user's role and access rules.
+
+```bash
+aai-cli merkys ask <question> [--conversation-id ID]
+aai-cli merkys research start <question> [--conversation-id ID] [--wait] [--timeout-secs N] [--poll-secs N]
+aai-cli merkys research get <run-id>
+aai-cli merkys research stop <run-id>
+aai-cli merkys conversations list [--limit N] [--page-token T]
+aai-cli merkys conversations search <query> [--limit N] [--page-token T]
+aai-cli merkys conversations messages <conversation-id> [--limit N] [--page-token T]
+aai-cli merkys documents list [--limit N]
+aai-cli merkys sources list [--limit N] [--offset N]
+aai-cli merkys assistants list
+aai-cli merkys request <get|head|post|put|patch|delete> <relative-path> [--query key=value ...]
+```
+
+`ask` creates a conversation (unless `--conversation-id` is given), posts the question, then reads the stored answer back for its sources, and returns `{conversation_id, message_id, answer, sources, detect_conflicts, faithfulness, total_tokens}`. `sources[].index` matches the `[[n]]` markers in the answer. If the answer was produced but the sources could not be loaded, `sources` is `null` and a `warning` explains why; the answer is still returned.
+
+`research start` returns `{run_id, conversation_id}` immediately. With `--wait` it polls every `--poll-secs` (default 5) until the run is `completed` or `failed` and returns the full run (`final_report`, `sources`, `plan`, `sub_queries`). A `failed` run is returned as output, not an error. If `--timeout-secs` (default 900) passes first, the command fails with `code: "timeout"` and `details.run_id`; the run keeps going and can be read with `research get`.
+
+`conversations` list commands pass Merkys's `next_page_token` through; supply it back with `--page-token`. `documents list` and `sources list` report no next page: if the result count equals the limit, raise it. `request` is read-only unless `--allow-write` is set. See [docs/services/merkys.md](services/merkys.md) for the verification notes.
 
 ## Google Drive
 
@@ -520,7 +577,7 @@ For every Apollo command that accepts `--json`, typed flags override matching to
 
 ## Pagination
 
-Every successful service response contains:
+Provider service responses, except the Custom API `{status,body}` envelope, contain:
 
 ```json
 {
@@ -552,7 +609,7 @@ Provider response fields remain at their original locations, except bare provide
 
 When `next_command` is present, run it to retrieve more results. Generic requests preserve existing query filters while replacing or adding continuation parameters. Typed commands that aggregate to `--limit` may suggest rerunning with a larger limit; this retrieves the previous results plus additional results rather than only the next page. If `status` is `unknown`, increase `--limit` or use a generic authenticated request with the provider's documented pagination parameters.
 
-For implemented Jira, Confluence, GitHub, Bitbucket, Pipedrive, Apollo, HubSpot, and Slack list/search commands, `aai-cli` may follow provider pagination and aggregate results until it reaches `--limit` or the provider has no next page.
+For implemented Jira, Confluence, GitHub, Bitbucket, Pipedrive, Apollo, HubSpot, Slack, and Merkys list/search commands, `aai-cli` may follow provider pagination and aggregate results until it reaches `--limit` or the provider has no next page.
 
 Covered operations:
 
@@ -572,6 +629,10 @@ Covered operations:
 - `pipedrive deals search`
 - `pipedrive activities list`
 - `pipedrive notes list`
+- `pipedrive files list`
+- `pipedrive fields <resource> list`
+- `pipedrive pipelines list`
+- `pipedrive stages list`
 - associated activities, notes, and mail-message lists
 - `pipedrive mailbox threads list`
 - `apollo people search`
@@ -819,3 +880,63 @@ Covered GitHub operations (uses page-based GitHub pagination):
 - `github source history`
 
 Set the smallest useful `--limit`. Large limits increase latency and rate-limit pressure.
+## Microsoft Graph
+
+```text
+microsoft auth login
+microsoft auth status
+microsoft request <get|head|post|put|patch|delete> <relative-path> [--query key=value] [--json JSON_OR_PATH] [--allow-write]
+microsoft files upload <local-file> <remote-path> [--drive-id ID | --user-id ID] [--mime-type TYPE]
+microsoft files download <remote-path> [--drive-id ID | --user-id ID] --output PATH
+microsoft files delete <remote-path> [--drive-id ID | --user-id ID]
+microsoft sharepoint files upload <local-file> <remote-path> --drive-id ID [--mime-type TYPE]
+microsoft sharepoint files download <remote-path> --drive-id ID --output PATH
+microsoft sharepoint files delete <remote-path> --drive-id ID
+microsoft excel worksheets list [--item-id ID | --path PATH] [--drive-id ID] [--limit N]
+microsoft excel worksheets add [--item-id ID | --path PATH] NAME [--drive-id ID]
+microsoft excel worksheets rename [--item-id ID | --path PATH] <WORKSHEET> <NAME> [--drive-id ID]
+microsoft excel worksheets delete [--item-id ID | --path PATH] <WORKSHEET> [--drive-id ID]
+microsoft excel ranges get [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID]
+microsoft excel ranges update [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--values JSON_OR_PATH] [--formulas JSON_OR_PATH] [--number-format JSON_OR_PATH]
+microsoft excel ranges clear [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--apply-to Contents|Formats|All]
+microsoft excel tables list [--item-id ID | --path PATH] [--drive-id ID] [--limit N]
+microsoft excel tables create [--item-id ID | --path PATH] <WORKSHEET> <RANGE> [--drive-id ID] [--has-headers]
+microsoft excel tables delete [--item-id ID | --path PATH] <TABLE> [--drive-id ID]
+microsoft excel tables rows list [--item-id ID | --path PATH] <TABLE> [--drive-id ID] [--limit N]
+microsoft excel tables rows append [--item-id ID | --path PATH] <TABLE> --values JSON_OR_PATH [--drive-id ID]
+microsoft mail messages <list|get|create|update|delete> ...
+microsoft mail send [--user-id ID] --json JSON_OR_PATH
+microsoft calendar events <list|get|create|update|delete> ...
+microsoft contacts <list|get|create|update|delete> ...
+microsoft sharepoint lists <list|get> ...
+microsoft sharepoint items <list|get|create|update|delete> ...
+microsoft teams <get|channels|channel|members|messages|chats> ...
+microsoft todo lists <list|get|create|update|delete> ...
+microsoft todo tasks <list|get|create|update|delete> ...
+microsoft planner plans get <ID>
+microsoft planner buckets get <ID>
+microsoft planner tasks <get|create|update|delete> ...
+```
+
+`auth login` is the only interactive operation. It saves an encrypted delegated refresh token after verifying the configured user. Every other command acquires fresh access tokens from saved credentials. `microsoft files` addresses OneDrive by default; the explicit `microsoft sharepoint files` commands require `--drive-id` for the target document library. Downloaded bytes are written only to `--output`.
+
+`microsoft excel` uses Graph's remote workbook API for worksheet, range, table, and table-row operations. Create or obtain an `.xlsx` separately, upload it through `microsoft files` or `microsoft sharepoint files`, then address it by item ID or path; the typed Graph surface does not create workbooks. It requires a delegated profile with `Files.ReadWrite`; application profiles are rejected because Graph does not support application permissions for workbook operations. For SharePoint workbooks, pass the document-library `--drive-id`. Word documents have no typed editor here: download the `.docx`, edit it with an external library or program, and upload the complete replacement. The same file workflow applies to unsupported Excel features.
+
+Typed user-resource commands use `--user-id` or `profile.user_id`. Create/update bodies use `--json JSON_OR_PATH` (or `--json -` for stdin). List commands aggregate Graph's `@odata.nextLink` pages into the provider's `value` array up to `--limit`.
+
+Microsoft To Do requires a delegated profile in this CLI because Graph's application-permission support varies across operations and the typed surface guarantees one consistent identity for complete list/task CRUD. Planner task update/delete require the last observed `@odata.etag` through `--etag`. Teams commands are read-only in this initial coverage: team/channel metadata, team members, channel messages, and chats. The exact argument shapes and safe CRUD workflow are included in the bundled `aai-microsoft` skill.
+
+## Agent Barn
+
+Use `aai-cli --profile agent-barn agent-barn ...`. Start with `auth context`; select an organization with `--organization-id` or `profile.org`. See the [service guide](services/agent-barn.md) and [complete command reference](../bundled/skills/aai-agent-barn/references/command-reference.md) for all 219 commands. Collections default to `--limit 100`; follow `_aai.pagination.next_command`. Downloads and bounded SSE streams require `--output` and return JSON file metadata. No dedicated login or key-management commands are provided.
+
+## Custom API
+
+See [Custom API configuration and transport contract](services/custom-api.md).
+
+```sh
+aai-cli --profile NAME custom-api request --url ABSOLUTE_HTTPS_URL [--method GET] [--query key=value] [--header Name=value] [--json FILE|-]
+aai-cli --profile NAME custom-api request --request-json FILE|-
+```
+
+Returns `{status,body}` without automatic pagination. Request JSON contains `method`, `url`, `query`, `body`, and `headers`. Configured credentials cannot be overridden.

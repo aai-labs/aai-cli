@@ -1,6 +1,6 @@
 # Auth Matrix
 
-This project should support credentials supplied by users or agents rather than implementing OAuth acquisition flows in v1.
+This project primarily consumes credentials supplied by users or agents. Microsoft delegated profiles additionally support an explicit one-time device bootstrap because unattended runs require a securely persisted refresh token.
 
 ## Atlassian Cloud
 
@@ -57,9 +57,38 @@ This project should support credentials supplied by users or agents rather than 
 - Optional `project_id` profile field: `insights *` and `profiles *` require a project ID in the URL; set `profile.project_id` to avoid passing `--project-id` on every call.
 - OAuth install flow: not applicable — OpenPanel has no OAuth flow for the REST API, only static client credentials created in the dashboard under Settings → Clients.
 
+## Merkys
+
+- User API key: Primary and only implemented model. Profiles use `auth_type = "api_key_header"` with `api_token_secret` and a required `base_url`, and the key is sent in the `X-API-Key` header (configurable with `api_key_header`). The key is bound to one Merkys user and organization: every call sees exactly what that user's role and access rules allow, and appears in that user's conversation history.
+- Service credentials: Merkys also issues org-level machine credentials sent as `Authorization: Bearer`. They resolve to one fixed service profile, never to a user, and cannot call user routes. This CLI does not use them.
+- User JWTs: Browser sessions. Not used; an API key is the right credential for an agent.
+- Scope: Prefer a dedicated Merkys user with only the access agents need (for example a `viewer` limited to the shared knowledge) over a person's own key. A 401 means the key is invalid or revoked; empty lists can mean the key owner lacks access.
+
 ## CLI Implications
 
-- Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `github_app`, `oauth_user`, or `service_account`.
+- Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `api_key_header`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `microsoft_client_credentials`, `microsoft_delegated`, `token_url`, `github_app`, `oauth_user`, or `service_account`.
 - Never infer service-account semantics from a token string alone.
 - Keep provider profiles isolated; do not reuse an Atlassian token across Jira, Confluence, and Bitbucket unless the provider docs explicitly support it.
 - Prefer env var overrides for secrets and config-file fields for non-secret metadata such as site URL, workspace, region, account email, and default scopes.
+## Microsoft Graph
+
+- `microsoft_client_credentials` uses `tenant_id`, `client_id`, and `client_secret_secret`. Each command obtains an app-only token for `https://graph.microsoft.com/.default` without user interaction.
+- `microsoft_delegated` uses `tenant_id`, `client_id`, `scope`, and `refresh_token_secret`. Run `microsoft auth login` once; it requires `offline_access`, validates `/me` against `profile.user_id` when configured, and stores the refresh token encrypted.
+- `token_url` uses `token_url` and `api_token_secret`, and needs no app registration on the profile. Each request first POSTs to `token_url` with the stored value as its bearer and uses the `access_token` from the JSON response. Use it when a platform holds the Microsoft credential and must keep it out of the CLI's environment. The token carries whatever identity and permissions that platform grants; the CLI never falls back to sending the stored value to Graph.
+- Refresh responses can rotate the delegated refresh token. The CLI replaces the encrypted value before returning the Graph response.
+- `microsoft auth status` is noninteractive. A revoked or expired delegated credential fails with an instruction to run `microsoft auth login` again.
+- `microsoft auth status` on a `token_url` profile confirms a token can be fetched; it makes no Graph identity call.
+- Microsoft To Do commands require `microsoft_delegated`. Graph's application-permission support varies by To Do operation, so the typed surface uses one delegated identity for complete list/task CRUD and rejects app-only profiles before making a request.
+- Microsoft Excel workbook commands require `microsoft_delegated` with `Files.ReadWrite`; Graph does not support application permissions for workbook operations and the CLI rejects app-only profiles before making a request.
+- Outlook, SharePoint, Teams reads, and Planner commands support the permissions granted to the profile. Planner task updates and deletes require the last observed `@odata.etag` via `--etag`.
+- Word files are transferred through OneDrive/SharePoint file commands only. The CLI does not semantically edit `.docx` content; agents must download, edit externally, and upload the complete replacement.
+
+## Agent Barn
+
+- Existing user-owned personal API key (`abk_…`), sent as `Authorization: Bearer`, with `auth_type = "bearer_token"` and `token_env` or `token_secret`. No OAuth refresh or login flow.
+- READ_ONLY and FULL modes restrict methods, while current organization membership, agent access, and platform authority still apply. A FULL key does not bypass permissions.
+- Key creation/revocation remains in Account settings. Expired, revoked, or password-invalidated keys return 401. See the [service guide](services/agent-barn.md).
+
+## Custom API
+
+Named `custom_api` profiles support none, bearer token, named API-key header (including a complete Authorization scheme), and Basic credentials, plus configured ordinary/secret headers. Isolated profiles hold only a gateway credential. See the [authoritative Custom API profile contract](services/custom-api.md).
