@@ -78,8 +78,9 @@ commit as `v<VERSION>`, and verify installation:
 
 ```bash
 cargo install aai-cli --version <VERSION> --locked
-aai-cli --version
-aai-cli skills list
+aai-cli --help
+aai-cli skills discover
+aai-cli skills validate
 ```
 
 A published version cannot be overwritten. See the
