@@ -356,7 +356,7 @@ mod token_url_tests {
         server.join().unwrap();
 
         assert_eq!(error.code, "auth_error");
-        assert_eq!(error.service, "microsoft");
+        assert_eq!(error.service.as_ref(), "microsoft");
         assert!(error.message.contains("HTTP 404"));
     }
 

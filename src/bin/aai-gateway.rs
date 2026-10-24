@@ -1,35 +1,15 @@
 #![allow(dead_code, unused_imports)]
 
-// The shared encrypted-secret module exposes CLI dispatch helpers in addition to the
-// storage functions used by gateway profile resolution. Keep the gateway binary
-// independent from the full aai-cli command tree by providing only those helper types.
-mod cli {
-    pub struct SecretsCommand {
-        pub action: SecretsAction,
-    }
-
-    pub enum SecretsAction {
-        Set(SecretSet),
-        List,
-        Remove(SecretRemove),
-    }
-
-    pub struct SecretSet {
-        pub key: String,
-        pub value: Option<String>,
-    }
-
-    pub struct SecretRemove {
-        pub key: String,
-    }
-}
-
+#[path = "../cli.rs"]
+mod cli;
 #[path = "../config.rs"]
 mod config;
 #[path = "../error.rs"]
 mod error;
 #[path = "../gateway_catalog.rs"]
 mod gateway_catalog;
+#[path = "../gateway_command.rs"]
+mod gateway_command;
 #[path = "../gateway_protocol.rs"]
 mod gateway_protocol;
 #[path = "../gateway_server.rs"]
@@ -40,8 +20,14 @@ mod http;
 mod input;
 #[path = "../oauth.rs"]
 mod oauth;
+#[path = "../pagination.rs"]
+mod pagination;
 #[path = "../secrets.rs"]
 mod secrets;
+#[path = "../services/mod.rs"]
+mod services;
+#[path = "../skills.rs"]
+mod skills;
 #[cfg(test)]
 #[path = "../test_support.rs"]
 mod test_support;

@@ -3,7 +3,37 @@ use serde::{Deserialize, Serialize};
 
 pub const PROTOCOL_VERSION: u32 = 1;
 pub const EXECUTE_PATH: &str = "/api/v1/execute";
+pub const COMMAND_PROTOCOL_VERSION: u32 = 2;
+pub const COMMAND_EXECUTE_PATH: &str = "/api/v2/execute";
 pub const RESPONSE_SOURCE_HEADER: &str = "x-aai-response-source";
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct CommandScope {
+    pub owner: Option<String>,
+    pub repo: Option<String>,
+    pub org: Option<String>,
+    pub workspace: Option<String>,
+    pub project_id: Option<String>,
+    pub account_id: Option<String>,
+    pub user_id: Option<String>,
+    pub calendar_id: Option<String>,
+    pub from_address: Option<String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandMetadata {
+    pub protocol_version: u32,
+    pub profile_id: String,
+    pub argv: Vec<String>,
+    pub scope: CommandScope,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommandResult {
+    pub value: serde_json::Value,
+    pub output: Option<String>,
+    pub server_output_path: Option<String>,
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExecuteMetadata {

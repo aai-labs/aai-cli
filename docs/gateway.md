@@ -4,6 +4,12 @@
 receive provider API keys. Provider credentials are stored only by the gateway and are
 injected into outbound requests after proxy-token and grant checks.
 
+Gateway-mode CLI profiles send a typed CLI command to `/api/v2/execute`. The gateway
+parses that command, constructs the provider request using its own service code and
+stored profile, and checks the actual operation and HTTP method before sending it.
+Clients cannot supply a provider URL or relabel an HTTP request as a different
+operation. The older URL-based `/api/v1/execute` endpoint returns `410 Gone`.
+
 The gateway state file is encrypted with a separate 32-byte key file. Keep both files
 on the gateway host and protect them with filesystem permissions. Put the gateway
 behind an HTTPS reverse proxy before giving clients a remote URL.
@@ -20,6 +26,13 @@ Microsoft Graph, OpenPanel, Pipedrive, PostHog, Slack, and Zoho Mail. It does no
 expose generic `request` or Custom API escape hatches. SMTP/IMAP, CalDAV, Agent Barn
 stream capture, Microsoft interactive device login, and local Excel operations are
 not gateway transports in this version.
+
+Input and output files are transferred with the command and are limited to 64 MiB
+each. The gateway writes uploads into temporary storage and returns downloads to
+the CLI for writing on the client machine. Google Drive resumable-upload session
+URLs remain on the gateway. The server rejects provider redirects outside its
+configured or service-specific destination allowlist. Configure the HTTPS reverse
+proxy to accept multipart requests of at least 70 MiB for the 64 MiB file limit.
 
 ## Administration
 

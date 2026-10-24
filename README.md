@@ -138,7 +138,7 @@ Keep credentials and generated local configs under ignored `local/`; never commi
 For deployments where users must not receive provider credentials, run the companion
 `aai-gateway` binary on trusted infrastructure. The gateway stores provider profiles in
 an encrypted state file and issues scoped proxy tokens. The CLI receives only the proxy
-token and sends typed HTTP operations through the gateway; direct profiles continue to
+token and sends typed commands for the gateway to execute; direct profiles continue to
 work unchanged.
 
 Gateway client profiles contain no provider secret references:

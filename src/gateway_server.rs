@@ -8,7 +8,7 @@ use std::{
 };
 
 use axum::{
-    extract::{Multipart, Path as AxumPath, State},
+    extract::{DefaultBodyLimit, Multipart, Path as AxumPath, State},
     http::{header, HeaderMap, HeaderValue, StatusCode},
     response::{IntoResponse, Response},
     routing::{get, patch, post},
@@ -19,6 +19,7 @@ use chacha20poly1305::{
     aead::{Aead, KeyInit},
     XChaCha20Poly1305, XNonce,
 };
+use clap::Parser;
 use rand::RngCore;
 use reqwest::{Client, Method};
 use serde::{Deserialize, Serialize};
@@ -28,15 +29,22 @@ use tokio::sync::RwLock;
 use url::Url;
 
 use crate::{
+    cli::{Cli, Command, MicrosoftResource},
+    config::Context,
     config::Profile,
     error::AppError,
     gateway_catalog,
+    gateway_command::{apply_scope, command_paths, normalize_argv, validate_inline_json},
     gateway_protocol::{
-        ExecuteMetadata, GatewayErrorBody, PROTOCOL_VERSION, RESPONSE_SOURCE_HEADER,
+        CommandMetadata, CommandResult, ExecuteMetadata, GatewayErrorBody,
+        COMMAND_PROTOCOL_VERSION, PROTOCOL_VERSION, RESPONSE_SOURCE_HEADER,
     },
-    http::apply_auth,
-    oauth,
+    http::{apply_auth, ApiClient},
+    oauth, services,
 };
+
+const MAX_COMMAND_FILE_BYTES: usize = 64 * 1024 * 1024;
+const MAX_COMMAND_REQUEST_BYTES: usize = 70 * 1024 * 1024;
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct Grant {
@@ -53,7 +61,7 @@ pub struct Grant {
 }
 
 impl Grant {
-    fn permits(&self, operation: &str, method: &Method) -> bool {
+    pub(crate) fn permits(&self, operation: &str, method: &Method) -> bool {
         let method = method.as_str().to_ascii_uppercase();
         if self.deny_operations.iter().any(|item| item == operation)
             || self
@@ -131,7 +139,11 @@ impl GatewayStore {
     }
 
     fn save(&self) -> Result<(), AppError> {
-        let plaintext = serde_json::to_vec(&self.document)
+        self.save_document(&self.document)
+    }
+
+    fn save_document(&self, document: &GatewayDocument) -> Result<(), AppError> {
+        let plaintext = serde_json::to_vec(document)
             .map_err(|err| AppError::internal("gateway", "state.save", err.to_string()))?;
         let cipher = XChaCha20Poly1305::new((&self.key).into());
         let mut nonce = [0_u8; 24];
@@ -231,7 +243,8 @@ pub fn router(app: GatewayApp) -> Router {
     Router::new()
         .route("/health/live", get(health))
         .route("/health/ready", get(health))
-        .route("/api/v1/execute", post(execute))
+        .route("/api/v1/execute", post(legacy_execute))
+        .route("/api/v2/execute", post(execute_command))
         .route(
             "/api/v1/admin/profiles",
             get(list_profiles).post(create_profile),
@@ -246,10 +259,363 @@ pub fn router(app: GatewayApp) -> Router {
             patch(update_token).delete(delete_token),
         )
         .with_state(app)
+        .layer(DefaultBodyLimit::max(MAX_COMMAND_REQUEST_BYTES))
 }
 
 async fn health() -> &'static str {
     "ok"
+}
+
+async fn legacy_execute() -> Response {
+    gateway_error(
+        StatusCode::GONE,
+        "gateway_protocol_error",
+        "URL-based gateway requests are no longer accepted",
+        None,
+    )
+}
+
+async fn execute_command(
+    State(app): State<GatewayApp>,
+    headers: HeaderMap,
+    mut multipart: Multipart,
+) -> Response {
+    let Some(token) = bearer(&headers) else {
+        return gateway_error(
+            StatusCode::UNAUTHORIZED,
+            "gateway_auth_error",
+            "missing proxy token",
+            None,
+        );
+    };
+    let mut metadata = None;
+    let mut input = None;
+    loop {
+        let field = match multipart.next_field().await {
+            Ok(Some(field)) => field,
+            Ok(None) => break,
+            Err(_) => {
+                return gateway_error(
+                    StatusCode::BAD_REQUEST,
+                    "gateway_protocol_error",
+                    "invalid multipart request",
+                    None,
+                )
+            }
+        };
+        match field.name() {
+            Some("metadata") if metadata.is_none() => {
+                metadata = match field.text().await {
+                    Ok(text) if text.len() <= 256 * 1024 => Some(text),
+                    _ => {
+                        return gateway_error(
+                            StatusCode::BAD_REQUEST,
+                            "gateway_protocol_error",
+                            "invalid command metadata",
+                            None,
+                        )
+                    }
+                };
+            }
+            Some("input") if input.is_none() => {
+                input = match field.bytes().await {
+                    Ok(bytes) if bytes.len() <= MAX_COMMAND_FILE_BYTES => Some(bytes.to_vec()),
+                    _ => {
+                        return gateway_error(
+                            StatusCode::PAYLOAD_TOO_LARGE,
+                            "gateway_protocol_error",
+                            "input file exceeds 64 MiB",
+                            None,
+                        )
+                    }
+                };
+            }
+            _ => {
+                return gateway_error(
+                    StatusCode::BAD_REQUEST,
+                    "gateway_protocol_error",
+                    "unexpected command part",
+                    None,
+                )
+            }
+        }
+    }
+    let Some(metadata) =
+        metadata.and_then(|text| serde_json::from_str::<CommandMetadata>(&text).ok())
+    else {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "missing or invalid command metadata",
+            None,
+        );
+    };
+    if metadata.protocol_version != COMMAND_PROTOCOL_VERSION
+        || metadata.argv.is_empty()
+        || metadata.argv.len() > 256
+    {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "unsupported command protocol",
+            None,
+        );
+    }
+    let (mut profile, grant, key_path) = {
+        let store = app.store.read().await;
+        let Some(stored) = find_token(&store.document, &token) else {
+            return gateway_error(
+                StatusCode::UNAUTHORIZED,
+                "gateway_auth_error",
+                "invalid proxy token",
+                None,
+            );
+        };
+        if !stored.enabled || stored.expires_at.is_some_and(|expiry| expiry <= now()) {
+            return gateway_error(
+                StatusCode::UNAUTHORIZED,
+                "gateway_auth_error",
+                "proxy token is disabled or expired",
+                None,
+            );
+        }
+        let Some(grant) = stored.grants.get(&metadata.profile_id) else {
+            return gateway_error(
+                StatusCode::FORBIDDEN,
+                "gateway_denied",
+                "token is not granted this profile",
+                None,
+            );
+        };
+        let Some(profile) = store.document.profiles.get(&metadata.profile_id) else {
+            return gateway_error(
+                StatusCode::NOT_FOUND,
+                "gateway_denied",
+                "gateway profile was not found",
+                None,
+            );
+        };
+        (profile.clone(), grant.clone(), store.key_path.clone())
+    };
+    let mut argv = normalize_argv(metadata.argv);
+    let paths = match command_paths(&argv) {
+        Ok(paths) => paths,
+        Err(err) => return app_error_response(StatusCode::BAD_REQUEST, err),
+    };
+    if let Err(err) = validate_inline_json(&argv) {
+        return app_error_response(StatusCode::BAD_REQUEST, err);
+    }
+    if paths.input.is_some() != input.is_some() {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "input attachment does not match command",
+            None,
+        );
+    }
+    let temporary = match tempfile::tempdir() {
+        Ok(temporary) => temporary,
+        Err(err) => {
+            return app_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                io_error("execute.temp", err),
+            )
+        }
+    };
+    if let (Some(index), Some(input)) = (paths.input, input) {
+        let name = Path::new(&argv[index]).file_name().unwrap_or_default();
+        let input_dir = temporary.path().join("input");
+        if let Err(err) = fs::create_dir(&input_dir) {
+            return app_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                io_error("execute.input", err),
+            );
+        }
+        let path = input_dir.join(name);
+        if let Err(err) = fs::write(&path, input) {
+            return app_error_response(
+                StatusCode::INTERNAL_SERVER_ERROR,
+                io_error("execute.input", err),
+            );
+        }
+        argv[index] = path.to_string_lossy().into_owned();
+    }
+    let output_path = paths.output.map(|index| {
+        let path = temporary.path().join("output");
+        argv[index] = path.to_string_lossy().into_owned();
+        path
+    });
+    let parsed = match Cli::try_parse_from(argv) {
+        Ok(parsed) => parsed,
+        Err(_) => {
+            return gateway_error(
+                StatusCode::BAD_REQUEST,
+                "gateway_protocol_error",
+                "invalid typed command",
+                None,
+            )
+        }
+    };
+    let service = match command_service(&parsed.command) {
+        Some(service) => service,
+        None => {
+            return gateway_error(
+                StatusCode::BAD_REQUEST,
+                "gateway_protocol_error",
+                "command is not available through the gateway",
+                None,
+            )
+        }
+    };
+    if !profile_matches_service(profile.provider.as_deref(), service) {
+        return gateway_error(
+            StatusCode::FORBIDDEN,
+            "gateway_denied",
+            "profile does not match the requested service",
+            None,
+        );
+    }
+    if (service == "email"
+        && (matches!(
+            profile.transport.as_deref(),
+            Some("smtp_imap" | "imap_smtp")
+        ) || matches!(profile.auth_type.as_deref(), Some("app_password"))))
+        || (service == "calendar"
+            && (matches!(profile.transport.as_deref(), Some("caldav"))
+                || matches!(profile.auth_type.as_deref(), Some("caldav_password"))))
+    {
+        return gateway_error(
+            StatusCode::BAD_REQUEST,
+            "gateway_protocol_error",
+            "non-HTTP transports are not available through the gateway",
+            None,
+        );
+    }
+    apply_scope(&mut profile, metadata.scope);
+    profile.credential_source = Some("local".to_string());
+    profile.runtime_key_file = Some(key_path.clone());
+    let ctx = Context {
+        profile,
+        secrets_file: temporary.path().join("unused-secrets.enc.json"),
+        key_file: key_path,
+    };
+    let client = match ApiClient::with_server_grant(grant) {
+        Ok(client) => client,
+        Err(err) => return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err),
+    };
+    let value = match services::dispatch_with_client(&client, &ctx, parsed.command).await {
+        Ok(value) => redact_command_value(value, &ctx.profile),
+        Err(mut err) => {
+            err.message = redact_text(&err.message, &ctx.profile);
+            err.details = err
+                .details
+                .map(|details| redact_command_value(details, &ctx.profile));
+            return app_error_response(StatusCode::BAD_REQUEST, err);
+        }
+    };
+    let (output, server_output_path) = if let Some(path) = output_path {
+        let bytes = match fs::read(&path) {
+            Ok(bytes) if bytes.len() <= MAX_COMMAND_FILE_BYTES => bytes,
+            Ok(_) => {
+                return gateway_error(
+                    StatusCode::PAYLOAD_TOO_LARGE,
+                    "gateway_protocol_error",
+                    "output file exceeds 64 MiB",
+                    None,
+                )
+            }
+            Err(err) => {
+                return app_error_response(
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    io_error("execute.output", err),
+                )
+            }
+        };
+        let bytes = if std::str::from_utf8(&bytes).is_ok() {
+            redact(
+                &bytes,
+                &ctx.profile,
+                Some(&HeaderValue::from_static("text/plain")),
+            )
+        } else {
+            bytes
+        };
+        (
+            Some(B64.encode(bytes)),
+            Some(path.to_string_lossy().into_owned()),
+        )
+    } else {
+        (None, None)
+    };
+    Json(CommandResult {
+        value,
+        output,
+        server_output_path,
+    })
+    .into_response()
+}
+
+fn redact_command_value(mut value: serde_json::Value, profile: &Profile) -> serde_json::Value {
+    match &mut value {
+        serde_json::Value::String(text) => {
+            *text = redact_text(text, profile);
+        }
+        serde_json::Value::Array(items) => {
+            for item in items {
+                *item = redact_command_value(std::mem::take(item), profile);
+            }
+        }
+        serde_json::Value::Object(fields) => {
+            for item in fields.values_mut() {
+                *item = redact_command_value(std::mem::take(item), profile);
+            }
+        }
+        _ => {}
+    }
+    value
+}
+
+fn redact_text(text: &str, profile: &Profile) -> String {
+    String::from_utf8(redact(
+        text.as_bytes(),
+        profile,
+        Some(&HeaderValue::from_static("text/plain")),
+    ))
+    .unwrap_or_default()
+}
+
+fn command_service(command: &Command) -> Option<&'static str> {
+    match command {
+        Command::AgentBarn(_) => Some("agent-barn"),
+        Command::Jira(_) => Some("jira"),
+        Command::Confluence(_) => Some("confluence"),
+        Command::Bitbucket(_) => Some("bitbucket"),
+        Command::Github(_) => Some("github"),
+        Command::Hubspot(_) => Some("hubspot"),
+        Command::Email(_) => Some("email"),
+        Command::Calendar(_) => Some("calendar"),
+        Command::Pipedrive(_) => Some("pipedrive"),
+        Command::Apollo(_) => Some("apollo"),
+        Command::Sheets(_) => Some("sheets"),
+        Command::Drive(_) => Some("drive"),
+        Command::Slack(_) => Some("slack"),
+        Command::Openpanel(_) => Some("openpanel"),
+        Command::Posthog(_) => Some("posthog"),
+        Command::Microsoft(command) if !matches!(command.resource, MicrosoftResource::Auth(_)) => {
+            Some("microsoft")
+        }
+        Command::Merkys(_) => Some("merkys"),
+        _ => None,
+    }
+}
+
+fn profile_matches_service(provider: Option<&str>, service: &str) -> bool {
+    match service {
+        "email" => matches!(provider, Some("email" | "gmail" | "google" | "zoho")),
+        "calendar" => matches!(provider, Some("calendar" | "google" | "zoho")),
+        "drive" | "sheets" => matches!(provider, Some("google" | "drive" | "sheets")),
+        _ => provider == Some(service),
+    }
 }
 
 async fn execute(
@@ -393,7 +759,7 @@ fn hex_digest(bytes: &[u8]) -> String {
     bytes.iter().map(|byte| format!("{byte:02x}")).collect()
 }
 
-fn target_allowed(service: &str, raw_url: &str, profile: &Profile) -> bool {
+pub(crate) fn target_allowed(service: &str, raw_url: &str, profile: &Profile) -> bool {
     let Ok(url) = Url::parse(raw_url) else {
         return false;
     };
@@ -409,15 +775,34 @@ fn target_allowed(service: &str, raw_url: &str, profile: &Profile) -> bool {
         .site_url
         .as_deref()
         .or(profile.base_url.as_deref())
-        .and_then(|base| Url::parse(base).ok())
-        .and_then(|base| base.host_str().map(str::to_string));
-    match (expected, url.host_str()) {
-        (Some(expected), Some(actual)) => expected.eq_ignore_ascii_case(actual),
-        (None, Some(actual)) => default_hosts(service)
-            .iter()
-            .any(|host| host.eq_ignore_ascii_case(actual)),
-        _ => false,
+        .and_then(|base| Url::parse(base).ok());
+    if expected
+        .as_ref()
+        .is_some_and(|base| base.origin() == url.origin())
+    {
+        return true;
     }
+    url.host_str().is_some_and(|actual| {
+        (url.scheme() == "https"
+            && default_hosts(service)
+                .iter()
+                .any(|host| host.eq_ignore_ascii_case(actual)))
+            || (url.scheme() == "https" && file_host_allowed(service, actual))
+    })
+}
+
+pub(crate) fn file_host_allowed(service: &str, host: &str) -> bool {
+    let host = host.to_ascii_lowercase();
+    let suffixes: &[&str] = match service {
+        "jira" | "confluence" => &[".atlassian.com", ".atlassian.net"],
+        "drive" | "sheets" | "email" | "calendar" => &[".googleusercontent.com", ".googleapis.com"],
+        "microsoft" => &[".sharepoint.com", ".1drv.com"],
+        "github" => &[".githubusercontent.com"],
+        "slack" => &[".slack.com"],
+        "pipedrive" => &[".amazonaws.com"],
+        _ => &[],
+    };
+    suffixes.iter().any(|suffix| host.ends_with(suffix))
 }
 
 fn is_loopback(host: &str) -> bool {
@@ -429,17 +814,21 @@ fn default_hosts(service: &str) -> &'static [&'static str] {
         "github" => &["api.github.com"],
         "bitbucket" => &["api.bitbucket.org"],
         "jira" | "confluence" => &[],
+        "agent-barn" => &[],
         "apollo" => &["api.apollo.io"],
         "hubspot" => &["api.hubapi.com"],
         "slack" => &["slack.com"],
         "openpanel" => &["api.openpanel.dev"],
         "posthog" => &["us.i.posthog.com", "eu.i.posthog.com"],
+        "pipedrive" => &["api.pipedrive.com"],
         "microsoft" => &["graph.microsoft.com"],
         "drive" | "sheets" | "email" | "calendar" => &[
             "www.googleapis.com",
             "sheets.googleapis.com",
             "gmail.googleapis.com",
             "calendar.googleapis.com",
+            "mail.zoho.com",
+            "calendar.zoho.com",
         ],
         _ => &[],
     }
@@ -579,7 +968,28 @@ fn gateway_error(
 }
 
 fn app_error_response(status: StatusCode, error: AppError) -> Response {
-    gateway_error(status, error.code, &error.message, error.details)
+    let response_status = error
+        .status
+        .and_then(|code| StatusCode::from_u16(code).ok())
+        .unwrap_or(status);
+    let source = if error.status.is_some() && error.service.as_ref() != "gateway" {
+        "provider"
+    } else {
+        "gateway"
+    };
+    let body = GatewayErrorBody {
+        code: error.code.to_string(),
+        message: error.message,
+        service: error.service.to_string(),
+        operation: error.operation.to_string(),
+        status: error.status,
+        details: error.details,
+    };
+    let mut response = (response_status, Json(body)).into_response();
+    response
+        .headers_mut()
+        .insert(RESPONSE_SOURCE_HEADER, HeaderValue::from_static(source));
+    response
 }
 
 fn admin_ok(headers: &HeaderMap, expected: &str) -> bool {
@@ -865,7 +1275,8 @@ async fn update_token(
             );
         }
     }
-    let Some(token) = store.document.tokens.get_mut(&id) else {
+    let mut next_document = store.document.clone();
+    let Some(token) = next_document.tokens.get_mut(&id) else {
         return gateway_error(StatusCode::NOT_FOUND, "not_found", "token not found", None);
     };
     if let Some(enabled) = update.enabled {
@@ -877,9 +1288,10 @@ async fn update_token(
     if let Some(grants) = update.grants {
         token.grants = grants;
     }
-    if let Err(err) = store.save() {
+    if let Err(err) = store.save_document(&next_document) {
         return app_error_response(StatusCode::INTERNAL_SERVER_ERROR, err);
     }
+    store.document = next_document;
     StatusCode::NO_CONTENT.into_response()
 }
 
@@ -989,6 +1401,53 @@ mod tests {
         assert!(!find_token(&document, token).unwrap().enabled);
     }
 
+    #[tokio::test]
+    async fn failed_revocation_save_does_not_change_live_or_disk_state() {
+        let temporary = tempfile::tempdir().unwrap();
+        let state_path = temporary.path().join("state.enc.json");
+        let key_path = temporary.path().join("state.key");
+        let mut store = GatewayStore::open(state_path.clone(), key_path.clone()).unwrap();
+        store.document.tokens.insert(
+            "agent".into(),
+            StoredToken {
+                label: None,
+                digest: hex_digest(&Sha256::digest(b"gw_agent.secret")),
+                enabled: true,
+                expires_at: None,
+                grants: HashMap::new(),
+            },
+        );
+        store.save().unwrap();
+        let invalid_parent = temporary.path().join("not-a-directory");
+        fs::write(&invalid_parent, b"file").unwrap();
+        store.state_path = invalid_parent.join("state.enc.json");
+        let app = GatewayApp {
+            store: Arc::new(RwLock::new(store)),
+            admin_token: "admin".into(),
+            client: Client::new(),
+        };
+        let mut headers = HeaderMap::new();
+        headers.insert(
+            header::AUTHORIZATION,
+            HeaderValue::from_static("Bearer admin"),
+        );
+        let response = update_token(
+            State(app.clone()),
+            headers,
+            AxumPath("agent".into()),
+            Json(TokenUpdate {
+                enabled: Some(false),
+                expires_at: None,
+                grants: None,
+            }),
+        )
+        .await;
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+        assert!(app.store.read().await.document.tokens["agent"].enabled);
+        let reopened = GatewayStore::open(state_path, key_path).unwrap();
+        assert!(reopened.document.tokens["agent"].enabled);
+    }
+
     #[test]
     fn bearer_scheme_is_case_insensitive() {
         let mut headers = HeaderMap::new();
@@ -1014,5 +1473,33 @@ mod tests {
             ),
             br#"{"refresh_token":"[REDACTED]"}"#
         );
+    }
+
+    #[test]
+    fn server_targets_reject_private_redirects_and_other_profile_origins() {
+        let profile = Profile {
+            site_url: Some("https://example.atlassian.net".into()),
+            ..Profile::default()
+        };
+        assert!(target_allowed(
+            "jira",
+            "https://example.atlassian.net/rest/api/3/issue/1",
+            &profile,
+        ));
+        assert!(target_allowed(
+            "jira",
+            "https://api.media.atlassian.com/file/1",
+            &profile,
+        ));
+        assert!(!target_allowed(
+            "jira",
+            "http://127.0.0.1:8080/internal",
+            &profile,
+        ));
+        assert!(!target_allowed(
+            "jira",
+            "https://other.example.com/internal",
+            &profile,
+        ));
     }
 }

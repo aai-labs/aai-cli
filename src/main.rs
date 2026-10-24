@@ -3,6 +3,7 @@ mod config;
 mod config_commands;
 mod error;
 mod gateway_catalog;
+mod gateway_command;
 mod gateway_commands;
 mod gateway_protocol;
 #[allow(dead_code)]
@@ -79,7 +80,11 @@ async fn run() -> Result<serde_json::Value, AppError> {
                 cli.secrets_file.as_deref(),
                 cli.key_file.as_deref(),
             )?;
-            let value = services::dispatch(&ctx, command).await?;
+            let value = if ctx.profile.credential_source.as_deref() == Some("gateway") {
+                gateway_command::execute(&ctx.profile, command_args.clone()).await?
+            } else {
+                services::dispatch(&ctx, command).await?
+            };
             Ok(if annotate {
                 pagination::annotate(value, &command_args)
             } else {

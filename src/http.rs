@@ -26,6 +26,7 @@ pub(crate) fn multipart_boundary() -> String {
 pub struct ApiClient {
     client: Client,
     no_redirect_client: Client,
+    server_grant: Option<crate::gateway_server::Grant>,
 }
 
 /// A request whose body is already-encoded bytes rather than a JSON value.
@@ -64,7 +65,63 @@ impl ApiClient {
         Ok(Self {
             client,
             no_redirect_client,
+            server_grant: None,
         })
+    }
+
+    pub fn with_server_grant(grant: crate::gateway_server::Grant) -> Result<Self, AppError> {
+        let mut client = Self::new()?;
+        client.client = Client::builder()
+            .user_agent("aai-gateway/0.1")
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .map_err(|err| AppError::internal("http", "client", err.to_string()))?;
+        client.server_grant = Some(grant);
+        Ok(client)
+    }
+
+    fn check_server_grant(
+        &self,
+        service: &'static str,
+        operation: &'static str,
+        method: &Method,
+    ) -> Result<(), AppError> {
+        if let Some(grant) = &self.server_grant {
+            if operation == "request" {
+                return Err(AppError::gateway_protocol(
+                    service,
+                    operation,
+                    "generic requests are not available through the gateway",
+                ));
+            }
+            if !grant.permits(operation, method) {
+                return Err(AppError::gateway_denied(
+                    service,
+                    operation,
+                    "gateway token is not granted this operation and method",
+                ));
+            }
+        }
+        Ok(())
+    }
+
+    fn check_server_target(
+        &self,
+        service: &'static str,
+        operation: &'static str,
+        profile: &Profile,
+        url: &str,
+    ) -> Result<(), AppError> {
+        if self.server_grant.is_some()
+            && !crate::gateway_server::target_allowed(service, url, profile)
+        {
+            return Err(AppError::gateway_protocol(
+                service,
+                operation,
+                "gateway request target is not allowed",
+            ));
+        }
+        Ok(())
     }
 
     /// Capture downloads or bounded SSE without buffering the complete response.
@@ -78,6 +135,8 @@ impl ApiClient {
         output: &str,
         duration_seconds: Option<u64>,
     ) -> Result<Value, AppError> {
+        self.check_server_grant(service, operation, &Method::GET)?;
+        self.check_server_target(service, operation, profile, &url)?;
         use std::{fs::OpenOptions, io::Write, path::Path};
         use tokio::time::{timeout, timeout_at, Duration, Instant};
         let path = std::path::absolute(Path::new(output))
@@ -245,6 +304,8 @@ impl ApiClient {
         url: String,
         body: Option<Value>,
     ) -> Result<Value, AppError> {
+        self.check_server_grant(service, operation, &method)?;
+        self.check_server_target(service, operation, profile, &url)?;
         if profile.credential_source.as_deref() == Some("gateway") {
             let body = body
                 .map(|value| serde_json::to_vec(&value))
@@ -279,6 +340,8 @@ impl ApiClient {
         url: String,
         body: Option<Value>,
     ) -> Result<Value, AppError> {
+        self.check_server_grant(service, operation, &method)?;
+        self.check_server_target(service, operation, profile, &url)?;
         if profile.credential_source.as_deref() == Some("gateway") {
             let body = body
                 .map(|value| serde_json::to_vec(&value))
@@ -392,6 +455,8 @@ impl ApiClient {
         url: String,
         accept: &str,
     ) -> Result<Vec<u8>, AppError> {
+        self.check_server_grant(service, operation, &Method::GET)?;
+        self.check_server_target(service, operation, profile, &url)?;
         if profile.credential_source.as_deref() == Some("gateway") {
             let response = self
                 .gateway_execute(GatewayExecuteRequest {
@@ -416,16 +481,32 @@ impl ApiClient {
         let mut target = parse_url(service, operation, &url)?;
         // Origin includes the scheme, so an http -> https hop on the same host also drops
         // credentials. reqwest compared only host and port; this is the stricter choice.
-        let credentialed_origin = target.origin();
+        let credentialed_origin = if self.server_grant.is_some() {
+            profile
+                .site_url
+                .as_deref()
+                .or(profile.base_url.as_deref())
+                .and_then(|base| reqwest::Url::parse(base).ok())
+                .map(|base| base.origin())
+                .or_else(|| {
+                    (!target.host_str().is_some_and(|host| {
+                        crate::gateway_server::file_host_allowed(service, host)
+                    }))
+                    .then(|| target.origin())
+                })
+        } else {
+            Some(target.origin())
+        };
         // Redirects are followed here rather than by reqwest, which strips only the
         // standard auth headers on a cross-origin hop: a provider-specific header such as
         // Pipedrive's x-api-token would otherwise reach a signed-storage host.
         for _ in 0..=MAX_DOWNLOAD_REDIRECTS {
+            self.check_server_target(service, operation, profile, target.as_str())?;
             let mut request = self
                 .no_redirect_client
                 .request(Method::GET, target.clone())
                 .header("Accept", accept);
-            if target.origin() == credentialed_origin {
+            if credentialed_origin.as_ref() == Some(&target.origin()) {
                 request = apply_auth(request, service, operation, &effective)?;
             }
             let response = request.send().await.map_err(|err| {
@@ -468,6 +549,8 @@ impl ApiClient {
         profile: &Profile,
         request: BytesRequest,
     ) -> Result<RawResponse, AppError> {
+        self.check_server_grant(service, operation, &request.method)?;
+        self.check_server_target(service, operation, profile, &request.url)?;
         if profile.credential_source.as_deref() == Some("gateway") {
             let BytesRequest {
                 method,
@@ -558,6 +641,8 @@ impl ApiClient {
         file_path: &str,
         comment: Option<&str>,
     ) -> Result<Value, AppError> {
+        self.check_server_grant(service, operation, &Method::POST)?;
+        self.check_server_target(service, operation, profile, &url)?;
         let file_bytes = std::fs::read(file_path).map_err(|e| {
             AppError::internal(service, operation, format!("failed to read file: {e}"))
         })?;
@@ -1273,6 +1358,7 @@ mod tests {
 
     async fn gateway_profile(
         provider_url: &str,
+        provider_name: &str,
         operation: &str,
     ) -> (String, String, tempfile::TempDir) {
         use crate::gateway_server::{router, GatewayApp, GatewayStore};
@@ -1295,9 +1381,10 @@ mod tests {
         });
         let gateway_url = format!("http://{address}");
         let profile = Profile {
-            provider: Some("github".into()),
+            provider: Some(provider_name.into()),
             auth_type: Some("bearer_token".into()),
             base_url: Some(provider_url.into()),
+            site_url: Some(provider_url.into()),
             gateway_profile_id: Some("fake".into()),
             token: Some("provider-secret".into()),
             ..Profile::default()
@@ -1346,40 +1433,442 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn gateway_json_request_injects_provider_auth_without_returning_it() {
-        let (provider, authorization) = provider_once(
-            br#"{"ok":true,"echo":"provider-secret"}"#,
-            "application/json",
-        )
-        .await;
-        let (gateway, proxy_token, _temp) = gateway_profile(&provider, "items.list").await;
-        let client = ApiClient::new().unwrap();
+    async fn gateway_typed_command_injects_provider_auth() {
+        let (provider, authorization) = provider_once(br#"{"ok":true}"#, "application/json").await;
+        let (gateway, proxy_token, _temp) =
+            gateway_profile(&provider, "github", "repos.list").await;
         let profile = Profile {
             credential_source: Some("gateway".into()),
             gateway_url: Some(gateway),
             gateway_profile_id: Some("fake".into()),
             gateway_token: Some(proxy_token),
-            base_url: Some(provider.clone()),
-            auth_type: Some("bearer_token".into()),
             ..Profile::default()
         };
-        let value = client
-            .request(
-                "github",
-                "items.list",
-                &profile,
-                Method::GET,
-                format!("{provider}/items"),
-                None,
-            )
-            .await
-            .unwrap();
+        let value = crate::gateway_command::execute(
+            &profile,
+            vec![
+                "aai-cli".into(),
+                "github".into(),
+                "repos".into(),
+                "list".into(),
+            ],
+        )
+        .await
+        .unwrap();
         assert_eq!(value["ok"], true);
-        assert_eq!(value["echo"], "[REDACTED]");
         assert_eq!(
             authorization.lock().unwrap().as_deref(),
             Some("Bearer provider-secret")
         );
+    }
+
+    #[tokio::test]
+    async fn gateway_rejects_generic_and_ungranted_typed_commands() {
+        let (provider, _) = provider_once(br#"{"ok":true}"#, "application/json").await;
+        let (gateway, proxy_token, _temp) =
+            gateway_profile(&provider, "github", "repos.list").await;
+        let profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(proxy_token),
+            ..Profile::default()
+        };
+        for (argv, code) in [
+            (
+                vec!["aai-cli", "github", "request", "get", "/user"],
+                "gateway_protocol_error",
+            ),
+            (
+                vec![
+                    "aai-cli", "github", "repos", "get", "--owner", "a", "--repo", "b",
+                ],
+                "gateway_denied",
+            ),
+        ] {
+            let error = crate::gateway_command::execute(
+                &profile,
+                argv.into_iter().map(str::to_string).collect(),
+            )
+            .await
+            .unwrap_err();
+            assert_eq!(error.code, code);
+        }
+    }
+
+    #[tokio::test]
+    async fn gateway_redacts_known_provider_secret_from_typed_result() {
+        use axum::{routing::get, Json, Router};
+        let provider_app = Router::new().route(
+            "/user/repos",
+            get(|| async { Json(serde_json::json!({"echo": "provider-secret"})) }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let provider = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, provider_app).await.unwrap() });
+        let direct = Profile {
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            token: Some("provider-secret".into()),
+            ..Profile::default()
+        };
+        let direct_value = ApiClient::new()
+            .unwrap()
+            .request(
+                "github",
+                "repos.list",
+                &direct,
+                Method::GET,
+                format!("{provider}/user/repos"),
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(direct_value["echo"], "provider-secret");
+        let (gateway, proxy_token, _temp) =
+            gateway_profile(&provider, "github", "repos.list").await;
+        let remote = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(proxy_token),
+            ..Profile::default()
+        };
+        let result = crate::gateway_command::execute(
+            &remote,
+            vec![
+                "aai-cli".into(),
+                "github".into(),
+                "repos".into(),
+                "list".into(),
+            ],
+        )
+        .await
+        .unwrap();
+        assert_eq!(result["echo"], "[REDACTED]");
+    }
+
+    #[tokio::test]
+    async fn gateway_preserves_provider_error_contract() {
+        use axum::{http::StatusCode as AxumStatus, routing::get, Json, Router};
+        let provider_app = Router::new().route(
+            "/user/repos",
+            get(|| async {
+                (
+                    AxumStatus::UNAUTHORIZED,
+                    Json(serde_json::json!({"error": "denied"})),
+                )
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let provider = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, provider_app).await.unwrap() });
+        let direct_profile = Profile {
+            base_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            token: Some("provider-secret".into()),
+            ..Profile::default()
+        };
+        let direct = ApiClient::new()
+            .unwrap()
+            .request(
+                "github",
+                "repos.list",
+                &direct_profile,
+                Method::GET,
+                format!("{provider}/user/repos?per_page=50"),
+                None,
+            )
+            .await
+            .unwrap_err();
+        let (gateway, proxy_token, _temp) =
+            gateway_profile(&provider, "github", "repos.list").await;
+        let gateway_profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(proxy_token),
+            ..Profile::default()
+        };
+        let remote = crate::gateway_command::execute(
+            &gateway_profile,
+            vec![
+                "aai-cli".into(),
+                "github".into(),
+                "repos".into(),
+                "list".into(),
+            ],
+        )
+        .await
+        .unwrap_err();
+        assert_eq!(remote.code, direct.code);
+        assert_eq!(remote.status, direct.status);
+        assert_eq!(remote.service, direct.service);
+        assert_eq!(remote.operation, direct.operation);
+        assert_eq!(remote.details, direct.details);
+    }
+
+    #[tokio::test]
+    async fn large_attachment_upload_works_direct_and_through_gateway() {
+        use axum::{body::Bytes, http::HeaderMap as AxumHeaders, routing::post, Json, Router};
+        let received = Arc::new(Mutex::new(Vec::<(usize, String)>::new()));
+        let capture = Arc::clone(&received);
+        let provider_app = Router::new()
+            .route(
+                "/rest/api/2/issue/TEST-1/attachments",
+                post(move |headers: AxumHeaders, body: Bytes| {
+                    let capture = Arc::clone(&capture);
+                    async move {
+                        let auth = headers
+                            .get("authorization")
+                            .and_then(|value| value.to_str().ok())
+                            .unwrap_or_default()
+                            .to_string();
+                        capture.lock().unwrap().push((body.len(), auth));
+                        Json(serde_json::json!({"ok": true}))
+                    }
+                }),
+            )
+            .layer(axum::extract::DefaultBodyLimit::max(64 * 1024 * 1024));
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let provider = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, provider_app).await.unwrap() });
+        let temp = tempfile::tempdir().unwrap();
+        let file = temp.path().join("large.bin");
+        std::fs::write(&file, vec![42_u8; 2_200_000]).unwrap();
+        let file_path = file.to_str().unwrap();
+        let direct = Profile {
+            site_url: Some(provider.clone()),
+            auth_type: Some("bearer_token".into()),
+            token: Some("provider-secret".into()),
+            ..Profile::default()
+        };
+        let direct_value = ApiClient::new()
+            .unwrap()
+            .upload(
+                "jira",
+                "issues.attachments.upload",
+                &direct,
+                format!("{provider}/rest/api/2/issue/TEST-1/attachments"),
+                file_path,
+                None,
+            )
+            .await
+            .unwrap();
+        assert_eq!(direct_value["ok"], true);
+        let (gateway, proxy_token, _gateway_state) =
+            gateway_profile(&provider, "jira", "issues.attachments.upload").await;
+        let gateway_profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(proxy_token),
+            ..Profile::default()
+        };
+        let gateway_value = crate::gateway_command::execute(
+            &gateway_profile,
+            vec![
+                "aai-cli".into(),
+                "jira".into(),
+                "issues".into(),
+                "attachments".into(),
+                "upload".into(),
+                "TEST-1".into(),
+                "--file".into(),
+                file_path.into(),
+            ],
+        )
+        .await
+        .unwrap();
+        assert_eq!(gateway_value["ok"], true);
+        let received = received.lock().unwrap();
+        assert_eq!(received.len(), 2);
+        assert!(received
+            .iter()
+            .all(|(bytes, auth)| *bytes > 2_200_000 && auth == "Bearer provider-secret"));
+    }
+
+    #[tokio::test]
+    async fn resumable_drive_upload_works_direct_and_through_gateway() {
+        use axum::{
+            body::Bytes,
+            http::{HeaderMap as AxumHeaders, HeaderValue as AxumHeaderValue},
+            routing::{post, put},
+            Json, Router,
+        };
+        use clap::Parser;
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let provider = format!("http://{}", listener.local_addr().unwrap());
+        let sessions = Arc::new(Mutex::new(Vec::<String>::new()));
+        let uploads = Arc::new(Mutex::new(Vec::<(usize, String)>::new()));
+        let session_capture = Arc::clone(&sessions);
+        let upload_capture = Arc::clone(&uploads);
+        let session_url = format!("{provider}/session/opaque-provider-url");
+        let provider_app = Router::new()
+            .route(
+                "/upload/drive/v3/files",
+                post(move |headers: AxumHeaders| {
+                    let session_capture = Arc::clone(&session_capture);
+                    let session_url = session_url.clone();
+                    async move {
+                        session_capture.lock().unwrap().push(
+                            headers
+                                .get("authorization")
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_string(),
+                        );
+                        let mut response_headers = AxumHeaders::new();
+                        response_headers
+                            .insert("location", AxumHeaderValue::from_str(&session_url).unwrap());
+                        (response_headers, Json(serde_json::json!({})))
+                    }
+                }),
+            )
+            .route(
+                "/session/opaque-provider-url",
+                put(move |headers: AxumHeaders, body: Bytes| {
+                    let upload_capture = Arc::clone(&upload_capture);
+                    async move {
+                        upload_capture.lock().unwrap().push((
+                            body.len(),
+                            headers
+                                .get("authorization")
+                                .unwrap()
+                                .to_str()
+                                .unwrap()
+                                .to_string(),
+                        ));
+                        Json(serde_json::json!({"id": "uploaded"}))
+                    }
+                }),
+            )
+            .layer(axum::extract::DefaultBodyLimit::max(64 * 1024 * 1024));
+        tokio::spawn(async move { axum::serve(listener, provider_app).await.unwrap() });
+        let temp = tempfile::tempdir().unwrap();
+        let file = temp.path().join("big.bin");
+        std::fs::write(&file, vec![7_u8; 5_100_000]).unwrap();
+        let file_path = file.to_str().unwrap().to_string();
+        let argv = vec![
+            "aai-cli".into(),
+            "drive".into(),
+            "files".into(),
+            "upload".into(),
+            file_path,
+        ];
+        let direct_cli = crate::cli::Cli::try_parse_from(argv.clone()).unwrap();
+        let direct_context = crate::config::Context {
+            profile: Profile {
+                provider: Some("drive".into()),
+                base_url: Some(provider.clone()),
+                auth_type: Some("bearer_token".into()),
+                token: Some("provider-secret".into()),
+                ..Profile::default()
+            },
+            secrets_file: temp.path().join("unused-secrets"),
+            key_file: temp.path().join("unused-key"),
+        };
+        let direct = crate::services::dispatch(&direct_context, direct_cli.command)
+            .await
+            .unwrap();
+        assert_eq!(direct["id"], "uploaded");
+        let (gateway, token, _gateway_state) =
+            gateway_profile(&provider, "drive", "files.upload").await;
+        let remote = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(token),
+            ..Profile::default()
+        };
+        let remote_result = crate::gateway_command::execute(&remote, argv)
+            .await
+            .unwrap();
+        assert_eq!(remote_result["id"], "uploaded");
+        assert_eq!(
+            sessions.lock().unwrap().as_slice(),
+            ["Bearer provider-secret", "Bearer provider-secret"]
+        );
+        let uploads = uploads.lock().unwrap();
+        assert_eq!(uploads.len(), 2);
+        assert!(uploads
+            .iter()
+            .all(|(bytes, auth)| *bytes == 5_100_000 && auth == "Bearer provider-secret"));
+    }
+
+    #[tokio::test]
+    async fn drive_download_writes_only_to_the_client_in_gateway_mode() {
+        use axum::{http::Uri, routing::get, Json, Router};
+        use clap::Parser;
+        let provider_app = Router::new().route(
+            "/drive/v3/files/item-1",
+            get(|uri: Uri| async move {
+                if uri.query().unwrap_or_default().contains("alt=media") {
+                    axum::response::IntoResponse::into_response("file-bytes")
+                } else {
+                    axum::response::IntoResponse::into_response(Json(serde_json::json!({
+                        "id": "item-1", "name": "note.txt", "mimeType": "text/plain"
+                    })))
+                }
+            }),
+        );
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let provider = format!("http://{}", listener.local_addr().unwrap());
+        tokio::spawn(async move { axum::serve(listener, provider_app).await.unwrap() });
+        let temp = tempfile::tempdir().unwrap();
+        let direct_output = temp.path().join("direct.txt");
+        let direct_argv = vec![
+            "aai-cli".to_string(),
+            "drive".into(),
+            "files".into(),
+            "download".into(),
+            "item-1".into(),
+            "--output".into(),
+            direct_output.to_str().unwrap().into(),
+        ];
+        let direct_cli = crate::cli::Cli::try_parse_from(direct_argv).unwrap();
+        let direct_context = crate::config::Context {
+            profile: Profile {
+                provider: Some("google".into()),
+                base_url: Some(provider.clone()),
+                auth_type: Some("bearer_token".into()),
+                token: Some("provider-secret".into()),
+                ..Profile::default()
+            },
+            secrets_file: temp.path().join("unused-secrets"),
+            key_file: temp.path().join("unused-key"),
+        };
+        crate::services::dispatch(&direct_context, direct_cli.command)
+            .await
+            .unwrap();
+        assert_eq!(std::fs::read(&direct_output).unwrap(), b"file-bytes");
+        let (gateway, token, _gateway_state) =
+            gateway_profile(&provider, "google", "files.download").await;
+        let gateway_profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway),
+            gateway_profile_id: Some("fake".into()),
+            gateway_token: Some(token),
+            ..Profile::default()
+        };
+        let gateway_output = temp.path().join("gateway.txt");
+        let value = crate::gateway_command::execute(
+            &gateway_profile,
+            vec![
+                "aai-cli".into(),
+                "drive".into(),
+                "files".into(),
+                "download".into(),
+                "item-1".into(),
+                "--output".into(),
+                gateway_output.to_str().unwrap().into(),
+            ],
+        )
+        .await
+        .unwrap();
+        assert_eq!(std::fs::read(&gateway_output).unwrap(), b"file-bytes");
+        assert_eq!(value["output"], gateway_output.to_str().unwrap());
     }
 
     #[tokio::test]
@@ -1420,44 +1909,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn services_added_after_gateway_v1_use_gateway_transport() {
-        for (service, operation, method) in [
-            ("agent-barn", "list_agents_get", Method::GET),
-            ("apollo", "people.search", Method::POST),
-            ("merkys", "ask", Method::POST),
-            ("microsoft", "planner.tasks.update", Method::PATCH),
-        ] {
-            let (provider, authorization) =
-                provider_once(br#"{"ok":true}"#, "application/json").await;
-            let (gateway, proxy_token, _temp) = gateway_profile(&provider, operation).await;
-            let profile = Profile {
-                credential_source: Some("gateway".into()),
-                gateway_url: Some(gateway),
-                gateway_profile_id: Some("fake".into()),
-                gateway_token: Some(proxy_token),
-                base_url: Some(provider.clone()),
-                auth_type: Some("bearer_token".into()),
-                ..Profile::default()
-            };
-            let value = ApiClient::new()
-                .unwrap()
-                .request(
-                    service,
-                    operation,
-                    &profile,
-                    method,
-                    format!("{provider}/typed"),
-                    None,
-                )
-                .await
-                .unwrap();
-            assert_eq!(value["ok"], true, "{service}");
-            assert_eq!(
-                authorization.lock().unwrap().as_deref(),
-                Some("Bearer provider-secret"),
-                "{service}"
-            );
-        }
+    async fn legacy_url_based_gateway_transport_is_rejected() {
+        let (provider, _) = provider_once(br#"{"ok":true}"#, "application/json").await;
+        let (gateway, proxy_token, _temp) =
+            gateway_profile(&provider, "github", "repos.list").await;
+        let response = Client::new()
+            .post(format!("{gateway}/api/v1/execute"))
+            .bearer_auth(proxy_token)
+            .multipart(reqwest::multipart::Form::new().text("metadata", "{}"))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.status(), reqwest::StatusCode::GONE);
     }
 
     #[tokio::test]
@@ -1481,36 +1944,6 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(bytes, b"provider-secret");
-        assert_eq!(
-            authorization.lock().unwrap().as_deref(),
-            Some("Bearer provider-secret")
-        );
-    }
-
-    #[tokio::test]
-    async fn gateway_download_returns_redacted_bytes() {
-        let (provider, authorization) = provider_once(b"provider-secret", "text/plain").await;
-        let (gateway, proxy_token, _temp) = gateway_profile(&provider, "items.download").await;
-        let client = ApiClient::new().unwrap();
-        let profile = Profile {
-            credential_source: Some("gateway".into()),
-            gateway_url: Some(gateway),
-            gateway_profile_id: Some("fake".into()),
-            gateway_token: Some(proxy_token),
-            base_url: Some(provider.clone()),
-            auth_type: Some("bearer_token".into()),
-            ..Profile::default()
-        };
-        let bytes = client
-            .download(
-                "github",
-                "items.download",
-                &profile,
-                format!("{provider}/items/1"),
-            )
-            .await
-            .unwrap();
-        assert_eq!(bytes, b"[REDACTED]");
         assert_eq!(
             authorization.lock().unwrap().as_deref(),
             Some("Bearer provider-secret")
@@ -1544,47 +1977,6 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(response.body["uploaded"], true);
-        assert_eq!(
-            authorization.lock().unwrap().as_deref(),
-            Some("Bearer provider-secret")
-        );
-    }
-
-    #[tokio::test]
-    async fn gateway_bytes_request_uses_proxy_and_redacts_response() {
-        let (provider, authorization) = provider_once(
-            br#"{"uploaded":true,"key":"provider-secret"}"#,
-            "application/json",
-        )
-        .await;
-        let (gateway, proxy_token, _temp) = gateway_profile(&provider, "items.upload").await;
-        let client = ApiClient::new().unwrap();
-        let profile = Profile {
-            credential_source: Some("gateway".into()),
-            gateway_url: Some(gateway),
-            gateway_profile_id: Some("fake".into()),
-            gateway_token: Some(proxy_token),
-            base_url: Some(provider.clone()),
-            auth_type: Some("bearer_token".into()),
-            ..Profile::default()
-        };
-        let response = client
-            .request_bytes(
-                "github",
-                "items.upload",
-                &profile,
-                BytesRequest {
-                    method: Method::POST,
-                    url: format!("{provider}/items"),
-                    content_type: "application/octet-stream".into(),
-                    headers: vec![],
-                    body: b"data".to_vec(),
-                },
-            )
-            .await
-            .unwrap();
-        assert_eq!(response.body["uploaded"], true);
-        assert_eq!(response.body["key"], "[REDACTED]");
         assert_eq!(
             authorization.lock().unwrap().as_deref(),
             Some("Bearer provider-secret")
