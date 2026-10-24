@@ -1463,6 +1463,54 @@ mod tests {
     }
 
     #[tokio::test]
+    async fn gateway_never_forwards_upstream_authorization_response_header() {
+        use axum::{http::StatusCode as AxumStatus, routing::get, Json, Router};
+        for upstream_status in [AxumStatus::OK, AxumStatus::UNAUTHORIZED] {
+            let provider_app = Router::new().route(
+                "/user/repos",
+                get(move || async move {
+                    (
+                        upstream_status,
+                        [("authorization", "Basic encoded-provider-credential")],
+                        Json(serde_json::json!({"ok": upstream_status.is_success()})),
+                    )
+                }),
+            );
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let provider = format!("http://{}", listener.local_addr().unwrap());
+            tokio::spawn(async move { axum::serve(listener, provider_app).await.unwrap() });
+            let (gateway, proxy_token, _temp) =
+                gateway_profile(&provider, "github", "repos.list").await;
+            let metadata = crate::gateway_protocol::CommandMetadata {
+                protocol_version: crate::gateway_protocol::COMMAND_PROTOCOL_VERSION,
+                profile_id: "fake".into(),
+                argv: vec![
+                    "aai-cli".into(),
+                    "github".into(),
+                    "repos".into(),
+                    "list".into(),
+                ],
+                scope: crate::gateway_protocol::CommandScope::default(),
+            };
+            let response = Client::new()
+                .post(format!("{gateway}/api/v2/execute"))
+                .bearer_auth(proxy_token)
+                .multipart(
+                    reqwest::multipart::Form::new()
+                        .text("metadata", serde_json::to_string(&metadata).unwrap()),
+                )
+                .send()
+                .await
+                .unwrap();
+            assert!(response
+                .headers()
+                .get(reqwest::header::AUTHORIZATION)
+                .is_none());
+            assert_eq!(response.status().is_success(), upstream_status.is_success());
+        }
+    }
+
+    #[tokio::test]
     async fn gateway_rejects_generic_and_ungranted_typed_commands() {
         let (provider, _) = provider_once(br#"{"ok":true}"#, "application/json").await;
         let (gateway, proxy_token, _temp) =

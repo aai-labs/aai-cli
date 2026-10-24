@@ -9,6 +9,8 @@ parses that command, constructs the provider request using its own service code 
 stored profile, and checks the actual operation and HTTP method before sending it.
 Clients cannot supply a provider URL or relabel an HTTP request as a different
 operation. The older URL-based `/api/v1/execute` endpoint returns `410 Gone`.
+The gateway returns command data and structured errors, not the outbound request
+or its authorization headers; upstream response headers are not forwarded.
 
 The gateway state file is encrypted with a separate 32-byte key file. Keep both files
 on the gateway host and protect them with filesystem permissions. Put the gateway
