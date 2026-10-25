@@ -1502,4 +1502,139 @@ mod tests {
             &profile,
         ));
     }
+
+    #[tokio::test]
+    #[ignore = "requires AAI_E2E_CONFIG and saved GitHub credentials; calls a live read-only API"]
+    async fn live_saved_github_credentials_match_direct_and_gateway_results() {
+        run_live_pair(
+            "AAI_E2E_GITHUB_PROFILE",
+            "github-work",
+            "github",
+            "repos.get",
+            &["aai-cli", "github", "repos", "get"],
+        )
+        .await;
+    }
+
+    #[tokio::test]
+    #[ignore = "requires AAI_E2E_CONFIG and saved Bitbucket credentials; calls a live read-only API"]
+    async fn live_saved_bitbucket_credentials_match_direct_and_gateway_results() {
+        run_live_pair(
+            "AAI_E2E_BITBUCKET_PROFILE",
+            "bitbucket-work",
+            "bitbucket",
+            "repos.list",
+            &["aai-cli", "bitbucket", "repos", "list", "--limit", "1"],
+        )
+        .await;
+    }
+
+    async fn run_live_pair(
+        profile_env: &str,
+        fallback_profile: &str,
+        service: &str,
+        operation: &str,
+        argv: &[&str],
+    ) {
+        let config = std::env::var("AAI_E2E_CONFIG").expect("AAI_E2E_CONFIG is required");
+        let profile_name =
+            std::env::var(profile_env).unwrap_or_else(|_| fallback_profile.to_string());
+        let ctx = Context::load(Some(&config), Some(&profile_name), None, None)
+            .unwrap_or_else(|err| panic!("{service} test profile could not load: {}", err.code));
+        let argv = argv.iter().map(ToString::to_string).collect::<Vec<_>>();
+        let direct_command =
+            Cli::try_parse_from(argv.clone()).expect("read-only live test command must parse");
+        let direct = services::dispatch(&ctx, direct_command.command)
+            .await
+            .unwrap_or_else(|err| {
+                panic!(
+                    "direct {service}.{operation} failed: {} (HTTP {:?})",
+                    err.code, err.status
+                )
+            });
+
+        let temporary = tempfile::tempdir().unwrap();
+        let mut store = GatewayStore::open(
+            temporary.path().join("gateway.enc.json"),
+            temporary.path().join("gateway.key"),
+        )
+        .unwrap();
+        let mut managed_profile = ctx.profile.clone();
+        managed_profile.provider = Some(service.to_string());
+        managed_profile.username_env = None;
+        managed_profile.username_secret = None;
+        managed_profile.token_env = None;
+        managed_profile.token_secret = None;
+        managed_profile.api_token_env = None;
+        managed_profile.api_token_secret = None;
+        managed_profile.password_env = None;
+        managed_profile.password_secret = None;
+        managed_profile.refresh_token_env = None;
+        managed_profile.refresh_token_secret = None;
+        managed_profile.client_secret_env = None;
+        managed_profile.client_secret_secret = None;
+        store
+            .document
+            .profiles
+            .insert("live".into(), managed_profile);
+        let mut secret = [0_u8; 32];
+        rand::rng().fill_bytes(&mut secret);
+        let proxy_token = format!("gw_live.{}", B64.encode(secret));
+        store.document.tokens.insert(
+            "live".into(),
+            StoredToken {
+                label: None,
+                digest: hex_digest(&Sha256::digest(proxy_token.as_bytes())),
+                enabled: true,
+                expires_at: None,
+                grants: HashMap::from([(
+                    "live".into(),
+                    Grant {
+                        allow_operations: vec![operation.into()],
+                        allow_methods: vec!["GET".into()],
+                        ..Grant::default()
+                    },
+                )]),
+            },
+        );
+        store.save().unwrap();
+        let app = GatewayApp {
+            store: Arc::new(RwLock::new(store)),
+            admin_token: "unused-live-test-admin".into(),
+            client: Client::new(),
+        };
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let gateway_url = format!("http://{}", listener.local_addr().unwrap());
+        let task = tokio::spawn(async move { axum::serve(listener, router(app)).await });
+        let remote_profile = Profile {
+            provider: Some(service.into()),
+            credential_source: Some("gateway".into()),
+            gateway_url: Some(gateway_url),
+            gateway_profile_id: Some("live".into()),
+            gateway_token: Some(proxy_token),
+            ..Profile::default()
+        };
+        let gateway = crate::gateway_command::execute(&remote_profile, argv)
+            .await
+            .unwrap_or_else(|err| panic!("gateway {service}.{operation} failed: {}", err.code));
+        assert!(
+            direct == gateway,
+            "direct and gateway {service}.{operation} results differ"
+        );
+        let gateway_json = serde_json::to_string(&gateway).unwrap();
+        for secret in [
+            ctx.profile.token.as_deref(),
+            ctx.profile.api_token.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+        .filter(|secret| !secret.is_empty())
+        {
+            assert!(
+                !gateway_json.contains(secret),
+                "gateway {service}.{operation} returned credential material"
+            );
+        }
+        task.abort();
+    }
 }
