@@ -5,6 +5,8 @@ description: Use aai-cli to create Google Sheets spreadsheets, manage their tabs
 
 # aai-cli Google Sheets
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Google Sheets through `aai-cli sheets`.
 
 Always pass the intended Google Sheets profile with `--profile` unless the active default profile is already known. Use `spreadsheets create` to make a new spreadsheet, `spreadsheets list` to find spreadsheet IDs, `spreadsheets get` to inspect tab titles, `sheets` commands to add, delete, or rename tabs, and `values` commands to read, update, or clear ranges.

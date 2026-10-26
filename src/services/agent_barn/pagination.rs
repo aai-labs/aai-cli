@@ -1,4 +1,4 @@
-use super::{invalid, Endpoint, OP, SERVICE};
+use super::{invalid, Endpoint, SERVICE};
 use crate::{config::Profile, error::AppError, http::ApiClient};
 use clap::ArgMatches;
 use reqwest::{Method, Url};
@@ -105,7 +105,7 @@ fn next_page(e: &Endpoint, body: &Value, url: &Url, count: usize) -> Result<Para
 pub(super) async fn collect(
     client: &ApiClient,
     profile: &Profile,
-    e: &Endpoint,
+    e: &'static Endpoint,
     args: &ArgMatches,
     mut url: Url,
 ) -> Result<Value, AppError> {
@@ -148,7 +148,14 @@ pub(super) async fn collect(
             return Err(invalid("provider repeated a pagination cursor"));
         }
         let body = client
-            .request_no_redirect(SERVICE, OP, profile, Method::GET, url.to_string(), None)
+            .request_no_redirect(
+                SERVICE,
+                e.operation_id.as_str(),
+                profile,
+                Method::GET,
+                url.to_string(),
+                None,
+            )
             .await?;
         let rows = if e.key.is_empty() {
             body.as_array()

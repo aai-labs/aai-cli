@@ -28,6 +28,8 @@ const DIRECT_SECRET_FIELDS: &[&str] = &[
     "api_token_env",
     "password",
     "password_env",
+    "gateway_token",
+    "gateway_token_env",
 ];
 
 const ALLOWED_PROFILE_FIELDS: &[&str] = &[
@@ -36,6 +38,10 @@ const ALLOWED_PROFILE_FIELDS: &[&str] = &[
     "username_secret",
     "provider",
     "transport",
+    "credential_source",
+    "gateway_url",
+    "gateway_profile_id",
+    "gateway_token_secret",
     "auth_type",
     "base_url",
     "site_url",
@@ -226,6 +232,14 @@ fn profile_patch(args: ConfigProfileSet) -> Result<TomlMap<String, TomlValue>, A
     set_string(&mut patch, "provider", args.provider);
     set_string(&mut patch, "auth_type", args.auth_type);
     set_string(&mut patch, "base_url", args.base_url);
+    set_string(&mut patch, "credential_source", args.credential_source);
+    set_string(&mut patch, "gateway_url", args.gateway_url);
+    set_string(&mut patch, "gateway_profile_id", args.gateway_profile_id);
+    set_string(
+        &mut patch,
+        "gateway_token_secret",
+        args.gateway_token_secret,
+    );
     set_string(&mut patch, "api_token_secret", args.api_token_secret);
     set_string(&mut patch, "token_secret", args.token_secret);
     set_string(&mut patch, "password_secret", args.password_secret);
@@ -310,6 +324,38 @@ fn validate_profile_table(
         return validate_custom_api(profile, operation);
     }
     let auth_type = required_string(profile, "auth_type", operation)?;
+    if profile.get("credential_source").and_then(TomlValue::as_str) == Some("gateway") {
+        for field in ["gateway_url", "gateway_profile_id", "gateway_token_secret"] {
+            required_string(profile, field, operation)?;
+        }
+        for field in [
+            "token_secret",
+            "api_token_secret",
+            "password_secret",
+            "refresh_token_secret",
+            "client_secret_secret",
+        ] {
+            if profile.contains_key(field) {
+                return Err(AppError::invalid_input(
+                    "config",
+                    operation,
+                    format!("gateway profile must not contain local credential field {field}"),
+                ));
+            }
+        }
+        let gateway_url = profile
+            .get("gateway_url")
+            .and_then(TomlValue::as_str)
+            .unwrap_or_default();
+        if !config::gateway_url_is_allowed(gateway_url) {
+            return Err(AppError::invalid_input(
+                "config",
+                operation,
+                "gateway_url must use https (loopback http is allowed for development)",
+            ));
+        }
+        return Ok(());
+    }
     match provider {
         "agent-barn" => {
             require_auth(profile, operation, auth_type, "bearer_token", "token_secret")?;
@@ -718,6 +764,10 @@ mod tests {
             provider: None,
             auth_type: None,
             base_url: None,
+            credential_source: None,
+            gateway_url: None,
+            gateway_profile_id: None,
+            gateway_token_secret: None,
             api_token_secret: None,
             token_secret: None,
             password_secret: None,
@@ -840,6 +890,33 @@ token_secret = "github.token"
             profile.insert("auth_type".into(), TomlValue::String(auth_type.into()));
             assert!(validate_profile_table(&profile, "profiles.validate").is_err());
             profile.insert(secret_field.into(), TomlValue::String("reference".into()));
+            validate_profile_table(&profile, "profiles.validate").unwrap();
+        }
+    }
+
+    #[test]
+    fn gateway_validation_accepts_all_supported_loopback_hosts() {
+        for gateway_url in [
+            "http://127.0.0.1:8787",
+            "http://localhost:8787",
+            "http://[::1]:8787",
+        ] {
+            let mut profile = TomlMap::new();
+            profile.insert("provider".into(), TomlValue::String("github".into()));
+            profile.insert("auth_type".into(), TomlValue::String("bearer_token".into()));
+            profile.insert(
+                "credential_source".into(),
+                TomlValue::String("gateway".into()),
+            );
+            profile.insert("gateway_url".into(), TomlValue::String(gateway_url.into()));
+            profile.insert(
+                "gateway_profile_id".into(),
+                TomlValue::String("github-work".into()),
+            );
+            profile.insert(
+                "gateway_token_secret".into(),
+                TomlValue::String("gateway.agent-token".into()),
+            );
             validate_profile_table(&profile, "profiles.validate").unwrap();
         }
     }

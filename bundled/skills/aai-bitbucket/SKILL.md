@@ -5,6 +5,8 @@ description: Use aai-cli to inspect and manage Bitbucket repositories, pull requ
 
 # aai-cli Bitbucket
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Bitbucket Cloud through `aai-cli bitbucket`.
 
 Before running commands, confirm the active profile or pass `--profile`. Repository commands accept `--repo`; newer commands also accept `--owner` plus `--repo`. A `workspace/repo` value overrides the configured workspace.

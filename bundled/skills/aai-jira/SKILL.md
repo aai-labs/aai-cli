@@ -5,6 +5,8 @@ description: Use aai-cli to search and manage Jira issues, Jira Product Discover
 
 # aai-cli Jira
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Jira Cloud through `aai-cli jira`.
 
 Before running commands, confirm the active profile or pass `--profile`. Prefer typed commands for common issue, idea, sprint, board, project, comment, and attachment workflows; use `jira request` only for uncommon Jira REST endpoints.

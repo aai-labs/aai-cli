@@ -5,6 +5,8 @@ description: Use aai-cli to search Apollo people and organizations, enrich recor
 
 # aai-cli Apollo
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with Apollo through `aai-cli apollo`.
 
 Before running commands, confirm the active profile or pass `--profile`. Apollo profiles use API-key auth (`auth_type = "apollo_api_key"`) with `api_token_secret`.

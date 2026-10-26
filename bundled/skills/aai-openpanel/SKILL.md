@@ -5,6 +5,8 @@ description: Use aai-cli to read OpenPanel projects, raw event exports, aggregat
 
 # aai-cli OpenPanel
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with OpenPanel analytics through `aai-cli openpanel`.
 
 This is a **read-only** integration — there are no write endpoints (no `identify`/`track` calls, no project or client management). Always pass the intended profile with `--profile` unless the active default profile is already known.

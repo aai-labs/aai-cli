@@ -723,7 +723,7 @@ fn enrich_auth_error(
     capability: Capability,
     err: AppError,
 ) -> AppError {
-    if err.service != "hubspot" || !matches!(err.status, Some(401 | 403)) {
+    if err.service.as_ref() != "hubspot" || !matches!(err.status, Some(401 | 403)) {
         return err;
     }
     AppError {
@@ -734,7 +734,7 @@ fn enrich_auth_error(
             auth_type(profile)
         ),
         service: err.service,
-        operation,
+        operation: operation.into(),
         status: err.status,
         details: Some(auth_details(
             profile,

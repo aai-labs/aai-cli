@@ -43,6 +43,9 @@ Use fake or local HTTP boundaries where practical. Do not mock internal function
 
 ## Live E2E tests
 
+For repeatable write/read/update/delete checks, use the project-local
+[`live-crud-e2e`](.agents/skills/live-crud-e2e/SKILL.md) skill.
+
 Live tests MUST be marked ignored so `cargo test` remains safe. They MUST:
 
 - Read profiles through `AAI_E2E_CONFIG` and provider-specific profile selectors.

@@ -9,8 +9,8 @@ use thiserror::Error;
 pub struct AppError {
     pub code: &'static str,
     pub message: String,
-    pub service: &'static str,
-    pub operation: &'static str,
+    pub service: Box<str>,
+    pub operation: Box<str>,
     pub status: Option<u16>,
     pub details: Option<Value>,
 }
@@ -44,6 +44,22 @@ impl AppError {
         Self::new("auth_error", service, operation, message)
     }
 
+    pub fn gateway_denied(
+        service: &'static str,
+        operation: &'static str,
+        message: impl Into<String>,
+    ) -> Self {
+        Self::new("gateway_denied", service, operation, message)
+    }
+
+    pub fn gateway_protocol(
+        service: &'static str,
+        operation: &'static str,
+        message: impl Into<String>,
+    ) -> Self {
+        Self::new("gateway_protocol_error", service, operation, message)
+    }
+
     pub fn unsupported_auth(
         service: &'static str,
         operation: &'static str,
@@ -53,8 +69,8 @@ impl AppError {
         Self {
             code: "unsupported_auth",
             message: message.into(),
-            service,
-            operation,
+            service: service.into(),
+            operation: operation.into(),
             status: None,
             details,
         }
@@ -87,8 +103,8 @@ impl AppError {
         Self {
             code,
             message: message.into(),
-            service,
-            operation,
+            service: service.into(),
+            operation: operation.into(),
             status: Some(status.as_u16()),
             details,
         }
@@ -102,6 +118,55 @@ impl AppError {
         Self::new("internal_error", service, operation, message)
     }
 
+    pub fn gateway(
+        service: &'static str,
+        operation: &'static str,
+        status: StatusCode,
+        message: impl Into<String>,
+        details: Option<Value>,
+    ) -> Self {
+        Self {
+            code: "gateway_error",
+            message: message.into(),
+            service: service.into(),
+            operation: operation.into(),
+            status: Some(status.as_u16()),
+            details,
+        }
+    }
+
+    pub fn remote(
+        code: &str,
+        service: String,
+        operation: String,
+        status: Option<u16>,
+        message: String,
+        details: Option<Value>,
+    ) -> Self {
+        let code = match code {
+            "invalid_input" => "invalid_input",
+            "config_error" => "config_error",
+            "auth_error" => "auth_error",
+            "unsupported_auth" => "unsupported_auth",
+            "not_found" => "not_found",
+            "rate_limited" => "rate_limited",
+            "provider_api_error" => "provider_api_error",
+            "internal_error" => "internal_error",
+            "gateway_auth_error" => "gateway_auth_error",
+            "gateway_denied" => "gateway_denied",
+            "gateway_protocol_error" => "gateway_protocol_error",
+            _ => "gateway_error",
+        };
+        Self {
+            code,
+            message,
+            service: service.into_boxed_str(),
+            operation: operation.into_boxed_str(),
+            status,
+            details,
+        }
+    }
+
     fn new(
         code: &'static str,
         service: &'static str,
@@ -111,8 +176,8 @@ impl AppError {
         Self {
             code,
             message: message.into(),
-            service,
-            operation,
+            service: service.into(),
+            operation: operation.into(),
             status: None,
             details: None,
         }
@@ -135,7 +200,9 @@ impl AppError {
     pub fn exit_code(&self) -> ExitCode {
         let code = match self.code {
             "invalid_input" => 2,
-            "config_error" | "auth_error" | "unsupported_auth" => 3,
+            "config_error" | "auth_error" | "unsupported_auth" | "gateway_auth_error"
+            | "gateway_denied" => 3,
+            "gateway_protocol_error" => 2,
             "provider_api_error" => 4,
             "not_found" => 5,
             "rate_limited" => 6,

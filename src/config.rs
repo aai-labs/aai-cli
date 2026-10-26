@@ -13,16 +13,18 @@ pub struct Config {
     pub profiles: HashMap<String, Profile>,
 }
 
-#[derive(Debug, Deserialize, Clone, Default)]
+#[derive(Debug, Deserialize, serde::Serialize, Clone, Default)]
 pub struct Profile {
-    pub gateway_url: Option<String>,
-    pub gateway_token: Option<String>,
-    pub gateway_token_env: Option<String>,
-    pub gateway_token_secret: Option<String>,
     #[serde(default)]
     pub headers: Vec<CustomHeader>,
     pub provider: Option<String>,
     pub transport: Option<String>,
+    pub credential_source: Option<String>,
+    pub gateway_url: Option<String>,
+    pub gateway_profile_id: Option<String>,
+    pub gateway_token: Option<String>,
+    pub gateway_token_env: Option<String>,
+    pub gateway_token_secret: Option<String>,
     pub auth_type: Option<String>,
     pub base_url: Option<String>,
     pub site_url: Option<String>,
@@ -73,7 +75,7 @@ pub struct Profile {
     pub runtime_key_file: Option<PathBuf>,
 }
 
-#[derive(Debug, Deserialize, Clone, Default)]
+#[derive(Debug, Deserialize, serde::Serialize, Clone, Default)]
 #[serde(deny_unknown_fields)]
 pub struct CustomHeader {
     pub name: String,
@@ -132,6 +134,7 @@ impl Context {
             key_file,
         };
         apply_secret_overrides(&mut ctx)?;
+        validate_gateway_profile(&ctx.profile)?;
         ctx.profile.runtime_secrets_file = Some(ctx.secrets_file.clone());
         ctx.profile.runtime_key_file = Some(ctx.key_file.clone());
 
@@ -238,6 +241,10 @@ fn apply_env_overrides(profile: &mut Profile, profile_name: &str) {
         profile.password = env_value(&format!("AAI_{}_PASSWORD", normalized))
             .or_else(|| env_value("AAI_PASSWORD"));
     }
+    if profile.gateway_token.is_none() {
+        profile.gateway_token = env_value(&format!("AAI_{}_GATEWAY_TOKEN", normalized))
+            .or_else(|| env_value("AAI_GATEWAY_TOKEN"));
+    }
     if profile.project_id.is_none() {
         profile.project_id = env_value(&format!("AAI_{}_PROJECT_ID", normalized))
             .or_else(|| env_value("AAI_PROJECT_ID"))
@@ -269,7 +276,6 @@ fn apply_secret_overrides(ctx: &mut Context) -> Result<(), AppError> {
             }
         }
     }
-
     if ctx.profile.token.is_none() {
         if let Some(key) = ctx.profile.token_secret.clone() {
             ctx.profile.token = secrets::get(ctx, &key)?;
@@ -300,6 +306,43 @@ fn apply_secret_overrides(ctx: &mut Context) -> Result<(), AppError> {
 
 fn env_value(name: &str) -> Option<String> {
     env::var(name).ok().filter(|value| !value.trim().is_empty())
+}
+
+fn validate_gateway_profile(profile: &Profile) -> Result<(), AppError> {
+    if profile.credential_source.as_deref() != Some("gateway") {
+        return Ok(());
+    }
+    let gateway_url = profile
+        .gateway_url
+        .as_deref()
+        .ok_or_else(|| AppError::config("gateway profile is missing gateway_url"))?;
+    if !gateway_url_is_allowed(gateway_url) {
+        return Err(AppError::config(
+            "gateway_url must use https (loopback http is allowed for development)",
+        ));
+    }
+    for (name, value) in [
+        ("gateway_profile_id", profile.gateway_profile_id.as_deref()),
+        ("gateway_token", profile.gateway_token.as_deref()),
+    ] {
+        if value.is_none() {
+            return Err(AppError::config(format!(
+                "gateway profile is missing {name}"
+            )));
+        }
+    }
+    Ok(())
+}
+
+pub(crate) fn gateway_url_is_allowed(value: &str) -> bool {
+    let Ok(parsed) = url::Url::parse(value) else {
+        return false;
+    };
+    let loopback = matches!(
+        parsed.host_str(),
+        Some("localhost" | "127.0.0.1" | "::1" | "[::1]")
+    );
+    parsed.scheme() == "https" || (parsed.scheme() == "http" && loopback)
 }
 
 #[cfg(test)]
@@ -335,16 +378,7 @@ token = "abc"
             secrets_file: secrets_path.clone(),
             key_file: key_path.clone(),
         };
-        crate::secrets::dispatch(
-            &seed_ctx,
-            crate::cli::SecretsCommand {
-                action: crate::cli::SecretsAction::Set(crate::cli::SecretSet {
-                    key: "github.token".to_string(),
-                    value: Some("resolved-token".to_string()),
-                }),
-            },
-        )
-        .unwrap();
+        crate::secrets::set(&seed_ctx, "github.token", "resolved-token").unwrap();
 
         fs::write(
             &config_path,
@@ -368,6 +402,34 @@ token_secret = "github.token"
         let ctx =
             Context::load(Some(display_path(&config_path).as_str()), None, None, None).unwrap();
         assert_eq!(ctx.profile.token.as_deref(), Some("resolved-token"));
+    }
+
+    #[test]
+    fn direct_profiles_do_not_require_gateway_fields() {
+        validate_gateway_profile(&Profile {
+            token: Some("provider-token".into()),
+            ..Profile::default()
+        })
+        .unwrap();
+    }
+
+    #[test]
+    fn gateway_profiles_require_loopback_http_or_https() {
+        let profile = Profile {
+            credential_source: Some("gateway".into()),
+            gateway_url: Some("http://gateway.example.test".into()),
+            gateway_profile_id: Some("profile".into()),
+            gateway_token: Some("proxy-token".into()),
+            ..Profile::default()
+        };
+        assert!(validate_gateway_profile(&profile).is_err());
+        let mut loopback = profile;
+        loopback.gateway_url = Some("http://127.0.0.1:8787".into());
+        validate_gateway_profile(&loopback).unwrap();
+        loopback.gateway_url = Some("http://localhost:8787".into());
+        validate_gateway_profile(&loopback).unwrap();
+        loopback.gateway_url = Some("http://[::1]:8787".into());
+        validate_gateway_profile(&loopback).unwrap();
     }
 
     fn seed_secrets(temp: &Path, entries: &[(&str, &str)]) -> (PathBuf, PathBuf) {

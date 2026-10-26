@@ -5,6 +5,8 @@ description: Use aai-cli to query PostHog product analytics, read projects, exec
 
 # aai-cli PostHog
 
+Profiles may use the managed credential gateway. Generic requests are unavailable in gateway mode; see the repository gateway documentation for setup.
+
 Use this skill when working with PostHog product analytics through `aai-cli posthog`.
 
 Before running commands, confirm the active profile or pass `--profile`, `--project-id`, or environment variables `POSTHOG_API_KEY`, `POSTHOG_PROJECT_ID`, and `POSTHOG_HOST`.
