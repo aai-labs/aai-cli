@@ -1529,6 +1529,19 @@ mod tests {
         .await;
     }
 
+    #[tokio::test]
+    #[ignore = "requires AAI_E2E_CONFIG and saved Jira credentials; calls a live read-only API"]
+    async fn live_saved_jira_credentials_match_direct_and_gateway_results() {
+        run_live_pair(
+            "AAI_E2E_JIRA_PROFILE",
+            "jira-work",
+            "jira",
+            "projects.list",
+            &["aai-cli", "jira", "projects", "list", "--limit", "1"],
+        )
+        .await;
+    }
+
     async fn run_live_pair(
         profile_env: &str,
         fallback_profile: &str,

@@ -52,13 +52,16 @@ proxy token is returned once; store it in the CLI's encrypted local secret store
 
 ## Live parity checks
 
-With `AAI_E2E_CONFIG` pointing at a local config whose GitHub and Bitbucket test
-credentials resolve, run the ignored read-only comparisons separately:
+With `AAI_E2E_CONFIG` pointing at a local config whose GitHub, Bitbucket, and Jira
+test credentials resolve, run the ignored read-only comparisons separately:
 
 ```bash
 cargo test --bin aai-cli live_saved_github_credentials_match_direct_and_gateway_results -- --ignored
 cargo test --bin aai-cli live_saved_bitbucket_credentials_match_direct_and_gateway_results -- --ignored
+cargo test --bin aai-cli live_saved_jira_credentials_match_direct_and_gateway_results -- --ignored
 ```
 
 Each check uses a temporary loopback gateway and encrypted state, then compares its
 result with a direct call. The tests do not print provider data or credentials.
+If the Jira token is saved as `JIRA_API_TOKEN`, set `AAI_API_TOKEN` to that value
+when running the Jira check so the local profile can resolve it.
