@@ -1542,30 +1542,186 @@ mod tests {
         .await;
     }
 
-    async fn run_live_pair(
-        profile_env: &str,
-        fallback_profile: &str,
-        service: &str,
-        operation: &str,
-        argv: &[&str],
-    ) {
-        let config = std::env::var("AAI_E2E_CONFIG").expect("AAI_E2E_CONFIG is required");
-        let profile_name =
-            std::env::var(profile_env).unwrap_or_else(|_| fallback_profile.to_string());
-        let ctx = Context::load(Some(&config), Some(&profile_name), None, None)
-            .unwrap_or_else(|err| panic!("{service} test profile could not load: {}", err.code));
-        let argv = argv.iter().map(ToString::to_string).collect::<Vec<_>>();
-        let direct_command =
-            Cli::try_parse_from(argv.clone()).expect("read-only live test command must parse");
-        let direct = services::dispatch(&ctx, direct_command.command)
-            .await
-            .unwrap_or_else(|err| {
-                panic!(
-                    "direct {service}.{operation} failed: {} (HTTP {:?})",
-                    err.code, err.status
-                )
-            });
+    #[tokio::test]
+    #[ignore = "requires saved Jira credentials and AAI_E2E_JIRA_PROJECT; creates and deletes a disposable issue"]
+    async fn live_saved_jira_direct_write_crud_is_repeatable() {
+        run_live_jira_write_crud(false).await;
+    }
 
+    #[tokio::test]
+    #[ignore = "requires saved Jira credentials and AAI_E2E_JIRA_PROJECT; creates and deletes a disposable issue"]
+    async fn live_saved_jira_gateway_write_crud_is_repeatable() {
+        run_live_jira_write_crud(true).await;
+    }
+
+    async fn run_live_jira_write_crud(gateway_mode: bool) {
+        let config = std::env::var("AAI_E2E_CONFIG").expect("AAI_E2E_CONFIG is required");
+        let project = std::env::var("AAI_E2E_JIRA_PROJECT")
+            .expect("AAI_E2E_JIRA_PROJECT must name a disposable Jira project");
+        let profile_name =
+            std::env::var("AAI_E2E_JIRA_PROFILE").unwrap_or_else(|_| "jira-work".into());
+        let ctx = Context::load(Some(&config), Some(&profile_name), None, None)
+            .unwrap_or_else(|err| panic!("Jira profile could not load: {}", err.code));
+        let gateway = if gateway_mode {
+            Some(
+                live_gateway(
+                    &ctx,
+                    "jira",
+                    &[
+                        ("issues.create", "POST"),
+                        ("issues.get", "GET"),
+                        ("issues.update", "PUT"),
+                        ("issues.delete", "DELETE"),
+                    ],
+                )
+                .await,
+            )
+        } else {
+            None
+        };
+        let remote = gateway.as_ref().map(|gateway| &gateway.profile);
+        let marker = format!("aai-gateway-e2e-{:016x}", rand::rng().next_u64());
+        let create = vec![
+            "aai-cli".into(),
+            "jira".into(),
+            "issues".into(),
+            "create".into(),
+            "--project".into(),
+            project,
+            "--summary".into(),
+            marker.clone(),
+        ];
+        let created = live_execute(&ctx, remote, create).await.unwrap_or_else(|err| {
+            panic!(
+                "issue creation failed for marker {marker}; search for it before retrying: {} HTTP {:?}",
+                err.code, err.status
+            )
+        });
+        let issue_key = created
+            .get("key")
+            .and_then(serde_json::Value::as_str)
+            .expect("created Jira issue must include a key")
+            .to_string();
+        let updated = format!("{marker}-updated");
+        let check = async {
+            let fetched = live_execute(&ctx, remote, jira_issue_args("get", &issue_key))
+                .await
+                .map_err(|err| format!("read failed: {} HTTP {:?}", err.code, err.status))?;
+            if fetched
+                .pointer("/fields/summary")
+                .and_then(serde_json::Value::as_str)
+                != Some(&marker)
+            {
+                return Err("created issue summary did not match".to_string());
+            }
+            let update_response = live_execute(
+                &ctx,
+                remote,
+                vec![
+                    "aai-cli".into(),
+                    "jira".into(),
+                    "issues".into(),
+                    "update".into(),
+                    issue_key.clone(),
+                    "--summary".into(),
+                    updated.clone(),
+                ],
+            )
+            .await
+            .map_err(|err| format!("update failed: {} HTTP {:?}", err.code, err.status))?;
+            let updated_issue = live_execute(&ctx, remote, jira_issue_args("get", &issue_key))
+                .await
+                .map_err(|err| {
+                    format!("updated read failed: {} HTTP {:?}", err.code, err.status)
+                })?;
+            if updated_issue
+                .pointer("/fields/summary")
+                .and_then(serde_json::Value::as_str)
+                != Some(&updated)
+            {
+                return Err("updated issue summary did not match".to_string());
+            }
+            if let Some(secret) = ctx
+                .profile
+                .api_token
+                .as_deref()
+                .filter(|value| !value.is_empty())
+            {
+                for value in [&created, &fetched, &update_response, &updated_issue] {
+                    if serde_json::to_string(value).unwrap().contains(secret) {
+                        return Err("Jira response contained raw credential material".to_string());
+                    }
+                }
+            }
+            Ok::<(), String>(())
+        }
+        .await;
+
+        let delete = live_execute(&ctx, remote, jira_issue_args("delete", &issue_key)).await;
+        if let Err(err) = delete {
+            if gateway_mode {
+                let fallback =
+                    live_execute(&ctx, None, jira_issue_args("delete", &issue_key)).await;
+                assert!(fallback.is_ok(), "gateway delete failed ({} HTTP {:?}); direct cleanup also failed for {issue_key}", err.code, err.status);
+            }
+            panic!(
+                "delete failed for {issue_key}: {} HTTP {:?}",
+                err.code, err.status
+            );
+        }
+        let missing = live_execute(&ctx, remote, jira_issue_args("get", &issue_key)).await;
+        assert!(
+            matches!(
+                missing,
+                Err(AppError {
+                    code: "not_found",
+                    ..
+                })
+            ),
+            "deleted issue {issue_key} should not be readable"
+        );
+        assert!(
+            check.is_ok(),
+            "Jira CRUD check failed for {issue_key}: {:?}",
+            check.err()
+        );
+    }
+
+    fn jira_issue_args(action: &str, key: &str) -> Vec<String> {
+        ["aai-cli", "jira", "issues", action, key]
+            .into_iter()
+            .map(ToString::to_string)
+            .collect()
+    }
+
+    async fn live_execute(
+        ctx: &Context,
+        gateway: Option<&Profile>,
+        argv: Vec<String>,
+    ) -> Result<serde_json::Value, AppError> {
+        match gateway {
+            Some(profile) => crate::gateway_command::execute(profile, argv).await,
+            None => {
+                let command =
+                    Cli::try_parse_from(argv).expect("typed Jira live-test command must parse");
+                services::dispatch(ctx, command.command).await
+            }
+        }
+    }
+
+    struct LiveGateway {
+        profile: Profile,
+        _temporary: tempfile::TempDir,
+        task: tokio::task::JoinHandle<()>,
+    }
+
+    impl Drop for LiveGateway {
+        fn drop(&mut self) {
+            self.task.abort();
+        }
+    }
+
+    async fn live_gateway(ctx: &Context, service: &str, grants: &[(&str, &str)]) -> LiveGateway {
         let temporary = tempfile::tempdir().unwrap();
         let mut store = GatewayStore::open(
             temporary.path().join("gateway.enc.json"),
@@ -1603,8 +1759,11 @@ mod tests {
                 grants: HashMap::from([(
                     "live".into(),
                     Grant {
-                        allow_operations: vec![operation.into()],
-                        allow_methods: vec!["GET".into()],
+                        allow_operations: grants
+                            .iter()
+                            .map(|(operation, _)| (*operation).into())
+                            .collect(),
+                        allow_methods: grants.iter().map(|(_, method)| (*method).into()).collect(),
                         ..Grant::default()
                     },
                 )]),
@@ -1618,8 +1777,8 @@ mod tests {
         };
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
         let gateway_url = format!("http://{}", listener.local_addr().unwrap());
-        let task = tokio::spawn(async move { axum::serve(listener, router(app)).await });
-        let remote_profile = Profile {
+        let task = tokio::spawn(async move { axum::serve(listener, router(app)).await.unwrap() });
+        let profile = Profile {
             provider: Some(service.into()),
             credential_source: Some("gateway".into()),
             gateway_url: Some(gateway_url),
@@ -1627,7 +1786,39 @@ mod tests {
             gateway_token: Some(proxy_token),
             ..Profile::default()
         };
-        let gateway = crate::gateway_command::execute(&remote_profile, argv)
+        LiveGateway {
+            profile,
+            _temporary: temporary,
+            task,
+        }
+    }
+
+    async fn run_live_pair(
+        profile_env: &str,
+        fallback_profile: &str,
+        service: &str,
+        operation: &str,
+        argv: &[&str],
+    ) {
+        let config = std::env::var("AAI_E2E_CONFIG").expect("AAI_E2E_CONFIG is required");
+        let profile_name =
+            std::env::var(profile_env).unwrap_or_else(|_| fallback_profile.to_string());
+        let ctx = Context::load(Some(&config), Some(&profile_name), None, None)
+            .unwrap_or_else(|err| panic!("{service} test profile could not load: {}", err.code));
+        let argv = argv.iter().map(ToString::to_string).collect::<Vec<_>>();
+        let direct_command =
+            Cli::try_parse_from(argv.clone()).expect("read-only live test command must parse");
+        let direct = services::dispatch(&ctx, direct_command.command)
+            .await
+            .unwrap_or_else(|err| {
+                panic!(
+                    "direct {service}.{operation} failed: {} (HTTP {:?})",
+                    err.code, err.status
+                )
+            });
+
+        let live_gateway = live_gateway(&ctx, service, &[(operation, "GET")]).await;
+        let gateway = crate::gateway_command::execute(&live_gateway.profile, argv)
             .await
             .unwrap_or_else(|err| panic!("gateway {service}.{operation} failed: {}", err.code));
         assert!(
@@ -1648,6 +1839,5 @@ mod tests {
                 "gateway {service}.{operation} returned credential material"
             );
         }
-        task.abort();
     }
 }

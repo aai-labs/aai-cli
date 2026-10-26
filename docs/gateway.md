@@ -65,3 +65,17 @@ Each check uses a temporary loopback gateway and encrypted state, then compares 
 result with a direct call. The tests do not print provider data or credentials.
 If the Jira token is saved as `JIRA_API_TOKEN`, set `AAI_API_TOKEN` to that value
 when running the Jira check so the local profile can resolve it.
+
+To verify writes, set `AAI_E2E_JIRA_PROJECT` to a disposable project on the
+configured Jira instance, then run both ignored checks:
+
+```bash
+cargo test --bin aai-cli live_saved_jira_direct_write_crud_is_repeatable -- --ignored
+cargo test --bin aai-cli live_saved_jira_gateway_write_crud_is_repeatable -- --ignored
+```
+
+Each run creates a uniquely named Jira issue, reads it, updates its summary,
+reads it again, deletes it, and confirms it is gone. Cleanup is attempted even
+if a read or update check fails. The project-local
+[`live-crud-e2e`](../.agents/skills/live-crud-e2e/SKILL.md) skill describes the
+same repeatable pattern for other integrations.
