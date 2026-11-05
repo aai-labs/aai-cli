@@ -24,6 +24,7 @@ Service-level CLI docs live under `docs/services/`:
 - [Confluence](services/confluence.md)
 - [Bitbucket](services/bitbucket.md)
 - [GitHub](services/github.md)
+- [GitLab](services/gitlab.md)
 - [Email](services/email.md)
 - [Calendar](services/calendar.md)
 - [Pipedrive](services/pipedrive.md)

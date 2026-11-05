@@ -31,6 +31,7 @@ pub enum Command {
     Confluence(ConfluenceCommand),
     Bitbucket(BitbucketCommand),
     Github(GithubCommand),
+    Gitlab(crate::services::gitlab::GitlabCommand),
     Email(EmailCommand),
     Calendar(CalendarCommand),
     /// Manage Pipedrive CRM records, history, activities, notes, and synced email.

@@ -68,6 +68,7 @@ This project primarily consumes credentials supplied by users or agents. Microso
 
 - Store auth type explicitly in each profile: `basic_api_token`, `bearer_token`, `api_key_header`, `apollo_api_key`, `hubspot_service_key`, `hubspot_legacy_private_app`, `openpanel_client_credentials`, `microsoft_client_credentials`, `microsoft_delegated`, `token_url`, `github_app`, `oauth_user`, or `service_account`.
 - Never infer service-account semantics from a token string alone.
+- GitLab: `auth_type = "bearer_token"` with `token_secret`, for personal, group, and project access tokens. Self-hosted profiles set `base_url` to the instance API root, `https://<host>/api/v4`.
 - Keep provider profiles isolated; do not reuse an Atlassian token across Jira, Confluence, and Bitbucket unless the provider docs explicitly support it.
 - Prefer env var overrides for secrets and config-file fields for non-secret metadata such as site URL, workspace, region, account email, and default scopes.
 ## Microsoft Graph

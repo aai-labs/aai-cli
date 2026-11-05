@@ -834,6 +834,18 @@ aai-cli --profile bitbucket-work bitbucket branches list --name-prefix release-
 
 `branches list` prefers `--name-contains TEXT` (substring match) and `--name-prefix TEXT` (anchored match) over raw query languages. An advanced `--query` escape hatch exists for Bitbucket BBQL expressions but is hidden from `--help` to keep the surface agent-friendly.
 
+## GitLab
+
+GitLab commands work on gitlab.com and self-hosted instances. `--project` takes a numeric ID or a full path such as `group/subgroup/app`, and defaults to `profile.repo`. Merge requests and issues are addressed by `iid`. The bundled `aai-gitlab` skill holds the full command list in `bundled/skills/aai-gitlab/references/command-reference.md`.
+
+```bash
+aai-cli gitlab mrs get 7 --project group/app
+aai-cli gitlab mrs diffs 7 --project group/app --output local/mr-7.json
+aai-cli gitlab source get main src/main.rs --project group/app
+aai-cli gitlab pipelines jobs 123 --project group/app
+aai-cli gitlab jobs log 456 --project group/app
+```
+
 ## Bundled Agent Skills
 
 ```bash
