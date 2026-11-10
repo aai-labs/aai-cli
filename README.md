@@ -12,6 +12,7 @@ The goal is not to replace full SDKs. The goal is to make common agent tasks saf
 | Confluence Cloud | Spaces, pages, comments, attachments, search, page moves | [docs/services/confluence.md](docs/services/confluence.md) | [Confluence REST API v2](https://developer.atlassian.com/cloud/confluence/rest/v2/intro/) |
 | Bitbucket Cloud | Repositories, branches, commits, source files, pull requests, comments, pipelines | [docs/services/bitbucket.md](docs/services/bitbucket.md) | [Bitbucket REST API](https://developer.atlassian.com/cloud/bitbucket/rest/intro/) |
 | GitHub | Repositories, branches, files, issues, pull requests, reviews, Actions runs/jobs/logs | [docs/services/github.md](docs/services/github.md) | [GitHub REST API](https://docs.github.com/en/rest) |
+| GitLab | Projects, branches, commits, files, issues, merge requests, notes, discussions, approvals, pipelines, job logs (gitlab.com and self-hosted) | [docs/services/gitlab.md](docs/services/gitlab.md) | [GitLab REST API](https://docs.gitlab.com/api/rest/) |
 | Email | Gmail REST profiles and Zoho SMTP/IMAP profiles | [docs/services/email.md](docs/services/email.md) | [Gmail API](https://developers.google.com/gmail/api/reference/rest), [Zoho Mail API](https://www.zoho.com/mail/help/api/) |
 | Calendar | Google Calendar REST profiles and Zoho CalDAV profiles | [docs/services/calendar.md](docs/services/calendar.md) | [Google Calendar API](https://developers.google.com/calendar/api/v3/reference), [Zoho CalDAV](https://www.zoho.com/calendar/help/caldav-sync.html) |
 | Pipedrive | Leads, persons, organizations, deals, labels, activities, notes, file attachments, field definitions, users, pipelines and stages, merges, synced email history | [docs/services/pipedrive.md](docs/services/pipedrive.md) | [Pipedrive API](https://developers.pipedrive.com/docs/api/v1), [Pipedrive API v2](https://developers.pipedrive.com/docs/api/v2) |
@@ -158,7 +159,7 @@ aai-cli --profile jira-work jira request post /rest/api/3/issue --allow-write --
 aai-cli --profile microsoft-e2e-delegated microsoft request get /me
 ```
 
-Supported services are `jira`, `confluence`, `bitbucket`, `github`, `hubspot`, `pipedrive`, `apollo`, `microsoft`, and REST-backed `email` and `calendar` profiles. SMTP/IMAP and CalDAV profiles are intentionally excluded.
+Supported services are `jira`, `confluence`, `bitbucket`, `github`, `gitlab`, `hubspot`, `pipedrive`, `apollo`, `microsoft`, and REST-backed `email` and `calendar` profiles. SMTP/IMAP and CalDAV profiles are intentionally excluded.
 
 ## Development
 

@@ -330,7 +330,7 @@ fn validate_profile_table(
             "apollo_api_key",
             "api_token_secret",
         ),
-        "github" => require_auth(
+        "github" | "gitlab" => require_auth(
             profile,
             operation,
             auth_type,
@@ -827,6 +827,7 @@ token_secret = "github.token"
             ("pipedrive", "pipedrive_personal_token", "api_token_secret"),
             ("apollo", "apollo_api_key", "api_token_secret"),
             ("github", "bearer_token", "token_secret"),
+            ("gitlab", "bearer_token", "token_secret"),
             ("hubspot", "hubspot_service_key", "token_secret"),
             ("hubspot", "hubspot_legacy_private_app", "token_secret"),
             ("slack", "bearer_token", "token_secret"),

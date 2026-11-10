@@ -9,6 +9,7 @@ pub(crate) mod email;
 pub(crate) mod excel;
 pub(crate) mod generic_request;
 pub(crate) mod github;
+pub(crate) mod gitlab;
 pub(crate) mod hubspot;
 pub(crate) mod jira;
 pub(crate) mod merkys;
@@ -33,6 +34,7 @@ pub async fn dispatch(ctx: &Context, command: Command) -> Result<Value, AppError
         Command::Confluence(command) => confluence::dispatch(&client, ctx, command).await,
         Command::Bitbucket(command) => bitbucket::dispatch(&client, ctx, command).await,
         Command::Github(command) => github::dispatch(&client, ctx, command).await,
+        Command::Gitlab(command) => gitlab::dispatch(&client, ctx, command).await,
         Command::Hubspot(command) => hubspot::dispatch(&client, ctx, command).await,
         Command::Email(command) => email::dispatch(&client, ctx, command).await,
         Command::Calendar(command) => calendar::dispatch(&client, ctx, command).await,

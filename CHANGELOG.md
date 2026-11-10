@@ -4,6 +4,10 @@ All notable user-visible changes to `aai-cli` are recorded here.
 
 ## Unreleased
 
+### Added
+
+- Added `gitlab` commands for projects, merge requests, issues, branches, commits, source files, pipelines, and job logs on gitlab.com and self-hosted instances, with a bundled `aai-gitlab` skill.
+
 ## 0.1.2 - 2026-10-22
 
 ## 0.1.1 - 2026-10-22
